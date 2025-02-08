@@ -22,6 +22,27 @@ export class DevicesService {
     });
   }
 
+  async createFromSdk(createDeviceDto: CreateDeviceDto) {
+    const appUser = await this.prisma.appUser.findUnique({
+      where: { id: createDeviceDto.appUserId },
+      include: { project: true },
+    });
+
+    if (!appUser) {
+      throw new NotFoundException('App user not found');
+    }
+
+    return this.prisma.device.create({
+      data: {
+        ...createDeviceDto,
+        lastSeenAt: new Date(),
+      },
+      include: {
+        appUser: true,
+      },
+    });
+  }
+
   async findAll(userId: string, appUserId: string, { page = 1, limit = 10 }: PaginationQueryDto) {
     await this.validateAppUserAccess(userId, appUserId);
     const skip = (page - 1) * limit;

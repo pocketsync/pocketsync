@@ -5,6 +5,9 @@ import { AuthModule } from './modules/auth/auth.module';
 import { ProjectsModule } from './modules/projects/projects.module';
 import { AppUsersModule } from './modules/app-users/app-users.module';
 import { DevicesModule } from './modules/devices/devices.module';
+import { ChangeLogController } from './modules/change-log/change-log.controller';
+import { ChangeLogService } from './modules/change-log/change-log.service';
+import { ChangeLogModule } from './modules/change-log/change-log.module';
 
 @Module({
   imports: [
@@ -16,6 +19,9 @@ import { DevicesModule } from './modules/devices/devices.module';
     ProjectsModule,
     AppUsersModule,
     DevicesModule,
+    ChangeLogModule,
   ],
+  controllers: [ChangeLogController],
+  providers: [ChangeLogService],
 })
 export class AppModule {}

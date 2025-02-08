@@ -21,6 +21,25 @@ export class AppUsersService {
     });
   }
 
+  async createFromSdk(createAppUserDto: CreateAppUserDto) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: createAppUserDto.projectId },
+    });
+
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
+
+    return this.prisma.appUser.create({
+      data: createAppUserDto,
+      include: {
+        _count: {
+          select: { devices: true },
+        },
+      },
+    });
+  }
+
   async findAll(userId: string, projectId: string, { page = 1, limit = 10 }: PaginationQueryDto) {
     await this.validateProjectAccess(userId, projectId);
     const skip = (page - 1) * limit;
