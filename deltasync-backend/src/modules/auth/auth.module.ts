@@ -5,10 +5,14 @@ import { ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { GithubStrategy } from './strategies/github.strategy';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
+import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
   imports: [
     PassportModule,
+    PrismaModule,
     JwtModule.registerAsync({
       useFactory: (configService: ConfigService) => ({
         secret: configService.get('oauth.jwt.secret'),
@@ -19,7 +23,8 @@ import { GithubStrategy } from './strategies/github.strategy';
       inject: [ConfigService],
     }),
   ],
-  providers: [JwtStrategy, GoogleStrategy, GithubStrategy],
-  exports: [JwtModule],
+  controllers: [AuthController],
+  providers: [AuthService, JwtStrategy, GoogleStrategy, GithubStrategy],
+  exports: [JwtModule, AuthService],
 })
 export class AuthModule {}
