@@ -1,4 +1,4 @@
-import { IsObject, IsArray, IsString, ValidateNested } from 'class-validator';
+import { IsObject, IsArray, IsString, ValidateNested, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class TableRows {
@@ -12,6 +12,12 @@ class TableChanges {
 }
 
 export class ChangeSetDto {
+    @IsNumber()
+    timestamp: number;
+
+    @IsNumber()
+    version: number;
+
     @IsObject()
     @ValidateNested()
     @Type(() => TableChanges)
