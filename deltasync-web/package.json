@@ -10,6 +10,7 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@nestjs/platform-socket.io": "^11.0.8",
     "@nuxtjs/tailwindcss": "^6.13.1",
     "@tailwindcss/vite": "^4.0.5",
     "nuxt": "^3.15.4",
