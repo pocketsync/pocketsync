@@ -1,0 +1,139 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                 String?                 @unique @db.VarChar(255)
+  passwordHash          String?                 @map("password_hash") @db.VarChar(255)
+  firstName            String?                 @map("first_name") @db.VarChar(255)
+  lastName             String?                 @map("last_name") @db.VarChar(255)
+  avatarUrl            String?                 @map("avatar_url") @db.Text
+  isEmailVerified      Boolean                 @default(false) @map("is_email_verified")
+  createdAt            DateTime                @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt            DateTime                @default(now()) @map("updated_at") @db.Timestamp()
+  projects             Project[]
+  socialConnections    UserSocialConnection[]
+  refreshTokens        RefreshToken[]
+  @@map("users")
+}
+
+model Project {
+  id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  apiKey    String     @unique @map("api_key") @db.VarChar(64)
+  name      String     @db.VarChar(255)
+  userId    String     @map("user_id") @db.Uuid
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt DateTime   @default(now()) @map("updated_at") @db.Timestamp()
+  user      User       @relation(fields: [userId], references: [id])
+  appUsers  AppUser[]
+
+  @@map("projects")
+}
+
+model AppUser {
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  projectId      String         @map("project_id") @db.Uuid
+  userIdentifier String         @map("user_identifier") @db.VarChar(255)
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt      DateTime       @default(now()) @map("updated_at") @db.Timestamp()
+  project        Project        @relation(fields: [projectId], references: [id])
+  devices        Device[]
+  userDatabase   UserDatabase?
+  changeLogs     ChangeLog[]
+
+  @@unique([projectId, userIdentifier])
+
+  @@map("app_users")
+}
+
+model Device {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  appUserId   String      @map("app_user_id") @db.Uuid
+  deviceId    String      @map("device_id") @db.VarChar(255)
+  lastSeenAt  DateTime?   @map("last_seen_at") @db.Timestamp()
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt   DateTime    @default(now()) @map("updated_at") @db.Timestamp()
+  appUser     AppUser     @relation(fields: [appUserId], references: [id])
+  changeLogs  ChangeLog[]
+
+  @@unique([appUserId, deviceId])
+  
+  @@map("devices")
+}
+
+model UserDatabase {
+  appUserId     String   @id @map("app_user_id") @db.Uuid
+  data          Bytes    @db.ByteA
+  lastSyncedAt  DateTime @default(now()) @map("last_synced_at") @db.Timestamp()
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt     DateTime @default(now()) @map("updated_at") @db.Timestamp()
+  appUser       AppUser  @relation(fields: [appUserId], references: [id])
+  @@map("user_databases")
+}
+
+model ChangeLog {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  appUserId   String    @map("app_user_id") @db.Uuid
+  deviceId    String    @map("device_id") @db.Uuid
+  changeSet   Json      @map("change_set") @db.JsonB
+  receivedAt  DateTime  @default(now()) @map("received_at") @db.Timestamp()
+  processedAt DateTime? @map("processed_at") @db.Timestamp()
+  appUser     AppUser   @relation(fields: [appUserId], references: [id])
+  device      Device    @relation(fields: [deviceId], references: [id])
+  @@map("change_logs")
+}
+
+model OAuthProvider {
+  id            String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String                  @unique @db.VarChar(50)
+  clientId      String                  @map("client_id") @db.VarChar(255)
+  clientSecret  String                  @map("client_secret") @db.VarChar(255)
+  createdAt     DateTime                @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt     DateTime                @default(now()) @map("updated_at") @db.Timestamp()
+  connections   UserSocialConnection[]
+
+  @@map("oauth_providers")
+}
+
+model UserSocialConnection {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String        @map("user_id") @db.Uuid
+  providerId      String        @map("provider_id") @db.Uuid
+  providerUserId  String        @map("provider_user_id") @db.VarChar(255)
+  accessToken     String        @map("access_token") @db.Text
+  refreshToken    String?       @map("refresh_token") @db.Text
+  tokenExpiresAt  DateTime?     @map("token_expires_at") @db.Timestamp()
+  providerData    Json?         @map("provider_data") @db.JsonB
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt       DateTime      @default(now()) @map("updated_at") @db.Timestamp()
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider        OAuthProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, providerUserId])
+
+  @@map("user_social_connections")
+}
+
+model RefreshToken {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  token     String   @unique @db.VarChar(255)
+  expiresAt DateTime @map("expires_at") @db.Timestamp()
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamp()
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("refresh_tokens")
+}
