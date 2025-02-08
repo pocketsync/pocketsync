@@ -28,8 +28,9 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
     profile: any,
     done: Function,
   ): Promise<any> {
-    const { username, photos, emails } = profile;
+    const { username, photos, emails, id } = profile;
     const user = {
+      id: id.toString(),
       email: emails[0].value,
       firstName: username,
       lastName: '',
