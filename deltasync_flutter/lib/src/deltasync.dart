@@ -115,6 +115,7 @@ class DeltaSync {
   Future<void> dispose() async {
     _syncTimer?.cancel();
     _syncTimer = null;
+    await _schemaChangeSubscription?.cancel();
     await _syncController.close();
     _db?.dispose();
     _db = null;
