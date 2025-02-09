@@ -17,6 +17,12 @@ class RemoteChangeListener {
     required Database db,
   })  : _db = db,
         _changeController = StreamController<ChangeSet>.broadcast() {
+    _initializeSocket(wsUrl, deviceId);
+  }
+
+  Stream<ChangeSet> get changes => _changeController.stream;
+
+  void _initializeSocket(String wsUrl, String deviceId) {
     _socket = io.io(
       '$wsUrl/changes?deviceId=$deviceId',
       io.OptionBuilder()
@@ -34,31 +40,34 @@ class RemoteChangeListener {
     );
   }
 
-  Stream<ChangeSet> get changes => _changeController.stream;
-
   Future<void> connect() async {
     if (_isConnected) return;
 
     log('Connecting to socket...');
-
-    _socket.onConnect((_) {
-      log('Socket.IO Connected');
-      _isConnected = true;
-    });
-
-    _socket.onDisconnect((_) {
-      log('Socket.IO Disconnected');
-      _isConnected = false;
-    });
-
-    _socket.onError((error) {
-      log('Socket.IO Error: $error');
-      _changeController.addError(error);
-    });
-
-    _socket.on('CHANGE_NOTIFICATION', (data) => _handleMessage(data));
-
+    _setupSocketListeners();
     _socket.connect();
+  }
+
+  void _setupSocketListeners() {
+    _socket.onConnect((_) => _onConnect());
+    _socket.onDisconnect((_) => _onDisconnect());
+    _socket.onError((error) => _onError(error));
+    _socket.on('CHANGE_NOTIFICATION', (data) => _handleMessage(data));
+  }
+
+  void _onConnect() {
+    log('Socket.IO Connected');
+    _isConnected = true;
+  }
+
+  void _onDisconnect() {
+    log('Socket.IO Disconnected');
+    _isConnected = false;
+  }
+
+  void _onError(dynamic error) {
+    log('Socket.IO Error: $error');
+    _changeController.addError(error);
   }
 
   void _handleMessage(dynamic data) {
@@ -66,86 +75,88 @@ class RemoteChangeListener {
       log('Received changes from remote server');
       final changeSet = ChangeSet.fromJson(data);
       _applyChanges(changeSet);
-      if (!_changeController.isClosed) {
-        _changeController.add(changeSet);
-      }
+      _changeController.add(changeSet);
     } catch (e) {
-      if (!_changeController.isClosed) {
-        _changeController.addError(e);
-      }
+      _changeController.addError(e);
     }
   }
 
   Future<void> _applyChanges(ChangeSet changeSet) async {
     _db.execute('BEGIN TRANSACTION');
     try {
-      // Apply Insertions
-      for (var entry in changeSet.insertions.changes.entries) {
-        final tableName = entry.key;
-        final tableRows = entry.value;
-
-        for (var row in tableRows.rows) {
-          final decodedRow = jsonDecode(row);
-          final rowId = decodedRow['row_id'];
-          final rowData = Map<String, dynamic>.from(decodedRow);
-          rowData.remove('row_id');
-
-          final stmt = _db.prepare(
-              'INSERT OR REPLACE INTO $tableName (rowid, ${rowData.keys.join(", ")}) VALUES (?, ${rowData.keys.map((_) => "?").join(", ")})');
-          try {
-            stmt.execute([rowId, ...rowData.values]);
-          } finally {
-            stmt.dispose();
-          }
-        }
-      }
-
-      // Apply Updates
-      for (var entry in changeSet.updates.changes.entries) {
-        final tableName = entry.key;
-        final tableRows = entry.value;
-
-        for (var row in tableRows.rows) {
-          final decodedRow = jsonDecode(row);
-          final rowId = decodedRow['row_id'];
-          final rowData = Map<String, dynamic>.from(decodedRow);
-          rowData.remove('row_id');
-
-          final stmt =
-              _db.prepare('UPDATE $tableName SET ${rowData.keys.map((key) => "$key = ?").join(", ")} WHERE rowid = ?');
-          stmt.execute([...rowData.values, rowId]);
-          stmt.dispose();
-        }
-      }
-
-      // Apply Deletions
-      for (var entry in changeSet.deletions.changes.entries) {
-        final tableName = entry.key;
-        final tableRows = entry.value;
-
-        for (var row in tableRows.rows) {
-          final decodedRow = jsonDecode(row);
-          final stmt = _db.prepare('DELETE FROM $tableName WHERE rowid = ?');
-          stmt.execute([decodedRow['row_id']]);
-          stmt.dispose();
-        }
-      }
-
-      // Emit change event and handle acknowledgment
-      _socket.emitWithAck('change', changeSet.toJson(), ack: (ackData) {
-        if (ackData != null && ackData['status'] == 'success') {
-          log('Device acknowledged change notification');
-        } else {
-          log('Device failed to acknowledge change');
-          throw Exception('Change notification not acknowledged');
-        }
-      });
-
+      _applyInsertions(changeSet);
+      _applyUpdates(changeSet);
+      _applyDeletions(changeSet);
+      _emitChangeAcknowledgment(changeSet);
       _db.execute('COMMIT');
     } catch (e) {
       _db.execute('ROLLBACK');
       rethrow;
     }
+  }
+
+  void _applyInsertions(ChangeSet changeSet) {
+    for (var entry in changeSet.insertions.changes.entries) {
+      final tableName = entry.key;
+      final tableRows = entry.value;
+
+      for (var row in tableRows.rows) {
+        final decodedRow = jsonDecode(row);
+        final rowId = decodedRow['row_id'];
+        final rowData = Map<String, dynamic>.from(decodedRow)..remove('row_id');
+
+        final stmt = _db.prepare(
+            'INSERT OR REPLACE INTO $tableName (rowid, ${rowData.keys.join(", ")}) VALUES (?, ${rowData.keys.map((_) => "?").join(", ")})');
+        try {
+          stmt.execute([rowId, ...rowData.values]);
+        } finally {
+          stmt.dispose();
+        }
+      }
+    }
+  }
+
+  void _applyUpdates(ChangeSet changeSet) {
+    for (var entry in changeSet.updates.changes.entries) {
+      final tableName = entry.key;
+      final tableRows = entry.value;
+
+      for (var row in tableRows.rows) {
+        final decodedRow = jsonDecode(row);
+        final rowId = decodedRow['row_id'];
+        final rowData = Map<String, dynamic>.from(decodedRow)..remove('row_id');
+
+        final stmt =
+            _db.prepare('UPDATE $tableName SET ${rowData.keys.map((key) => "$key = ?").join(", ")} WHERE rowid = ?');
+        stmt.execute([...rowData.values, rowId]);
+        stmt.dispose();
+      }
+    }
+  }
+
+  void _applyDeletions(ChangeSet changeSet) {
+    for (var entry in changeSet.deletions.changes.entries) {
+      final tableName = entry.key;
+      final tableRows = entry.value;
+
+      for (var row in tableRows.rows) {
+        final decodedRow = jsonDecode(row);
+        final stmt = _db.prepare('DELETE FROM $tableName WHERE rowid = ?');
+        stmt.execute([decodedRow['row_id']]);
+        stmt.dispose();
+      }
+    }
+  }
+
+  void _emitChangeAcknowledgment(ChangeSet changeSet) {
+    _socket.emitWithAck('change', changeSet.toJson(), ack: (ackData) {
+      if (ackData != null && ackData['status'] == 'success') {
+        log('Device acknowledged change notification');
+      } else {
+        log('Device failed to acknowledge change');
+        throw Exception('Change notification not acknowledged');
+      }
+    });
   }
 
   Future<void> dispose() async {

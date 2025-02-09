@@ -56,9 +56,9 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
       const deviceId = client.handshake.query.deviceId as string;
       if (deviceId) {
         // Check if device exists in database
-        const device = await this.prisma.device.findUnique({
-          where: { id: deviceId }
-        });
+        const device = await this.prisma.device.findFirst({
+          where: { deviceId }
+        })
 
         if (!device) {
           this.logger.warn(`Unknown device attempting to connect: ${deviceId}`);
