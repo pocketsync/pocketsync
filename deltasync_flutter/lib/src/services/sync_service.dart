@@ -29,7 +29,7 @@ class SyncService {
   Future<void> uploadChanges(ChangeSet changeSet) async {
     try {
       final response = await _dio.post(
-        '/sync',
+        '/sdk/changes',
         data: changeSet.toJson(),
       );
 
