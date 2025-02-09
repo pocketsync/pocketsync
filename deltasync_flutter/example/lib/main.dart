@@ -1,7 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:deltasync_flutter/deltasync_flutter.dart';
 import 'views/todo_list_view.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await DeltaSync.instance.initialize(
+    dbPath: 'todo.db',
+    syncInterval: const Duration(seconds: 15),
+    options: DeltaSyncOptions(
+      projectId: '05a2c7a3-0b00-418e-8226-39d74b02e71c',
+      projectApiKey: '0a9d6e9c-04f4-4323-b5d0-52eaf0179a24',
+      serverUrl: 'https://your-api-endpoint.com',
+    ),
+  );
+
+  // Set user ID - In a real app, this would come from your auth system
+  await DeltaSync.instance.setUserId(userId: 'test-user');
+
+  // Start syncing
+  await DeltaSync.instance.startSync();
+
   runApp(const MyApp());
 }
 
