@@ -30,7 +30,7 @@ class RemoteChangeListener {
 
   void _initializeSocket(String wsUrl, String deviceId, String userId) {
     _socket = io.io(
-      wsUrl,
+      '$wsUrl/changes',
       io.OptionBuilder()
           .setTransports(['websocket'])
           .setExtraHeaders({
@@ -68,7 +68,8 @@ class RemoteChangeListener {
       ..onDisconnect((_) => _onDisconnect())
       ..onError((error) => _onError(error))
       ..onConnectError((error) => _onError(error))
-      ..on('CHANGE_NOTIFICATION', (data) => _handleMessage(data));
+      ..on('CHANGE_NOTIFICATION', (data) => _handleMessage(data))
+      ..on('connected', (data) => log('Received on connection: $data'));
   }
 
   void _onConnect() {
