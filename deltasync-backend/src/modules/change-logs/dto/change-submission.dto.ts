@@ -5,10 +5,6 @@ import { ChangeSetDto } from './change-set.dto';
 export class ChangeSubmissionDto {
   @IsUUID()
   @IsNotEmpty()
-  appUserId: string;
-
-  @IsUUID()
-  @IsNotEmpty()
   deviceId: string;
 
   @ValidateNested()

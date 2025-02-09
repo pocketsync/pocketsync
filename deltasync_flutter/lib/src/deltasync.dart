@@ -1,38 +1,79 @@
 import 'dart:async';
 import 'package:deltasync_flutter/src/models/change_set.dart';
+import 'package:deltasync_flutter/src/models/delta_sync_options.dart';
 import 'package:deltasync_flutter/src/services/sync_service.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'services/change_tracker.dart';
 import 'errors/sync_error.dart';
 
 class DeltaSync {
-  final String dbPath;
-  final String serverUrl;
-  final String projectId;
-  final String apiKey;
-  final String userIdentifier;
-  late final SyncService _syncService;
+  static final DeltaSync instance = DeltaSync._();
+  DeltaSync._();
 
   Database? _db;
   ChangeTracker? _changeTracker;
+  SyncService? _syncService;
   bool _isInitialized = false;
   int _lastSyncTimestamp = 0;
   Timer? _syncTimer;
+  String? _userId;
   final _syncController = StreamController<ChangeSet>.broadcast();
+  StreamSubscription? _schemaChangeSubscription;
 
-  DeltaSync({
-    required this.dbPath,
-    required this.serverUrl,
-    required this.projectId,
-    required this.apiKey,
-    required this.userIdentifier,
-  }) {
-    _syncService = SyncService(
-      serverUrl: serverUrl,
-      projectId: projectId,
-      apiKey: apiKey,
-      userIdentifier: userIdentifier,
-    );
+  Stream<ChangeSet> get changes => _syncController.stream;
+
+  Future<void> initialize({
+    required String dbPath,
+    Duration syncInterval = const Duration(seconds: 30),
+    required DeltaSyncOptions options,
+  }) async {
+    if (_isInitialized) return;
+
+    try {
+      _db = sqlite3.open(dbPath);
+      _changeTracker = ChangeTracker(_db!);
+      
+      _syncService = SyncService(
+        serverUrl: options.serverUrl,
+        projectId: options.projectId,
+        apiKey: options.projectApiKey,
+        userIdentifier: _userId ?? '',
+        changeTracker: _changeTracker!,  // Pass the ChangeTracker
+      );
+
+      await _changeTracker!.setupTracking();
+      await _initializeWatcher();
+      _setupSchemaChangeListener();
+
+      _isInitialized = true;
+    } catch (e) {
+      await dispose();
+      throw SyncError('Failed to initialize DeltaSync: $e');
+    }
+  }
+
+  Future<void> setUserId({required String userId}) async {
+    if (!_isInitialized) throw StateError('DeltaSync not initialized');
+    _userId = userId;
+
+    // Recreate sync service with new user ID
+    if (_syncService != null) {
+      _syncService!.dispose();
+      _syncService = SyncService(
+        serverUrl: _syncService!.serverUrl,
+        projectId: _syncService!.projectId,
+        apiKey: _syncService!.apiKey,
+        userIdentifier: userId,
+        changeTracker: _changeTracker!,
+      );
+    }
+  }
+
+  Future<void> startSync() async {
+    if (!_isInitialized) throw StateError('DeltaSync not initialized');
+    if (_userId == null) throw StateError('User ID not set');
+
+    _startPeriodicSync(const Duration(seconds: 30));
   }
 
   Future<void> _checkForChanges() async {
@@ -41,8 +82,9 @@ class DeltaSync {
     try {
       final changeSets = await _changeTracker!.generateChangeSets(_lastSyncTimestamp);
       for (final changeSet in changeSets) {
-        await _syncService.uploadChanges(changeSet);
-        await markChangesSynced(changeSet.timestamp);
+        await _syncService!.uploadChanges(changeSet);
+        // Remove this as it's now handled in SyncService
+        // await markChangesSynced(changeSet.timestamp);
         _syncController.add(changeSet);
       }
     } catch (e) {
@@ -55,34 +97,13 @@ class DeltaSync {
     _syncTimer = null;
     await _schemaChangeSubscription?.cancel();
     await _syncController.close();
-    _syncService.dispose();
+    _syncService?.dispose();
     _db?.dispose();
     _db = null;
     _changeTracker = null;
+    _syncService = null;
+    _userId = null;
     _isInitialized = false;
-  }
-
-  Stream<ChangeSet> get changes => _syncController.stream;
-
-  StreamSubscription? _schemaChangeSubscription;
-
-  Future<void> initialize({Duration syncInterval = const Duration(seconds: 30)}) async {
-    if (_isInitialized) return;
-
-    try {
-      _db = sqlite3.open(dbPath);
-      _changeTracker = ChangeTracker(_db!);
-
-      await _changeTracker!.setupTracking();
-      await _initializeWatcher();
-      _setupSchemaChangeListener();
-
-      _startPeriodicSync(syncInterval);
-      _isInitialized = true;
-    } catch (e) {
-      await dispose();
-      throw SyncError('Failed to initialize DeltaSync: $e');
-    }
   }
 
   void _setupSchemaChangeListener() {
@@ -137,9 +158,12 @@ class DeltaSync {
 
   Future<void> resumeSync({Duration? interval}) async {
     if (!_isInitialized) throw StateError('DeltaSync not initialized');
+    if (_userId == null) throw StateError('User ID not set');
+
     _startPeriodicSync(interval ?? const Duration(seconds: 30));
   }
 
   bool get isInitialized => _isInitialized;
   bool get isSyncing => _syncTimer != null;
+  bool get isUserSet => _userId != null;
 }

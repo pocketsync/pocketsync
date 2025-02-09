@@ -11,7 +11,19 @@ await DeltaSync.instance.initialize(
     serverUrl: 'https://api.example.com',
   ),
 );
+````
 
+Authenticate the app user:
+```dart
+await DeltaSync.instance.setUserId(userId: 'user-id');
+```
+
+Start sync:
+```dart
+await DeltaSync.instance.startSync();
+```
+
+```dart
 // Pause/Resume sync as needed
 await DeltaSync.instance.pauseSync();
 await DeltaSync.instance.resumeSync();
