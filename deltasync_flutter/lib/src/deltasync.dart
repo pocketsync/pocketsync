@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:deltasync_flutter/src/models/change_set.dart';
 import 'package:deltasync_flutter/src/models/delta_sync_options.dart';
+import 'package:deltasync_flutter/src/services/device_manager.dart';
 import 'package:deltasync_flutter/src/services/sync_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'services/change_tracker.dart';
 import 'errors/sync_error.dart';
@@ -13,12 +15,14 @@ class DeltaSync {
   Database? _db;
   ChangeTracker? _changeTracker;
   SyncService? _syncService;
+  DeviceManager? _deviceManager;
   bool _isInitialized = false;
   int _lastSyncTimestamp = 0;
   Timer? _syncTimer;
   String? _userId;
   final _syncController = StreamController<ChangeSet>.broadcast();
   StreamSubscription? _schemaChangeSubscription;
+  SharedPreferences? _sharedPreferences;
 
   Stream<ChangeSet> get changes => _syncController.stream;
 
@@ -31,14 +35,16 @@ class DeltaSync {
 
     try {
       _db = sqlite3.open(dbPath);
+      _sharedPreferences = await SharedPreferences.getInstance();
       _changeTracker = ChangeTracker(_db!);
-      
+
       _syncService = SyncService(
         serverUrl: options.serverUrl,
         projectId: options.projectId,
         apiKey: options.projectApiKey,
         userIdentifier: _userId ?? '',
-        changeTracker: _changeTracker!,  // Pass the ChangeTracker
+        changeTracker: _changeTracker!,
+        deviceManager: DeviceManager(_sharedPreferences!),
       );
 
       await _changeTracker!.setupTracking();
@@ -56,7 +62,6 @@ class DeltaSync {
     if (!_isInitialized) throw StateError('DeltaSync not initialized');
     _userId = userId;
 
-    // Recreate sync service with new user ID
     if (_syncService != null) {
       _syncService!.dispose();
       _syncService = SyncService(
@@ -65,6 +70,7 @@ class DeltaSync {
         apiKey: _syncService!.apiKey,
         userIdentifier: userId,
         changeTracker: _changeTracker!,
+        deviceManager: _deviceManager!,
       );
     }
   }
@@ -83,8 +89,6 @@ class DeltaSync {
       final changeSets = await _changeTracker!.generateChangeSets(_lastSyncTimestamp);
       for (final changeSet in changeSets) {
         await _syncService!.uploadChanges(changeSet);
-        // Remove this as it's now handled in SyncService
-        // await markChangesSynced(changeSet.timestamp);
         _syncController.add(changeSet);
       }
     } catch (e) {
@@ -108,10 +112,10 @@ class DeltaSync {
 
   void _setupSchemaChangeListener() {
     _schemaChangeSubscription = _changeTracker!.schemaChanges.listen((schemaChange) {
-      // Notify listeners about schema changes
-      _syncController.addError(SyncError('Schema changed for table ${schemaChange.tableName} '
-          'to version ${schemaChange.version}'));
-      // Optionally pause sync until schema change is handled
+      _syncController.addError(SyncError(
+        'Schema changed for table ${schemaChange.tableName} '
+        'to version ${schemaChange.version}',
+      ));
       pauseSync();
     }, onError: (error) {
       _syncController.addError(SyncError('Failed to monitor schema changes: $error'));

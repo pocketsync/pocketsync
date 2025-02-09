@@ -1,4 +1,5 @@
 import 'package:deltasync_flutter/src/services/change_tracker.dart';
+import 'package:deltasync_flutter/src/services/device_manager.dart';
 import 'package:dio/dio.dart';
 import '../models/change_set.dart';
 import '../errors/sync_error.dart';
@@ -8,7 +9,8 @@ class SyncService {
   final String projectId;
   final String apiKey;
   final String userIdentifier;
-  final ChangeTracker changeTracker; // Add ChangeTracker reference
+  final DeviceManager deviceManager;
+  final ChangeTracker changeTracker;
   late final Dio _dio;
 
   static const _maxRetries = 3;
@@ -23,7 +25,8 @@ class SyncService {
     required this.projectId,
     required this.apiKey,
     required this.userIdentifier,
-    required this.changeTracker, // Add this parameter
+    required this.changeTracker,
+    required this.deviceManager,
   }) {
     _dio = Dio(BaseOptions(
       baseUrl: serverUrl,
@@ -49,11 +52,13 @@ class SyncService {
     try {
       final response = await _dio.post(
         '/sdk/changes',
-        data: changeSet.toJson(),
+        data: {
+          'deviceId': deviceManager.getDeviceId(),
+          'changeSet': changeSet.toJson(),
+        },
       );
 
       if (response.statusCode == 200) {
-        // Mark changes as synced only after successful upload
         await changeTracker.markChangesAsSynced(changeSet.timestamp);
       } else {
         throw SyncError('Failed to upload changes: ${response.data}');
