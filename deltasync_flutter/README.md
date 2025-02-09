@@ -12,13 +12,6 @@ await DeltaSync.instance.initialize(
   ),
 );
 
-// Listen to changes
-DeltaSync.instance.changes.listen((changeSet) {
-  // Handle changes
-}, onError: (error) {
-  // Handle errors
-});
-
 // Pause/Resume sync as needed
 await DeltaSync.instance.pauseSync();
 await DeltaSync.instance.resumeSync();

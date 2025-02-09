@@ -1,13 +1,18 @@
 import 'dart:async';
 import 'package:deltasync_flutter/src/models/change_set.dart';
+import 'package:deltasync_flutter/src/services/sync_service.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'services/change_tracker.dart';
 import 'errors/sync_error.dart';
 
 class DeltaSync {
   final String dbPath;
-  final String authToken;
   final String serverUrl;
+  final String projectId;
+  final String apiKey;
+  final String userIdentifier;
+  late final SyncService _syncService;
+
   Database? _db;
   ChangeTracker? _changeTracker;
   bool _isInitialized = false;
@@ -17,9 +22,45 @@ class DeltaSync {
 
   DeltaSync({
     required this.dbPath,
-    required this.authToken,
     required this.serverUrl,
-  });
+    required this.projectId,
+    required this.apiKey,
+    required this.userIdentifier,
+  }) {
+    _syncService = SyncService(
+      serverUrl: serverUrl,
+      projectId: projectId,
+      apiKey: apiKey,
+      userIdentifier: userIdentifier,
+    );
+  }
+
+  Future<void> _checkForChanges() async {
+    if (!_isInitialized) return;
+
+    try {
+      final changeSets = await _changeTracker!.generateChangeSets(_lastSyncTimestamp);
+      for (final changeSet in changeSets) {
+        await _syncService.uploadChanges(changeSet);
+        await markChangesSynced(changeSet.timestamp);
+        _syncController.add(changeSet);
+      }
+    } catch (e) {
+      _syncController.addError(SyncError('Failed to sync changes: $e'));
+    }
+  }
+
+  Future<void> dispose() async {
+    _syncTimer?.cancel();
+    _syncTimer = null;
+    await _schemaChangeSubscription?.cancel();
+    await _syncController.close();
+    _syncService.dispose();
+    _db?.dispose();
+    _db = null;
+    _changeTracker = null;
+    _isInitialized = false;
+  }
 
   Stream<ChangeSet> get changes => _syncController.stream;
 
@@ -74,19 +115,6 @@ class DeltaSync {
     _syncTimer = Timer.periodic(interval, (_) => _checkForChanges());
   }
 
-  Future<void> _checkForChanges() async {
-    if (!_isInitialized) return;
-
-    try {
-      final changeSets = await _changeTracker!.generateChangeSets(_lastSyncTimestamp);
-      for (final changeSet in changeSets) {
-        _syncController.add(changeSet);
-      }
-    } catch (e) {
-      _syncController.addError(SyncError('Failed to check for changes: $e'));
-    }
-  }
-
   Future<List<ChangeSet>> getChanges() async {
     if (!_isInitialized) throw StateError('DeltaSync not initialized');
     return await _changeTracker!.generateChangeSets(_lastSyncTimestamp);
@@ -110,17 +138,6 @@ class DeltaSync {
   Future<void> resumeSync({Duration? interval}) async {
     if (!_isInitialized) throw StateError('DeltaSync not initialized');
     _startPeriodicSync(interval ?? const Duration(seconds: 30));
-  }
-
-  Future<void> dispose() async {
-    _syncTimer?.cancel();
-    _syncTimer = null;
-    await _schemaChangeSubscription?.cancel();
-    await _syncController.close();
-    _db?.dispose();
-    _db = null;
-    _changeTracker = null;
-    _isInitialized = false;
   }
 
   bool get isInitialized => _isInitialized;
