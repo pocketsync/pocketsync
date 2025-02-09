@@ -29,6 +29,7 @@ class DeltaSync {
   StreamSubscription? _schemaChangeSubscription;
   SharedPreferences? _sharedPreferences;
   Duration? _syncInterval;
+  bool _isSyncing = false;
 
   Stream<ChangeSet> get changes => _syncController.stream;
 
@@ -60,32 +61,50 @@ class DeltaSync {
       _setupSchemaChangeListener();
 
       if (_userId != null) {
-        log('No user id, we will not be listening for changes on the server');
         await _setupRemoteChangeListener();
+      } else {
+        log('No user id set, remote change listening is disabled');
       }
 
       _isInitialized = true;
-    } catch (e) {
+    } catch (e, stackTrace) {
       await dispose();
-      throw SyncError('Failed to initialize DeltaSync: $e');
+      throw SyncError('Failed to initialize DeltaSync: $e\n$stackTrace');
     }
   }
 
   Future<void> setUserId({required String userId}) async {
     if (!_isInitialized) throw StateError('DeltaSync not initialized');
-    _userId = userId;
 
-    if (_syncService != null) {
-      _syncService!.dispose();
-      _syncService = SyncService(
-        serverUrl: _syncService!.serverUrl,
-        projectId: _syncService!.projectId,
-        apiKey: _syncService!.apiKey,
-        userIdentifier: userId,
-        changeTracker: _changeTracker!,
-        deviceManager: _deviceManager!,
-      );
-      await _setupRemoteChangeListener();
+    // Pause sync while updating user ID
+    final wasRunning = _syncTimer != null;
+    if (wasRunning) {
+      await pauseSync();
+    }
+
+    try {
+      _userId = userId;
+      if (_syncService != null) {
+        await _remoteChangeListener?.dispose();
+        _syncService!.dispose();
+
+        _syncService = SyncService(
+          serverUrl: _syncService!.serverUrl,
+          projectId: _syncService!.projectId,
+          apiKey: _syncService!.apiKey,
+          userIdentifier: userId,
+          changeTracker: _changeTracker!,
+          deviceManager: _deviceManager!,
+        );
+
+        if (_isInitialized) {
+          await _setupRemoteChangeListener();
+        }
+      }
+    } finally {
+      if (wasRunning && _isInitialized) {
+        await resumeSync();
+      }
     }
   }
 
@@ -97,16 +116,24 @@ class DeltaSync {
   }
 
   Future<void> _checkForChanges() async {
-    if (!_isInitialized) return;
+    if (!_isInitialized || _isSyncing) return;
 
+    _isSyncing = true;
     try {
       final changeSets = await _changeTracker!.generateChangeSets(_lastSyncTimestamp);
       for (final changeSet in changeSets) {
+        if (!_isInitialized) break;
         await _syncService!.uploadChanges(changeSet);
-        _syncController.add(changeSet);
+        if (_isInitialized) {
+          _syncController.add(changeSet);
+        }
       }
     } catch (e) {
-      _syncController.addError(SyncError('Failed to sync changes: $e'));
+      if (_isInitialized) {
+        _syncController.addError(SyncError('Failed to sync changes: $e'));
+      }
+    } finally {
+      _isSyncing = false;
     }
   }
 

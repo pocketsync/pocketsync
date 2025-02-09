@@ -7,11 +7,6 @@ class DeviceManager {
 
   DeviceManager(this._prefs);
 
-  static Future<DeviceManager> create() async {
-    final prefs = await SharedPreferences.getInstance();
-    return DeviceManager(prefs);
-  }
-
   String getDeviceId() {
     String? deviceId = _prefs.getString(_deviceIdKey);
     if (deviceId == null) {
