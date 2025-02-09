@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 import 'package:deltasync_flutter/src/models/change_set.dart';
 import 'package:deltasync_flutter/src/models/delta_sync_options.dart';
 import 'package:deltasync_flutter/src/services/device_manager.dart';
@@ -57,7 +58,11 @@ class DeltaSync {
       await _changeTracker!.setupTracking();
       await _initializeWatcher();
       _setupSchemaChangeListener();
-      await _setupRemoteChangeListener();
+
+      if (_userId != null) {
+        log('No user id, we will not be listening for changes on the server');
+        await _setupRemoteChangeListener();
+      }
 
       _isInitialized = true;
     } catch (e) {
@@ -113,6 +118,7 @@ class DeltaSync {
       wsUrl: _syncService!.serverUrl.replaceFirst('http', 'ws'),
       deviceId: _deviceManager!.getDeviceId(),
       db: _db!,
+      userId: _userId!,
     );
 
     await _remoteChangeListener!.connect();

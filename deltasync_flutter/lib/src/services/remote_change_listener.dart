@@ -15,14 +15,15 @@ class RemoteChangeListener {
     required String wsUrl,
     required String deviceId,
     required Database db,
+    required String userId,
   })  : _db = db,
         _changeController = StreamController<ChangeSet>.broadcast() {
-    _initializeSocket(wsUrl, deviceId);
+    _initializeSocket(wsUrl, deviceId, userId);
   }
 
   Stream<ChangeSet> get changes => _changeController.stream;
 
-  void _initializeSocket(String wsUrl, String deviceId) {
+  void _initializeSocket(String wsUrl, String deviceId, String userId) {
     _socket = io.io(
       '$wsUrl/changes?deviceId=$deviceId',
       io.OptionBuilder()
@@ -35,7 +36,11 @@ class RemoteChangeListener {
           .setReconnectionDelay(1000)
           .setReconnectionDelayMax(5000)
           .enableForceNewConnection()
-          .setExtraHeaders({'deviceId': deviceId, 'withCredentials': true})
+          .setExtraHeaders({
+            'deviceId': deviceId,
+            'x-app-user-id': userId,
+            'withCredentials': true,
+          })
           .build(),
     );
   }

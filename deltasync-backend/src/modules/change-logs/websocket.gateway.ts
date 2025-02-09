@@ -28,7 +28,7 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
 
   private deviceConnections = new Map<string, Socket>();
 
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   afterInit(server: Server) {
     this.logger.log('WebSocket Gateway initialized');
@@ -56,15 +56,19 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
       const deviceId = client.handshake.query.deviceId as string;
       if (deviceId) {
         // Check if device exists in database
-        const device = await this.prisma.device.findFirst({
+        let device = await this.prisma.device.findFirst({
           where: { deviceId }
-        })
+        });
 
         if (!device) {
-          this.logger.warn(`Unknown device attempting to connect: ${deviceId}`);
-          client.emit('error', { message: 'Device not registered' });
-          client.disconnect();
-          return;
+          const appUserId = client.handshake.headers['x-app-user-id'] as string;
+          device = await this.prisma.device.create({
+            data: {
+              deviceId,
+              appUserId: appUserId
+            },
+          });
+          this.logger.log(`Created temporary device entry for ${deviceId}`);
         }
 
         // Handle potential duplicate connections
@@ -173,7 +177,7 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
               reject(new Error('Change notification not acknowledged'));
             }
           });
-  
+
           // Set a timeout for acknowledgment
           setTimeout(() => {
             reject(new Error('Change notification timeout'));
@@ -186,11 +190,11 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
           where: { id: deviceId },
           select: { appUserId: true }
         });
-  
+
         if (!device) {
           throw new Error(`Device ${deviceId} not found`);
         }
-  
+
         await this.prisma.changeLog.create({
           data: {
             deviceId,
