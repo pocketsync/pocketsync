@@ -4,11 +4,12 @@ import { DevicesController } from './devices.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { DevicesSdkController } from './devices.sdk.controller';
 import { AppUsersModule } from '../app-users/app-users.module';
+import { AppUsersService } from '../app-users/app-users.service';
 
 @Module({
   imports: [PrismaModule, AppUsersModule],
   controllers: [DevicesController, DevicesSdkController],
-  providers: [DevicesService],
+  providers: [DevicesService, AppUsersService],
   exports: [DevicesService],
 })
 export class DevicesModule {}

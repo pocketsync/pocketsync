@@ -237,7 +237,13 @@ class ChangeTracker {
             insertionMap.putIfAbsent(tableName, () => {}).add(jsonEncode(changeData['new']));
             break;
           case 'UPDATE':
-            updateMap.putIfAbsent(tableName, () => {}).add(jsonEncode(changeData['new']));
+            // Get the modified columns data
+            final modifiedColumns = changeData['modified_columns'] as Map<String, dynamic>;
+            // Filter out null values and create the update object
+            final updateData = Map.fromEntries(modifiedColumns.entries.where((e) => e.value != null));
+            if (updateData.isNotEmpty) {
+              updateMap.putIfAbsent(tableName, () => {}).add(jsonEncode(updateData));
+            }
             break;
           case 'DELETE':
             deletionMap.putIfAbsent(tableName, () => {}).add(jsonEncode(changeData['old']));

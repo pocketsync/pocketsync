@@ -3,10 +3,12 @@ import { ChangeLogsService } from './change-logs.service';
 import { ChangeLogsController } from './change-logs.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { WebSocketGateway } from './websocket.gateway';
+import { AppUsersService } from '../app-users/app-users.service';
+import { DevicesService } from '../devices/devices.service';
 
 @Module({
   imports: [PrismaModule],
   controllers: [ChangeLogsController],
-  providers: [ChangeLogsService, WebSocketGateway],
+  providers: [ChangeLogsService, AppUsersService, DevicesService, WebSocketGateway],
 })
-export class ChangeLogsModule {}
+export class ChangeLogsModule { }

@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:deltasync_flutter/src/services/change_tracker.dart';
 import 'package:deltasync_flutter/src/services/device_manager.dart';
 import 'package:dio/dio.dart';
@@ -50,6 +52,7 @@ class SyncService {
 
   Future<void> uploadChanges(ChangeSet changeSet) async {
     try {
+      print(changeSet.toJson());
       final response = await _dio.post(
         '/sdk/changes',
         data: {
@@ -116,6 +119,8 @@ class RetryInterceptor extends Interceptor {
   }
 
   bool _shouldRetry(DioException error) {
+    log('An error occured: ', error: error);
+    log('Details: ', error: error.response);
     return error.type == DioExceptionType.connectionError ||
         error.type == DioExceptionType.connectionTimeout ||
         error.response?.statusCode == 503;
