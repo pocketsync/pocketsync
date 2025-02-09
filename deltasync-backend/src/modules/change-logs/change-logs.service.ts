@@ -1,25 +1,31 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { WebSocketGateway } from './websocket.gateway';
 import { ChangeSetDto } from './dto/change-set.dto';
 
 @Injectable()
 export class ChangeLogsService {
+  private readonly logger = new Logger(ChangeLogsService.name);
+
   constructor(
     private prisma: PrismaService,
     private wsGateway: WebSocketGateway,
   ) { }
 
   async processChange(appUserId: string, deviceId: string, changeSet: ChangeSetDto) {
+    this.logger.log(`Processing change for user ${appUserId} from device ${deviceId}`);
     try {
       // 1. Record the change in the log (if it doesn't already exist)
       const changeLog = await this.createOrFindChangeLog(appUserId, deviceId, changeSet);
+      this.logger.log(`Change log ${changeLog.id} ${changeLog.processedAt ? 'already exists' : 'created'}`);
 
       // 2. Get user's current database state
       const userDb = await this.getOrCreateUserDatabase(appUserId);
+      this.logger.log(`Retrieved user database state, last synced at ${userDb.lastSyncedAt}`);
 
       // 3. Apply changes and resolve conflicts
       const updatedData = await this.resolveConflicts(userDb.data, changeSet);
+      this.logger.log('Conflicts resolved, merging changes into database');
 
       // 4. Update the server-side database
       await this.prisma.userDatabase.update({
@@ -39,19 +45,27 @@ export class ChangeLogsService {
 
       // 6. Notify other devices
       await this.notifyOtherDevices(appUserId, deviceId, changeSet);
+      this.logger.log('Change processing completed successfully');
 
       return changeLog;
     } catch (error) {
-      console.error('Error processing change:', error);
+      this.logger.error('Error processing change', {
+        error: error.message,
+        userId: appUserId,
+        deviceId,
+        stack: error.stack
+      });
       throw new InternalServerErrorException('Error processing change');
     }
   }
 
   private async createOrFindChangeLog(appUserId: string, deviceId: string, changeSet: ChangeSetDto) {
+    this.logger.debug('Checking for existing change log within last 100s');
     const existingChangeLog = await this.prisma.changeLog.findFirst({
       where: {
         appUserId,
         deviceId,
+        changeSet: { equals: JSON.stringify(changeSet) },
         receivedAt: {
           gte: new Date(Date.now() - 100000),
         },
@@ -101,8 +115,12 @@ export class ChangeLogsService {
         const bufferData = Buffer.from(currentData);
         const parsedData = JSON.parse(bufferData.toString('utf8').trim());
         currentState = { ...currentState, ...parsedData };
+        this.logger.debug(`Current database state parsed, version: ${currentState.version}`);
       } catch (error) {
-        console.error('Error parsing current database state:', error);
+        this.logger.error('Error parsing current database state', {
+          error: error.message,
+          stack: error.stack
+        });
       }
     }
 
