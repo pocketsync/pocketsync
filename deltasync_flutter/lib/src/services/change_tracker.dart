@@ -94,8 +94,6 @@ class ChangeTracker {
     if (!columns.contains('last_modified')) {
       db.execute('BEGIN TRANSACTION');
       try {
-        // Add column with a default value of 0
-
         db.execute('''
           ALTER TABLE $tableName ADD COLUMN last_modified INTEGER DEFAULT 0
         ''');

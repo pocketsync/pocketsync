@@ -104,13 +104,24 @@ class RemoteChangeListener {
   }
 
   void _handleMessage(dynamic data) {
+    if (_isDisposed) return;
+
     try {
       log('Received changes from remote server');
       final changeSet = ChangeSet.fromJson(data);
-      _applyChanges(changeSet);
-      _changeController.add(changeSet);
+      _applyChanges(changeSet).then((_) {
+        if (!_isDisposed) {
+          _changeController.add(changeSet);
+        }
+      }).catchError((e) {
+        if (!_isDisposed) {
+          _changeController.addError(e);
+        }
+      });
     } catch (e) {
-      _changeController.addError(e);
+      if (!_isDisposed) {
+        _changeController.addError(e);
+      }
     }
   }
 
@@ -157,14 +168,20 @@ class RemoteChangeListener {
       final tableRows = entry.value;
 
       for (var row in tableRows.rows) {
-        final decodedRow = jsonDecode(row);
-        final rowId = decodedRow['row_id'];
-        final rowData = Map<String, dynamic>.from(decodedRow)..remove('row_id');
+        var stmt = _db.prepare('');
+        try {
+          final decodedRow = jsonDecode(row);
+          final rowId = decodedRow['row_id'];
+          final rowData = Map<String, dynamic>.from(decodedRow)..remove('row_id');
 
-        final stmt =
-            _db.prepare('UPDATE $tableName SET ${rowData.keys.map((key) => "$key = ?").join(", ")} WHERE rowid = ?');
-        stmt.execute([...rowData.values, rowId]);
-        stmt.dispose();
+          if (rowData.isEmpty) continue;
+
+          final query = 'UPDATE $tableName SET ${rowData.keys.map((key) => "$key = ?").join(", ")} WHERE rowid = ?';
+          stmt = _db.prepare(query);
+          stmt.execute([...rowData.values, rowId]);
+        } finally {
+          stmt.dispose();
+        }
       }
     }
   }
@@ -175,23 +192,44 @@ class RemoteChangeListener {
       final tableRows = entry.value;
 
       for (var row in tableRows.rows) {
-        final decodedRow = jsonDecode(row);
-        final stmt = _db.prepare('DELETE FROM $tableName WHERE rowid = ?');
-        stmt.execute([decodedRow['row_id']]);
-        stmt.dispose();
+        var stmt = _db.prepare('');
+        try {
+          final decodedRow = jsonDecode(row);
+          final rowId = decodedRow['row_id'];
+          if (rowId == null) continue;
+
+          stmt = _db.prepare('DELETE FROM $tableName WHERE rowid = ?');
+          stmt.execute([rowId]);
+        } finally {
+          stmt.dispose();
+        }
       }
     }
   }
 
   Future<void> _emitChangeAcknowledgment(ChangeSet changeSet) async {
+    final completer = Completer<void>();
+
     _socket.emitWithAck('change', changeSet.toJson(), ack: (ackData) {
-      if (ackData != null && ackData['status'] == 'success') {
-        log('Device acknowledged change notification');
-      } else {
-        log('Device failed to acknowledge change');
-        throw Exception('Change notification not acknowledged');
+      if (!_isDisposed) {
+        if (ackData != null && ackData['status'] == 'success') {
+          log('Device acknowledged change notification');
+          completer.complete();
+        } else {
+          final error = Exception('Change notification not acknowledged: ${ackData?['error'] ?? 'Unknown error'}');
+          log('Device failed to acknowledge change: $error');
+          completer.completeError(error);
+        }
       }
     });
+
+    Timer(const Duration(seconds: 30), () {
+      if (!completer.isCompleted) {
+        completer.completeError(TimeoutException('Change acknowledgment timed out'));
+      }
+    });
+
+    return completer.future;
   }
 
   Future<void> dispose() async {
