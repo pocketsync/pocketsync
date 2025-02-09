@@ -85,6 +85,7 @@ class DeltaSync {
         changeTracker: _changeTracker!,
         deviceManager: _deviceManager!,
       );
+      await _setupRemoteChangeListener();
     }
   }
 
