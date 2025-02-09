@@ -114,9 +114,15 @@ export class AppUsersService {
     }
   }
 
-  async findByUserIdentifier(userIdentifier: string) {
+  async findByUserIdentifier(userIdentifier: string, projectId: string) {
     return this.prisma.appUser.findFirst({
-      where: { id: userIdentifier },
+      where: {
+        userIdentifier,
+        projectId,
+      },
+      include: {
+        project: true,
+      },
     });
   }
 

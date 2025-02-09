@@ -34,9 +34,9 @@ export class DevicesService {
     });
   }
 
-  async createFromSdk(data: { deviceId: string; userIdentifier: string }) {
-    let appUser = await this.appUsersService.findByUserIdentifier(data.userIdentifier);
-
+  async createFromSdk(data: { deviceId: string; userIdentifier: string, projectId: string }) {
+    let appUser = await this.appUsersService.findByUserIdentifier(data.userIdentifier, data.projectId);
+    
     if (!appUser) {
       throw new NotFoundException('App user not found');
     }

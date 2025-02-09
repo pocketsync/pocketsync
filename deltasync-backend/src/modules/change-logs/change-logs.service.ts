@@ -7,10 +7,27 @@ export class ChangeLogsService {
   constructor(
     private prisma: PrismaService,
     private wsGateway: WebSocketGateway,
-  ) {}
+  ) { }
 
-  async processChange(appUserId: string, deviceId: string, changeSet: any) {
-    console.log(changeSet)
+  async processChange(appUserId: string, projectId: string, deviceId: string, changeSet: any) {
+
+    // Check if app user exists, if not create it
+    const appUser = await this.prisma.appUser.findUnique({
+      where: { id: appUserId },
+      include: { project: true },
+    });
+
+    if (!appUser) {
+      // Create new app user with the provided ID
+      await this.prisma.appUser.create({
+        data: {
+          id: appUserId,
+          projectId: projectId,
+          userIdentifier: appUserId,
+        },
+      });
+    }
+
     // 1. Record the change in the log
     const changeLog = await this.prisma.changeLog.create({
       data: {

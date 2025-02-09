@@ -25,7 +25,7 @@ export class ChangeLogsController {
     }
 
     // Ensure app user exists or create it
-    let appUser = await this.appUsersService.findByUserIdentifier(userIdentifier);
+    let appUser = await this.appUsersService.findByUserIdentifier(userIdentifier, projectId);
 
     if (!appUser) {
       appUser = await this.appUsersService.createFromSdk({
@@ -40,13 +40,15 @@ export class ChangeLogsController {
     if (!device) {
       device = await this.devicesService.createFromSdk({
         deviceId: submission.deviceId,
-        userIdentifier: appUser.id,
+        userIdentifier: appUser.userIdentifier,
+        projectId: projectId,
       });
     }
 
     return this.changesService.processChange(
       appUser.id,
       device.id,
+      projectId,
       submission.changeSet,
     );
   }
