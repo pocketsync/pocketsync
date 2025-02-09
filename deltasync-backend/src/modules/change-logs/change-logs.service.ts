@@ -9,38 +9,42 @@ export class ChangeLogsService {
     private wsGateway: WebSocketGateway,
   ) { }
 
-  async processChange(appUserId: string, projectId: string, deviceId: string, changeSet: any) {
-
-    // Check if app user exists, if not create it
-    const appUser = await this.prisma.appUser.findUnique({
-      where: { id: appUserId },
-      include: { project: true },
-    });
-
-    if (!appUser) {
-      // Create new app user with the provided ID
-      await this.prisma.appUser.create({
-        data: {
-          id: appUserId,
-          projectId: projectId,
-          userIdentifier: appUserId,
-        },
-      });
-    }
-
+  async processChange(appUserId: string, deviceId: string, changeSet: any) {
     // 1. Record the change in the log
-    const changeLog = await this.prisma.changeLog.create({
-      data: {
+    // Check if a similar change log entry already exists
+    const existingChangeLog = await this.prisma.changeLog.findFirst({
+      where: {
         appUserId,
         deviceId,
+        changeSet: {
+          path: ['version'],
+          equals: changeSet.version
+        },
+        receivedAt: {
+          gte: new Date(Date.now() - 100000), // Look for entries within last 100 seconds
+        },
+      },
+    });
+
+    // Only create new change log if no similar entry exists
+    const changeLog = existingChangeLog || await this.prisma.changeLog.create({
+      data: {
+        appUserId,
+        deviceId: deviceId,
         changeSet,
         receivedAt: new Date(),
       },
     });
 
     // 2. Get user's current database state
-    const userDb = await this.prisma.userDatabase.findUnique({
+    const userDb = await this.prisma.userDatabase.findFirst({
       where: { appUserId },
+    }) || await this.prisma.userDatabase.create({
+      data: {
+        appUserId,
+        data: Buffer.from('{}'),
+        lastSyncedAt: new Date(),
+      }
     });
 
     // 3. Apply changes and resolve conflicts
@@ -73,11 +77,8 @@ export class ChangeLogsService {
   }
 
   private async resolveConflicts(currentData: Uint8Array | undefined, changeSet: any) {
-    // TODO: Implement your conflict resolution logic here
-    // This is where you'll implement your specific conflict resolution strategy
-    // For now, we'll just return a simple merged result
-    const current = currentData ? JSON.parse(currentData.toString()) : {};
-    return Buffer.from(JSON.stringify({ ...current, ...changeSet }));
+    console.log('Resolving conflicts')
+    return Buffer.from(JSON.stringify(changeSet));
   }
 
   private async notifyOtherDevices(appUserId: string, sourceDeviceId: string, changeSet: any) {

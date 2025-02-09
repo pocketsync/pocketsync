@@ -48,7 +48,6 @@ export class ChangeLogsController {
     return this.changesService.processChange(
       appUser.id,
       device.id,
-      projectId,
       submission.changeSet,
     );
   }

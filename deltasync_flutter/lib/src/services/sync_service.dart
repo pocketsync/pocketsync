@@ -52,7 +52,6 @@ class SyncService {
 
   Future<void> uploadChanges(ChangeSet changeSet) async {
     try {
-      print(changeSet.toJson());
       final response = await _dio.post(
         '/sdk/changes',
         data: {
@@ -61,11 +60,9 @@ class SyncService {
         },
       );
 
-      if (response.statusCode == 200) {
-        await changeTracker.markChangesAsSynced(changeSet.timestamp);
-      } else {
-        throw SyncError('Failed to upload changes: ${response.data}');
-      }
+      log('Data uploaded with response: ${response.data}');
+
+      await changeTracker.markChangesAsSynced(changeSet.timestamp);
     } on DioException catch (e) {
       if (e.type == DioExceptionType.connectionError || e.type == DioExceptionType.connectionTimeout) {
         rethrow;
