@@ -23,6 +23,8 @@ class DeltaSync {
 
   Stream<ChangeSet> get changes => _syncController.stream;
 
+  StreamSubscription? _schemaChangeSubscription;
+
   Future<void> initialize({Duration syncInterval = const Duration(seconds: 30)}) async {
     if (_isInitialized) return;
 
@@ -32,6 +34,7 @@ class DeltaSync {
 
       await _changeTracker!.setupTracking();
       await _initializeWatcher();
+      _setupSchemaChangeListener();
 
       _startPeriodicSync(syncInterval);
       _isInitialized = true;
@@ -39,6 +42,18 @@ class DeltaSync {
       await dispose();
       throw SyncError('Failed to initialize DeltaSync: $e');
     }
+  }
+
+  void _setupSchemaChangeListener() {
+    _schemaChangeSubscription = _changeTracker!.schemaChanges.listen((schemaChange) {
+      // Notify listeners about schema changes
+      _syncController.addError(SyncError('Schema changed for table ${schemaChange.tableName} '
+          'to version ${schemaChange.version}'));
+      // Optionally pause sync until schema change is handled
+      pauseSync();
+    }, onError: (error) {
+      _syncController.addError(SyncError('Failed to monitor schema changes: $error'));
+    });
   }
 
   Future<void> _initializeWatcher() async {
