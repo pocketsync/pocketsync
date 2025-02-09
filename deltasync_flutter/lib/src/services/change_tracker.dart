@@ -66,6 +66,7 @@ class ChangeTracker {
       return 1;
     } else if (existing.first['schema_hash'] != schemaHash) {
       final newVersion = (existing.first['schema_version'] as int) + 1;
+
       db.execute('''
         UPDATE __deltasync_versions 
         SET schema_version = ?, schema_hash = ?, last_modified = ?
@@ -94,6 +95,7 @@ class ChangeTracker {
       db.execute('BEGIN TRANSACTION');
       try {
         // Add column with a default value of 0
+
         db.execute('''
           ALTER TABLE $tableName ADD COLUMN last_modified INTEGER DEFAULT 0
         ''');
@@ -101,28 +103,32 @@ class ChangeTracker {
         // Update all existing rows with current timestamp and create initial change records
         final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
         final existingRows = db.select('SELECT rowid, * FROM $tableName');
-        
+
         for (final row in existingRows) {
           final rowId = row['rowid'];
           final rowData = Map<String, dynamic>.from(row);
           rowData.remove('rowid'); // Remove rowid from the data
-          
-          db.execute('''
-            INSERT INTO __deltasync_changes (
-              table_name, row_id, operation, timestamp, change_data, sync_status
-            ) VALUES (?, ?, ?, ?, ?, ?)
-          ''', [
-            tableName,
-            rowId,
-            'INSERT',
-            now,
-            jsonEncode({
-              'new': rowData,
-              'schema_version': schemaVersion,
-              'row_id': rowId
-            }),
-            'pending'
-          ]);
+
+          // Check if there's already a pending insert for this row
+          final existingChange = db.select('''
+            SELECT id FROM __deltasync_changes 
+            WHERE table_name = ? AND row_id = ? AND operation = 'INSERT' AND sync_status = 'pending'
+          ''', [tableName, rowId]);
+
+          if (existingChange.isEmpty) {
+            db.execute('''
+              INSERT INTO __deltasync_changes (
+                table_name, row_id, operation, timestamp, change_data, sync_status
+              ) VALUES (?, ?, ?, ?, ?, ?)
+            ''', [
+              tableName,
+              rowId,
+              'INSERT',
+              now,
+              jsonEncode({'new': rowData, 'schema_version': schemaVersion, 'row_id': rowId}),
+              'pending'
+            ]);
+          }
         }
 
         db.execute('''
@@ -141,7 +147,7 @@ class ChangeTracker {
     db.execute('''
       CREATE TRIGGER IF NOT EXISTS after_update_$tableName
       AFTER UPDATE ON $tableName
-      WHEN ${_generateUpdateCondition(columns)}
+      WHEN ${_generateUpdateCondition(columns)} AND NOT (NEW.last_modified != OLD.last_modified AND NEW.last_modified = strftime('%s', 'now'))
       BEGIN
         INSERT INTO __deltasync_changes (
           table_name, row_id, operation, timestamp, change_data
@@ -181,6 +187,25 @@ class ChangeTracker {
         );
         UPDATE $tableName SET last_modified = strftime('%s', 'now') 
         WHERE rowid = NEW.rowid;
+      END;
+    ''');
+
+    db.execute('''
+      CREATE TRIGGER IF NOT EXISTS after_delete_$tableName
+      AFTER DELETE ON $tableName
+      BEGIN
+        INSERT INTO __deltasync_changes (
+          table_name, row_id, operation, timestamp, change_data
+        ) VALUES (
+          '$tableName',
+          OLD.rowid,
+          'DELETE',
+          strftime('%s', 'now'),
+          json_object(
+            'old', json_object(${_generateColumnList(tableName, prefix: 'OLD')}),
+            'schema_version', $schemaVersion
+          )
+        );
       END;
     ''');
   }
@@ -297,6 +322,7 @@ class ChangeTracker {
   Future<void> markChangesAsSynced(int upToTimestamp) async {
     try {
       db.execute('BEGIN TRANSACTION');
+
       db.execute('''
       UPDATE __deltasync_changes 
       SET sync_status = 'synced' 
