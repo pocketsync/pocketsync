@@ -1,7 +1,18 @@
 import { IsObject, IsArray, IsString, ValidateNested, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 
+class TableSchema {
+    @IsNumber()
+    version: number;
+
+    @IsString()
+    hash: string;
+}
+
 class TableRows {
+    @IsNumber()
+    schemaVersion: number;
+
     @IsArray()
     @IsString({ each: true })
     rows: string[];
@@ -17,6 +28,11 @@ export class ChangeSetDto {
 
     @IsNumber()
     version: number;
+
+    @IsObject()
+    @ValidateNested()
+    @Type(() => TableSchema)
+    schemas: { [tableName: string]: TableSchema };
 
     @IsObject()
     @ValidateNested()
