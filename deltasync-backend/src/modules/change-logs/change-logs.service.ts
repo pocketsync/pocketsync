@@ -10,6 +10,7 @@ export class ChangeLogsService {
   ) {}
 
   async processChange(appUserId: string, deviceId: string, changeSet: any) {
+    console.log(changeSet)
     // 1. Record the change in the log
     const changeLog = await this.prisma.changeLog.create({
       data: {
