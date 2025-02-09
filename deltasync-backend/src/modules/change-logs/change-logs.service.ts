@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { WebSocketGateway } from './websocket.gateway';
 
@@ -42,38 +42,50 @@ export class ChangeLogsService {
     }) || await this.prisma.userDatabase.create({
       data: {
         appUserId,
-        data: Buffer.from('{}'),
+        data: Buffer.from(JSON.stringify({
+          version: 0,
+          timestamp: Date.now(),
+          operations: [],
+          lastModified: new Date().toISOString()
+        })),
         lastSyncedAt: new Date(),
       }
     });
 
-    // 3. Apply changes and resolve conflicts
-    const updatedData = await this.resolveConflicts(userDb?.data, changeSet);
+    try {
 
-    // 4. Update the server-side database
-    await this.prisma.userDatabase.upsert({
-      where: { appUserId },
-      create: {
-        appUserId,
-        data: updatedData,
-        lastSyncedAt: new Date(),
-      },
-      update: {
-        data: updatedData,
-        lastSyncedAt: new Date(),
-      },
-    });
+      // 3. Apply changes and resolve conflicts
+      const updatedData = await this.resolveConflicts(userDb?.data, changeSet);
 
-    // 5. Mark change as processed
-    await this.prisma.changeLog.update({
-      where: { id: changeLog.id },
-      data: { processedAt: new Date() },
-    });
+      // 4. Update the server-side database
+      await this.prisma.userDatabase.upsert({
+        where: { appUserId },
+        create: {
+          appUserId,
+          data: updatedData,
+          lastSyncedAt: new Date(),
+        },
+        update: {
+          data: updatedData,
+          lastSyncedAt: new Date(),
+        },
+      });
 
-    // 6. Notify other devices
-    await this.notifyOtherDevices(appUserId, deviceId, changeSet);
+      // 5. Mark change as processed
+      await this.prisma.changeLog.update({
+        where: { id: changeLog.id },
+        data: { processedAt: new Date() },
+      });
 
-    return changeLog;
+      // 6. Notify other devices
+      await this.notifyOtherDevices(appUserId, deviceId, changeSet);
+
+      return changeLog;
+    } catch (error) {
+      console.error('Error processing change:', error);
+      // Handle error appropriately, e.g., log it or throw a custom error
+      throw new InternalServerErrorException('Error processing change');
+    }
   }
 
   private async resolveConflicts(currentData: Uint8Array | undefined, changeSet: any) {
@@ -88,22 +100,6 @@ export class ChangeLogsService {
       const timestamp = typeof changeSet.timestamp === 'number' ? changeSet.timestamp : Date.now();
       const operations = Array.isArray(changeSet.operations) ? changeSet.operations : [];
 
-      // Validate operations structure
-      for (const op of operations) {
-        if (!op || typeof op !== 'object') {
-          throw new Error('Invalid operation: each operation must be an object');
-        }
-        if (!op.table || typeof op.table !== 'string') {
-          throw new Error('Invalid operation: missing or invalid table');
-        }
-        if (!op.rowId || typeof op.rowId !== 'string') {
-          throw new Error('Invalid operation: missing or invalid rowId');
-        }
-        if (typeof op.timestamp !== 'number') {
-          op.timestamp = timestamp; // Use changeset timestamp if operation timestamp is missing
-        }
-      }
-
       // Parse the current database state
       let currentState = {
         version: 0,
@@ -114,8 +110,9 @@ export class ChangeLogsService {
 
       if (currentData && currentData.length > 0) {
         try {
-          const dataString = currentData.toString().trim();
-          if (dataString) {
+          // Convert Buffer to string and ensure it's properly trimmed
+          const dataString = Buffer.from(currentData).toString('utf8').trim();
+          if (dataString && dataString !== '{}') {
             const parsedData = JSON.parse(dataString);
             if (typeof parsedData === 'object' && parsedData !== null) {
               currentState = {
@@ -134,22 +131,12 @@ export class ChangeLogsService {
 
       // If current state is empty or new changes are newer
       if (currentState.operations.length === 0 || timestamp > currentState.timestamp) {
-        // Filter out duplicate operations
-        const uniqueOperations = operations.filter(newOp => {
-          return !currentState.operations.some((existingOp: any) =>
-            existingOp.table === newOp.table &&
-            existingOp.rowId === newOp.rowId &&
-            existingOp.timestamp >= newOp.timestamp
-          );
-        });
-
         const updatedState = {
           version: Math.max(currentState.version, version),
           timestamp: Math.max(currentState.timestamp, timestamp),
-          operations: [...currentState.operations, ...uniqueOperations].sort((a, b) => a.timestamp - b.timestamp),
+          operations: operations,
           lastModified: new Date().toISOString()
         };
-
         return Buffer.from(JSON.stringify(updatedState));
       }
 
@@ -159,7 +146,7 @@ export class ChangeLogsService {
       const mergedState = {
         version: Math.max(currentState.version, version),
         timestamp: Math.max(currentState.timestamp, timestamp),
-        operations: mergedOperations.sort((a, b) => a.timestamp - b.timestamp),
+        operations: mergedOperations,
         lastModified: new Date().toISOString()
       };
 
