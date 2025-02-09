@@ -77,10 +77,124 @@ export class ChangeLogsService {
   }
 
   private async resolveConflicts(currentData: Uint8Array | undefined, changeSet: any) {
-    console.log('Resolving conflicts')
-    return Buffer.from(JSON.stringify(changeSet));
+    try {
+      // Validate changeSet structure
+      if (!changeSet || typeof changeSet !== 'object') {
+        throw new Error('Invalid changeSet: must be an object');
+      }
+
+      // Ensure required fields exist with defaults
+      const version = typeof changeSet.version === 'number' ? changeSet.version : 0;
+      const timestamp = typeof changeSet.timestamp === 'number' ? changeSet.timestamp : Date.now();
+      const operations = Array.isArray(changeSet.operations) ? changeSet.operations : [];
+
+      // Validate operations structure
+      for (const op of operations) {
+        if (!op || typeof op !== 'object') {
+          throw new Error('Invalid operation: each operation must be an object');
+        }
+        if (!op.table || typeof op.table !== 'string') {
+          throw new Error('Invalid operation: missing or invalid table');
+        }
+        if (!op.rowId || typeof op.rowId !== 'string') {
+          throw new Error('Invalid operation: missing or invalid rowId');
+        }
+        if (typeof op.timestamp !== 'number') {
+          op.timestamp = timestamp; // Use changeset timestamp if operation timestamp is missing
+        }
+      }
+
+      // Parse the current database state
+      let currentState = {
+        version: 0,
+        timestamp: 0,
+        operations: [],
+        lastModified: new Date().toISOString()
+      };
+
+      if (currentData && currentData.length > 0) {
+        try {
+          const dataString = currentData.toString().trim();
+          if (dataString) {
+            const parsedData = JSON.parse(dataString);
+            if (typeof parsedData === 'object' && parsedData !== null) {
+              currentState = {
+                version: typeof parsedData.version === 'number' ? parsedData.version : 0,
+                timestamp: typeof parsedData.timestamp === 'number' ? parsedData.timestamp : 0,
+                operations: Array.isArray(parsedData.operations) ? parsedData.operations : [],
+                lastModified: typeof parsedData.lastModified === 'string' ? parsedData.lastModified : new Date().toISOString()
+              };
+            }
+          }
+        } catch (parseError) {
+          console.error('Error parsing current database state:', parseError);
+          // Continue with default state
+        }
+      }
+
+      // If current state is empty or new changes are newer
+      if (currentState.operations.length === 0 || timestamp > currentState.timestamp) {
+        // Filter out duplicate operations
+        const uniqueOperations = operations.filter(newOp => {
+          return !currentState.operations.some((existingOp: any) =>
+            existingOp.table === newOp.table &&
+            existingOp.rowId === newOp.rowId &&
+            existingOp.timestamp >= newOp.timestamp
+          );
+        });
+
+        const updatedState = {
+          version: Math.max(currentState.version, version),
+          timestamp: Math.max(currentState.timestamp, timestamp),
+          operations: [...currentState.operations, ...uniqueOperations].sort((a, b) => a.timestamp - b.timestamp),
+          lastModified: new Date().toISOString()
+        };
+
+        return Buffer.from(JSON.stringify(updatedState));
+      }
+
+      // Merge operations when current state is newer or has same timestamp
+      const mergedOperations = this.mergeOperations(currentState.operations, operations);
+
+      const mergedState = {
+        version: Math.max(currentState.version, version),
+        timestamp: Math.max(currentState.timestamp, timestamp),
+        operations: mergedOperations.sort((a, b) => a.timestamp - b.timestamp),
+        lastModified: new Date().toISOString()
+      };
+
+      return Buffer.from(JSON.stringify(mergedState));
+    } catch (error) {
+      console.error('Error resolving conflicts:', error);
+      // Return a safe fallback state
+      const fallbackState = {
+        version: 0,
+        timestamp: Date.now(),
+        operations: [],
+        lastModified: new Date().toISOString()
+      };
+      return Buffer.from(JSON.stringify(fallbackState));
+    }
   }
 
+  private mergeOperations(currentOps: any[], newOps: any[]): any[] {
+    // Create a map of operations by their target (table + row)
+    const opsByTarget = new Map();
+
+    // Process all operations in chronological order
+    [...currentOps, ...newOps].forEach(op => {
+      const target = `${op.table}:${op.rowId}`;
+      const existing = opsByTarget.get(target);
+
+      // If no existing operation or new operation is newer, use the new one
+      if (!existing || op.timestamp > existing.timestamp) {
+        opsByTarget.set(target, op);
+      }
+    });
+
+    // Convert map back to array
+    return Array.from(opsByTarget.values());
+  }
   private async notifyOtherDevices(appUserId: string, sourceDeviceId: string, changeSet: any) {
     // Get all other devices of this user
     const devices = await this.prisma.device.findMany({
