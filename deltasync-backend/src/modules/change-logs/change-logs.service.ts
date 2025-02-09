@@ -3,6 +3,22 @@ import { PrismaService } from '../prisma/prisma.service';
 import { WebSocketGateway } from './websocket.gateway';
 import { ChangeSetDto } from './dto/change-set.dto';
 
+interface DatabaseState {
+  version: number;
+  timestamp: number;
+  insertions: Record<string, TableData>;
+  updates: Record<string, TableData>;
+  deletions: Record<string, TableData>;
+  lastModified: string;
+}
+
+interface TableData {
+  rows: Array<{
+    row_id: string;
+    [key: string]: any;
+  }>;
+}
+
 @Injectable()
 export class ChangeLogsService {
   private readonly logger = new Logger(ChangeLogsService.name);
@@ -61,10 +77,20 @@ export class ChangeLogsService {
 
   private async createOrFindChangeLog(appUserId: string, deviceId: string, changeSet: ChangeSetDto) {
     this.logger.debug('Checking for existing change log within last 100s');
+    
+    const device = await this.prisma.device.findFirst({
+      where: { deviceId },
+      select: { id: true }
+    });
+
+    if (!device) {
+      throw new Error(`Device ${deviceId} not found`);
+    }
+
     const existingChangeLog = await this.prisma.changeLog.findFirst({
       where: {
         appUserId,
-        deviceId,
+        deviceId: device.id,
         changeSet: { equals: JSON.stringify(changeSet) },
         receivedAt: {
           gte: new Date(Date.now() - 100000),
@@ -75,7 +101,7 @@ export class ChangeLogsService {
     return existingChangeLog || await this.prisma.changeLog.create({
       data: {
         appUserId,
-        deviceId,
+        deviceId: device.id,
         changeSet: JSON.stringify(changeSet),
         receivedAt: new Date(),
       },
@@ -99,8 +125,8 @@ export class ChangeLogsService {
     });
   }
 
-  private async resolveConflicts(currentData: Uint8Array | undefined, changeSet: ChangeSetDto) {
-    let currentState = {
+  private async resolveConflicts(currentData: Uint8Array | undefined, changeSet: ChangeSetDto): Promise<Buffer> {
+    let currentState: DatabaseState = {
       version: 0,
       timestamp: Date.now(),
       insertions: {},
@@ -111,20 +137,26 @@ export class ChangeLogsService {
 
     if (currentData) {
       try {
-        // Convert Uint8Array to Buffer
         const bufferData = Buffer.from(currentData);
         const parsedData = JSON.parse(bufferData.toString('utf8').trim());
-        currentState = { ...currentState, ...parsedData };
+        
+        // Validate parsed data structure
+        if (!this.isValidDatabaseState(parsedData)) {
+          throw new Error('Invalid database state structure');
+        }
+        
+        currentState = parsedData;
         this.logger.debug(`Current database state parsed, version: ${currentState.version}`);
       } catch (error) {
         this.logger.error('Error parsing current database state', {
           error: error.message,
           stack: error.stack
         });
+        throw new InternalServerErrorException('Failed to parse database state');
       }
     }
 
-    const mergedState = {
+    const mergedState: DatabaseState = {
       version: Math.max(currentState.version, changeSet.version),
       timestamp: Math.max(currentState.timestamp, changeSet.timestamp),
       insertions: this.mergeTableChanges(currentState.insertions, changeSet.insertions),
@@ -136,8 +168,23 @@ export class ChangeLogsService {
     return Buffer.from(JSON.stringify(mergedState));
   }
 
-  private mergeTableChanges(currentChanges: any, newChanges: any): any {
-    const mergedChanges: any = { ...currentChanges };
+  private isValidDatabaseState(data: any): data is DatabaseState {
+    return (
+      typeof data === 'object' &&
+      typeof data.version === 'number' &&
+      typeof data.timestamp === 'number' &&
+      typeof data.insertions === 'object' &&
+      typeof data.updates === 'object' &&
+      typeof data.deletions === 'object' &&
+      typeof data.lastModified === 'string'
+    );
+  }
+
+  private mergeTableChanges(
+    currentChanges: Record<string, TableData>,
+    newChanges: Record<string, TableData>
+  ): Record<string, TableData> {
+    const mergedChanges: Record<string, TableData> = { ...currentChanges };
 
     for (const [tableName, tableData] of Object.entries(newChanges)) {
       if (!mergedChanges[tableName]) {
@@ -145,10 +192,10 @@ export class ChangeLogsService {
       }
 
       const existingRowsMap = new Map(
-        mergedChanges[tableName].rows.map((row: any) => [row.row_id, row]) // Ensure rows remain objects
+        mergedChanges[tableName].rows.map((row) => [row.row_id, row])
       );
 
-      for (const newRow of (tableData as any).rows) {
+      for (const newRow of tableData.rows) {
         const parsedRow = typeof newRow === 'string' ? JSON.parse(newRow) : newRow;
         existingRowsMap.set(parsedRow.row_id, parsedRow);
       }
@@ -160,10 +207,19 @@ export class ChangeLogsService {
   }
 
   private async notifyOtherDevices(appUserId: string, sourceDeviceId: string, changeSet: any) {
+    const sourceDevice = await this.prisma.device.findFirst({
+      where: { deviceId: sourceDeviceId },
+      select: { id: true }
+    });
+
+    if (!sourceDevice) {
+      throw new Error(`Source device ${sourceDeviceId} not found`);
+    }
+
     const devices = await this.prisma.device.findMany({
       where: {
         appUserId,
-        NOT: { deviceId: sourceDeviceId },
+        NOT: { id: sourceDevice.id },
       },
     });
 
@@ -173,7 +229,7 @@ export class ChangeLogsService {
         data: {
           appUserId,
           deviceId: device.id,
-          changeSet,
+          changeSet: JSON.stringify(changeSet),
           receivedAt: new Date(),
         },
       });
