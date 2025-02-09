@@ -89,13 +89,11 @@ class ChangeTracker {
     final columns =
         db.select("SELECT name FROM pragma_table_info(?)", [tableName]).map((row) => row['name'] as String).toList();
 
-    // Add last_modified column if it doesn't exist
     db.execute('''
       ALTER TABLE $tableName ADD COLUMN IF NOT EXISTS last_modified INTEGER 
       DEFAULT (strftime('%s', 'now'))
     ''');
 
-    // Create update trigger with optimized change tracking
     db.execute('''
       CREATE TRIGGER IF NOT EXISTS after_update_$tableName
       AFTER UPDATE ON $tableName
@@ -121,7 +119,6 @@ class ChangeTracker {
       END;
     ''');
 
-    // Create insert trigger with version check
     db.execute('''
       CREATE TRIGGER IF NOT EXISTS after_insert_$tableName
       AFTER INSERT ON $tableName
@@ -162,7 +159,6 @@ class ChangeTracker {
         .join(', ');
   }
 
-  // Add schema change notification support
   final _schemaChangeController = StreamController<SchemaChange>.broadcast();
   Stream<SchemaChange> get schemaChanges => _schemaChangeController.stream;
 

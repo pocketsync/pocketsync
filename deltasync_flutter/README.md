@@ -23,11 +23,13 @@ Start sync:
 await DeltaSync.instance.startSync();
 ```
 
+Pause and resume sync:
 ```dart
-// Pause/Resume sync as needed
 await DeltaSync.instance.pauseSync();
 await DeltaSync.instance.resumeSync();
+````
 
-// Clean up
+Cleanup:
+```dart
 await DeltaSync.instance.dispose();
 ```
