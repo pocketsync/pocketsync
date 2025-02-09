@@ -37,6 +37,7 @@ class DeltaSync {
       _db = sqlite3.open(dbPath);
       _sharedPreferences = await SharedPreferences.getInstance();
       _changeTracker = ChangeTracker(_db!);
+      _deviceManager = DeviceManager(_sharedPreferences!);
 
       _syncService = SyncService(
         serverUrl: options.serverUrl,
@@ -44,7 +45,7 @@ class DeltaSync {
         apiKey: options.projectApiKey,
         userIdentifier: _userId ?? '',
         changeTracker: _changeTracker!,
-        deviceManager: DeviceManager(_sharedPreferences!),
+        deviceManager: _deviceManager!,
       );
 
       await _changeTracker!.setupTracking();

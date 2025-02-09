@@ -89,10 +89,28 @@ class ChangeTracker {
     final columns =
         db.select("SELECT name FROM pragma_table_info(?)", [tableName]).map((row) => row['name'] as String).toList();
 
-    db.execute('''
-      ALTER TABLE $tableName ADD COLUMN IF NOT EXISTS last_modified INTEGER 
-      DEFAULT (strftime('%s', 'now'))
-    ''');
+    // Add last_modified column with a default value, then update it
+    if (!columns.contains('last_modified')) {
+      db.execute('BEGIN TRANSACTION');
+      try {
+        // Add column with a default value of 0
+        db.execute('''
+          ALTER TABLE $tableName ADD COLUMN last_modified INTEGER DEFAULT 0
+        ''');
+
+        // Update all existing rows with current timestamp
+        db.execute('''
+          UPDATE $tableName 
+          SET last_modified = strftime('%s', 'now')
+          WHERE last_modified = 0
+        ''');
+
+        db.execute('COMMIT');
+      } catch (e) {
+        db.execute('ROLLBACK');
+        throw e;
+      }
+    }
 
     db.execute('''
       CREATE TRIGGER IF NOT EXISTS after_update_$tableName

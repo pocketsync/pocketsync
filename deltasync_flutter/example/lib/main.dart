@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:deltasync_flutter/deltasync_flutter.dart';
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
 import 'views/todo_list_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  String path = join(await getDatabasesPath(), 'todo_database.db');
+
   await DeltaSync.instance.initialize(
-    dbPath: 'todo.db',
-    syncInterval: const Duration(seconds: 15),
+    dbPath: path,
+    syncInterval: const Duration(seconds: 3),
     options: DeltaSyncOptions(
       projectId: '05a2c7a3-0b00-418e-8226-39d74b02e71c',
       projectApiKey: '0a9d6e9c-04f4-4323-b5d0-52eaf0179a24',
-      serverUrl: 'https://your-api-endpoint.com',
+      serverUrl: 'http://127.0.0.1:3000',
     ),
   );
 
