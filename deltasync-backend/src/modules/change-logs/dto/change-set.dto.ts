@@ -27,17 +27,14 @@ export class ChangeSetDto {
     version: number;
 
     @IsObject()
-    @ValidateNested()
     @Type(() => TableChanges)
     insertions: TableChanges;
 
     @IsObject()
-    @ValidateNested()
     @Type(() => TableChanges)
     updates: TableChanges;
 
     @IsObject()
-    @ValidateNested()
     @Type(() => TableChanges)
     deletions: TableChanges;
 }

@@ -102,12 +102,12 @@ class ChangeTracker {
 
         // Update all existing rows with current timestamp and create initial change records
         final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-        final existingRows = db.select('SELECT rowid, * FROM $tableName');
+        final existingRows = db.select('SELECT oid as rowid, * FROM $tableName');
 
         for (final row in existingRows) {
           final rowId = row['rowid'];
           final rowData = Map<String, dynamic>.from(row);
-          rowData.remove('rowid'); // Remove rowid from the data
+          rowData.remove('rowid'); // Remove rowid from the data to avoid duplication
 
           // Check if there's already a pending insert for this row
           final existingChange = db.select('''
@@ -140,7 +140,7 @@ class ChangeTracker {
         db.execute('COMMIT');
       } catch (e) {
         db.execute('ROLLBACK');
-        throw e;
+        rethrow;
       }
     }
 
@@ -182,7 +182,8 @@ class ChangeTracker {
           strftime('%s', 'now'),
           json_object(
             'new', json_object(${_generateColumnList(tableName)}),
-            'schema_version', $schemaVersion
+            'schema_version', $schemaVersion,
+            'row_id', NEW.rowid
           )
         );
         UPDATE $tableName SET last_modified = strftime('%s', 'now') 
