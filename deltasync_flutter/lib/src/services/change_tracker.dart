@@ -98,12 +98,38 @@ class ChangeTracker {
           ALTER TABLE $tableName ADD COLUMN last_modified INTEGER DEFAULT 0
         ''');
 
-        // Update all existing rows with current timestamp
+        // Update all existing rows with current timestamp and create initial change records
+        final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        final existingRows = db.select('SELECT rowid, * FROM $tableName');
+        
+        for (final row in existingRows) {
+          final rowId = row['rowid'];
+          final rowData = Map<String, dynamic>.from(row);
+          rowData.remove('rowid'); // Remove rowid from the data
+          
+          db.execute('''
+            INSERT INTO __deltasync_changes (
+              table_name, row_id, operation, timestamp, change_data, sync_status
+            ) VALUES (?, ?, ?, ?, ?, ?)
+          ''', [
+            tableName,
+            rowId,
+            'INSERT',
+            now,
+            jsonEncode({
+              'new': rowData,
+              'schema_version': schemaVersion,
+              'row_id': rowId
+            }),
+            'pending'
+          ]);
+        }
+
         db.execute('''
           UPDATE $tableName 
-          SET last_modified = strftime('%s', 'now')
+          SET last_modified = ?
           WHERE last_modified = 0
-        ''');
+        ''', [now]);
 
         db.execute('COMMIT');
       } catch (e) {
@@ -230,23 +256,27 @@ class ChangeTracker {
         final changeData = jsonDecode(change['change_data'] as String);
         final operation = change['operation'] as String;
         final timestamp = change['timestamp'] as int;
+        final rowId = change['row_id'] as int;
         maxTimestamp = timestamp > maxTimestamp ? timestamp : maxTimestamp;
 
         switch (operation) {
           case 'INSERT':
-            insertionMap.putIfAbsent(tableName, () => {}).add(jsonEncode(changeData['new']));
+            final insertData = changeData['new'] as Map<String, dynamic>;
+            insertData['row_id'] = rowId;
+            insertionMap.putIfAbsent(tableName, () => {}).add(jsonEncode(insertData));
             break;
           case 'UPDATE':
-            // Get the modified columns data
             final modifiedColumns = changeData['modified_columns'] as Map<String, dynamic>;
-            // Filter out null values and create the update object
             final updateData = Map.fromEntries(modifiedColumns.entries.where((e) => e.value != null));
             if (updateData.isNotEmpty) {
+              updateData['row_id'] = rowId;
               updateMap.putIfAbsent(tableName, () => {}).add(jsonEncode(updateData));
             }
             break;
           case 'DELETE':
-            deletionMap.putIfAbsent(tableName, () => {}).add(jsonEncode(changeData['old']));
+            final deleteData = changeData['old'] as Map<String, dynamic>;
+            deleteData['row_id'] = rowId;
+            deletionMap.putIfAbsent(tableName, () => {}).add(jsonEncode(deleteData));
             break;
         }
       } catch (e) {
