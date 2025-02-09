@@ -8,6 +8,8 @@ import 'package:sqlite3/sqlite3.dart';
 import 'services/change_tracker.dart';
 import 'errors/sync_error.dart';
 
+const kDefaultSyncInternal = Duration(seconds: 10);
+
 class DeltaSync {
   static final DeltaSync instance = DeltaSync._();
   DeltaSync._();
@@ -23,6 +25,7 @@ class DeltaSync {
   final _syncController = StreamController<ChangeSet>.broadcast();
   StreamSubscription? _schemaChangeSubscription;
   SharedPreferences? _sharedPreferences;
+  Duration? _syncInterval;
 
   Stream<ChangeSet> get changes => _syncController.stream;
 
@@ -34,6 +37,7 @@ class DeltaSync {
     if (_isInitialized) return;
 
     try {
+      _syncInterval = syncInterval;
       _db = sqlite3.open(dbPath);
       _sharedPreferences = await SharedPreferences.getInstance();
       _changeTracker = ChangeTracker(_db!);
@@ -80,7 +84,7 @@ class DeltaSync {
     if (!_isInitialized) throw StateError('DeltaSync not initialized');
     if (_userId == null) throw StateError('User ID not set');
 
-    _startPeriodicSync(const Duration(seconds: 30));
+    _startPeriodicSync(_syncInterval);
   }
 
   Future<void> _checkForChanges() async {
@@ -136,9 +140,9 @@ class DeltaSync {
     }
   }
 
-  void _startPeriodicSync(Duration interval) {
+  void _startPeriodicSync(Duration? interval) {
     _syncTimer?.cancel();
-    _syncTimer = Timer.periodic(interval, (_) => _checkForChanges());
+    _syncTimer = Timer.periodic(interval ?? kDefaultSyncInternal, (_) => _checkForChanges());
   }
 
   Future<List<ChangeSet>> getChanges() async {
@@ -165,7 +169,7 @@ class DeltaSync {
     if (!_isInitialized) throw StateError('DeltaSync not initialized');
     if (_userId == null) throw StateError('User ID not set');
 
-    _startPeriodicSync(interval ?? const Duration(seconds: 30));
+    _startPeriodicSync(interval ?? _syncInterval);
   }
 
   bool get isInitialized => _isInitialized;
