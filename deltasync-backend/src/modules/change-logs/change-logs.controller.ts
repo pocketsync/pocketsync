@@ -1,15 +1,17 @@
 import { Controller, Post, Body, UseGuards, Headers, UnauthorizedException } from '@nestjs/common';
-import { ChangesService } from './changes.service';
+import { ChangeLogsService } from './change-logs.service';
 import { DevicesService } from '../devices/devices.service';
 import { ApiKeyAuthGuard } from '../../common/guards/api-key-auth.guard';
 import { ChangeSubmissionDto } from './dto/change-submission.dto';
+import { AppUsersService } from '../app-users/app-users.service';
 
 @Controller('sdk/changes')
 @UseGuards(ApiKeyAuthGuard)
 export class ChangeLogsController {
   constructor(
-    private readonly changesService: ChangesService,
+    private readonly changesService: ChangeLogsService,
     private readonly devicesService: DevicesService,
+    private readonly appUsersService: AppUsersService,
   ) { }
 
   @Post()
@@ -22,18 +24,28 @@ export class ChangeLogsController {
       throw new UnauthorizedException('User identifier is required');
     }
 
+    // Ensure app user exists or create it
+    let appUser = await this.appUsersService.findByUserIdentifier(userIdentifier);
+
+    if (!appUser) {
+      appUser = await this.appUsersService.createFromSdk({
+        userIdentifier,
+        projectId: projectId,
+      });
+    }
+
     // Ensure device exists or create it
     let device = await this.devicesService.findByDeviceId(submission.deviceId);
 
     if (!device) {
       device = await this.devicesService.createFromSdk({
         deviceId: submission.deviceId,
-        userIdentifier,
+        userIdentifier: appUser.id,
       });
     }
 
     return this.changesService.processChange(
-      userIdentifier,
+      appUser.id,
       device.id,
       submission.changeSet,
     );

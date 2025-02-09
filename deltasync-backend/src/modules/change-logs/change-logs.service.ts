@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { WebSocketGateway } from './websocket.gateway';
 
 @Injectable()
-export class ChangesService {
+export class ChangeLogsService {
   constructor(
     private prisma: PrismaService,
     private wsGateway: WebSocketGateway,
