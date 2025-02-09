@@ -30,13 +30,15 @@ class RemoteChangeListener {
 
   void _initializeSocket(String wsUrl, String deviceId, String userId) {
     _socket = io.io(
-      '$wsUrl/changes?deviceId=$deviceId',
+      wsUrl,
       io.OptionBuilder()
           .setTransports(['websocket'])
           .setExtraHeaders({
-            'deviceId': deviceId,
             'x-app-user-id': userId,
             'withCredentials': true,
+          })
+          .setQuery({
+            'deviceId': deviceId,
           })
           .setPath('/socket.io')
           .enableAutoConnect()
@@ -210,24 +212,34 @@ class RemoteChangeListener {
   Future<void> _emitChangeAcknowledgment(ChangeSet changeSet) async {
     final completer = Completer<void>();
 
-    _socket.emitWithAck('change', changeSet.toJson(), ack: (ackData) {
-      if (!_isDisposed) {
+    try {
+      _socket.emitWithAck('change', {
+        'status': 'success',
+        'data': changeSet.toJson(),
+      }, ack: (ackData) {
+        if (_isDisposed) return;
+
         if (ackData != null && ackData['status'] == 'success') {
           log('Device acknowledged change notification');
-          completer.complete();
+          if (!completer.isCompleted) completer.complete();
         } else {
           final error = Exception('Change notification not acknowledged: ${ackData?['error'] ?? 'Unknown error'}');
           log('Device failed to acknowledge change: $error');
+          if (!completer.isCompleted) completer.completeError(error);
+        }
+      });
+
+      Timer(const Duration(seconds: 30), () {
+        if (!completer.isCompleted) {
+          final error = TimeoutException('Change acknowledgment timed out');
+          log('Change acknowledgment timed out');
           completer.completeError(error);
         }
-      }
-    });
-
-    Timer(const Duration(seconds: 30), () {
-      if (!completer.isCompleted) {
-        completer.completeError(TimeoutException('Change acknowledgment timed out'));
-      }
-    });
+      });
+    } catch (e) {
+      log('Error emitting change acknowledgment: $e');
+      if (!completer.isCompleted) completer.completeError(e);
+    }
 
     return completer.future;
   }

@@ -59,17 +59,18 @@ model AppUser {
 }
 
 model Device {
-  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  appUserId   String      @map("app_user_id") @db.Uuid
-  deviceId    String      @map("device_id") @db.VarChar(255)
-  lastSeenAt  DateTime?   @map("last_seen_at") @db.Timestamp()
-  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamp()
-  updatedAt   DateTime    @default(now()) @map("updated_at") @db.Timestamp()
-  appUser     AppUser     @relation(fields: [appUserId], references: [id])
-  changeLogs  ChangeLog[]
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  appUserId     String      @map("app_user_id") @db.Uuid
+  deviceId      String      @map("device_id") @db.VarChar(255)
+  socketId      String?     @map("socket_id") @db.VarChar(255)
+  isConnected   Boolean     @default(false) @map("is_connected")
+  lastSeenAt    DateTime?   @map("last_seen_at") @db.Timestamp()
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt     DateTime    @default(now()) @map("updated_at") @db.Timestamp()
+  appUser       AppUser     @relation(fields: [appUserId], references: [id])
+  changeLogs    ChangeLog[]
 
   @@unique([appUserId, deviceId])
-  
   @@map("devices")
 }
 

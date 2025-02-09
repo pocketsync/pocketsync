@@ -78,18 +78,34 @@ export class ChangeLogsService {
   private async createOrFindChangeLog(appUserId: string, deviceId: string, changeSet: ChangeSetDto) {
     this.logger.debug('Checking for existing change log within last 100s');
     
+    if (!this.isValidUUID(appUserId)) {
+      throw new Error('Invalid app user ID format');
+    }
+
     const device = await this.prisma.device.findFirst({
-      where: { deviceId },
-      select: { id: true }
+      where: {
+        id: deviceId,
+        appUser: {
+          id: appUserId
+        }
+      },
+      select: { 
+        id: true,
+        appUser: {
+          select: {
+            id: true
+          }
+        }
+      }
     });
 
     if (!device) {
-      throw new Error(`Device ${deviceId} not found`);
+      throw new Error(`Device ${deviceId} not found for user ${appUserId}`);
     }
 
     const existingChangeLog = await this.prisma.changeLog.findFirst({
       where: {
-        appUserId,
+        appUserId: device.appUser.id,
         deviceId: device.id,
         changeSet: { equals: JSON.stringify(changeSet) },
         receivedAt: {
@@ -98,9 +114,13 @@ export class ChangeLogsService {
       },
     });
 
-    return existingChangeLog || await this.prisma.changeLog.create({
+    if (existingChangeLog) {
+      return existingChangeLog;
+    }
+
+    return await this.prisma.changeLog.create({
       data: {
-        appUserId,
+        appUserId: device.appUser.id,
         deviceId: device.id,
         changeSet: JSON.stringify(changeSet),
         receivedAt: new Date(),
@@ -207,38 +227,90 @@ export class ChangeLogsService {
   }
 
   private async notifyOtherDevices(appUserId: string, sourceDeviceId: string, changeSet: any) {
+    if (!this.isValidUUID(appUserId)) {
+      throw new Error('Invalid app user ID format');
+    }
+
+    // First find the source device using deviceId (not UUID)
     const sourceDevice = await this.prisma.device.findFirst({
-      where: { deviceId: sourceDeviceId },
-      select: { id: true }
+      where: {
+        id: sourceDeviceId,
+        appUser: {
+          id: appUserId
+        }
+      },
+      select: { 
+        id: true,
+        deviceId: true,
+        appUser: {
+          select: {
+            id: true
+          }
+        }
+      }
     });
 
     if (!sourceDevice) {
-      throw new Error(`Source device ${sourceDeviceId} not found`);
+      throw new Error(`Source device ${sourceDeviceId} not found for user ${appUserId}`);
     }
 
+    // Find all other devices for this user
     const devices = await this.prisma.device.findMany({
       where: {
-        appUserId,
-        NOT: { id: sourceDevice.id },
+        appUser: {
+          id: appUserId
+        },
+        NOT: {
+          deviceId: sourceDeviceId // Changed: compare deviceId instead of UUID
+        }
       },
+      select: {
+        id: true,
+        deviceId: true,
+        appUser: {
+          select: {
+            id: true
+          }
+        }
+      }
+    });
+
+    this.logger.debug(`Found ${devices.length} other devices to notify`, {
+      sourceDeviceId,
+      targetDevices: devices.map(d => d.deviceId)
     });
 
     for (const device of devices) {
-      // Create a pending change record
-      await this.prisma.changeLog.create({
-        data: {
-          appUserId,
-          deviceId: device.id,
-          changeSet: JSON.stringify(changeSet),
-          receivedAt: new Date(),
-        },
-      });
+      try {
+        // Create a pending change record
+        await this.prisma.changeLog.create({
+          data: {
+            appUserId: device.appUser.id,
+            deviceId: device.id,
+            changeSet: JSON.stringify(changeSet),
+            receivedAt: new Date(),
+          },
+        });
 
-      // Attempt to notify the device in real-time
-      this.wsGateway.notifyDevice(device.deviceId, {
-        type: 'CHANGE_NOTIFICATION',
-        data: changeSet,
-      });
+        // Attempt to notify the device in real-time
+        await this.wsGateway.notifyDevice(device.deviceId, {
+          type: 'CHANGE_NOTIFICATION',
+          data: changeSet,
+        });
+
+        this.logger.debug(`Notification sent to device ${device.deviceId}`);
+      } catch (error) {
+        this.logger.error(`Failed to notify device ${device.deviceId}:`, {
+          error: error.message,
+          stack: error.stack
+        });
+        // Continue with other devices even if one fails
+      }
     }
+  }
+
+  private isValidUUID(uuid: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
   }
 }

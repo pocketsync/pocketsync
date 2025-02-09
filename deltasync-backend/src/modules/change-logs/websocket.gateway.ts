@@ -23,11 +23,6 @@ interface SocketAcknowledgement {
   message?: string;
 }
 
-interface DeviceConnection {
-  socket: Socket;
-  lastActivity: Date;
-}
-
 @NestWebSocketGateway({
   cors: {
     origin: process.env.CORS_ORIGIN || '*',
@@ -47,8 +42,6 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
 
   @WebSocketServer()
   server: Server;
-
-  private deviceConnections = new Map<string, DeviceConnection>();
 
   constructor(private prisma: PrismaService) {
     // Start periodic cleanup of stale connections
@@ -85,77 +78,48 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
         throw new Error('Missing required connection parameters');
       }
 
-      // Validate device and user
-      const device = await this.getOrCreateDevice(deviceId, appUserId);
-      
-      // Handle duplicate connections
-      await this.handleDuplicateConnection(deviceId);
+      // Validate that appUserId is a valid UUID
+      if (!this.isValidUUID(appUserId)) {
+        throw new Error('Invalid app user ID format');
+      }
 
-      // Store connection with timestamp
-      this.deviceConnections.set(deviceId, {
-        socket: client,
-        lastActivity: new Date()
+      // Update device connection status
+      const device = await this.prisma.device.update({
+        where: {
+          appUserId_deviceId: {
+            appUserId,
+            deviceId
+          }
+        },
+        data: {
+          socketId: client.id,
+          isConnected: true,
+          lastSeenAt: new Date()
+        }
       });
 
       this.logger.log(`Device ${deviceId} connected (Socket ID: ${client.id})`);
-      
+
       // Send connection acknowledgment
-      client.emit('connected', { 
-        status: 'success', 
+      client.emit('connected', {
+        status: 'success',
         deviceId,
-        timestamp: Date.now() 
+        timestamp: Date.now()
       });
 
       // Deliver pending changes
       await this.deliverPendingChanges(deviceId);
     } catch (error) {
-      this.logger.error('Connection error:', { 
-        error: error.message, 
+      this.logger.error('Connection error:', {
+        error: error.message,
         socketId: client.id,
-        stack: error.stack 
+        stack: error.stack
       });
-      client.emit('error', { 
+      client.emit('error', {
         status: 'error',
-        message: 'Connection failed: ' + error.message 
+        message: 'Connection failed: ' + error.message
       });
       client.disconnect();
-    }
-  }
-
-  private async getOrCreateDevice(deviceId: string, appUserId: string) {
-    return await this.prisma.device.upsert({
-      where: { 
-        appUserId_deviceId: {
-          appUserId,
-          deviceId
-        }
-      },
-      update: { lastSeenAt: new Date() },
-      create: {
-        deviceId,
-        appUserId,
-        lastSeenAt: new Date()
-      }
-    });
-  }
-
-  private async handleDuplicateConnection(deviceId: string) {
-    const existingConnection = this.deviceConnections.get(deviceId);
-    if (existingConnection?.socket.connected) {
-      this.logger.warn(`Duplicate connection attempt for device ${deviceId}`);
-      existingConnection.socket.disconnect();
-      this.deviceConnections.delete(deviceId);
-    }
-  }
-
-  private async cleanupStaleConnections() {
-    const staleThreshold = new Date(Date.now() - 30 * 60 * 1000); // 30 minutes
-    for (const [deviceId, connection] of this.deviceConnections.entries()) {
-      if (connection.lastActivity < staleThreshold) {
-        this.logger.debug(`Cleaning up stale connection for device ${deviceId}`);
-        connection.socket.disconnect();
-        this.deviceConnections.delete(deviceId);
-      }
     }
   }
 
@@ -163,11 +127,89 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
     try {
       const deviceId = client.handshake.query.deviceId as string;
       if (deviceId) {
-        this.deviceConnections.delete(deviceId);
+        await this.prisma.device.updateMany({
+          where: {
+            deviceId,
+            socketId: client.id
+          },
+          data: {
+            isConnected: false,
+            socketId: null
+          }
+        });
         this.logger.log(`Device ${deviceId} disconnected (Socket ID: ${client.id})`);
       }
     } catch (error) {
       this.logger.error('Disconnection error:', { error: error.message, socketId: client.id });
+    }
+  }
+
+  private async cleanupStaleConnections() {
+    const staleThreshold = new Date(Date.now() - 30 * 60 * 1000); // 30 minutes
+    await this.prisma.device.updateMany({
+      where: {
+        isConnected: true,
+        lastSeenAt: {
+          lt: staleThreshold
+        }
+      },
+      data: {
+        isConnected: false,
+        socketId: null
+      }
+    });
+  }
+
+  async notifyDevice(deviceId: string, payload: ChangeNotification): Promise<boolean> {
+    try {
+      // Get device connection info from database
+      const device = await this.prisma.device.findFirst({
+        where: { deviceId }
+      });
+
+      if (!device?.isConnected || !device.socketId) {
+        this.logger.debug(`Device ${deviceId} not connected, storing for later delivery`);
+        await this.storeNotificationForLaterDelivery(deviceId, payload);
+        return false;
+      }
+
+      const socket = this.server.sockets.sockets.get(device.socketId);
+      if (!socket?.connected) {
+        // Update device status if socket is actually disconnected
+        await this.prisma.device.update({
+          where: { id: device.id },
+          data: {
+            isConnected: false,
+            socketId: null
+          }
+        });
+        await this.storeNotificationForLaterDelivery(deviceId, payload);
+        return false;
+      }
+
+      let retryCount = 0;
+      const acknowledged = await this.attemptNotification(socket, payload, retryCount);
+
+      if (!acknowledged) {
+        this.logger.debug(`Device ${deviceId} failed to acknowledge notification, storing for later delivery`);
+        await this.storeNotificationForLaterDelivery(deviceId, payload);
+      } else {
+        // Update last activity timestamp
+        await this.prisma.device.update({
+          where: { id: device.id },
+          data: { lastSeenAt: new Date() }
+        });
+        this.logger.debug(`Device ${deviceId} acknowledged notification successfully`);
+      }
+
+      return acknowledged;
+    } catch (error) {
+      this.logger.error(`Error notifying device ${deviceId}:`, {
+        error: error.message,
+        stack: error.stack,
+        payload: JSON.stringify(payload)
+      });
+      return false;
     }
   }
 
@@ -203,8 +245,8 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
 
       const pendingChanges = await this.prisma.changeLog.findMany({
         where: {
-          appUserId: device.appUserId,
-          deviceId: device.id, // Use the device's UUID here
+          appUserId: device.appUser.id,
+          deviceId: device.id,
           processedAt: null,
           receivedAt: {
             gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
@@ -225,38 +267,41 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
     }
   }
 
-  async notifyDevice(deviceId: string, payload: ChangeNotification): Promise<boolean> {
-    try {
-      const connection = this.deviceConnections.get(deviceId);
-      if (!connection?.socket.connected) {
-        await this.storeNotificationForLaterDelivery(deviceId, payload);
-        return false;
+  private async storeNotificationForLaterDelivery(
+    deviceId: string,
+    payload: ChangeNotification
+  ): Promise<void> {
+    const device = await this.prisma.device.findFirst({
+      where: { deviceId },
+      select: {
+        id: true,
+        appUser: {
+          select: {
+            id: true
+          }
+        }
       }
+    });
 
-      let retryCount = 0;
-      const acknowledged = await this.attemptNotification(connection.socket, payload, retryCount);
-      
-      if (!acknowledged) {
-        await this.storeNotificationForLaterDelivery(deviceId, payload);
-      } else {
-        // Update last activity timestamp
-        connection.lastActivity = new Date();
-      }
-      
-      return acknowledged;
-    } catch (error) {
-      this.logger.error(`Error notifying device ${deviceId}:`, {
-        error: error.message,
-        stack: error.stack,
-        payload: JSON.stringify(payload)
-      });
-      return false;
+    if (!device) {
+      throw new Error(`Device ${deviceId} not found`);
     }
+
+    await this.prisma.changeLog.create({
+      data: {
+        deviceId: device.id,
+        changeSet: JSON.stringify(payload.data),
+        receivedAt: new Date(),
+        appUserId: device.appUser.id,
+      },
+    });
+
+    this.logger.debug(`Stored notification for later delivery to device ${deviceId}`);
   }
 
-  private attemptNotification(
-    client: Socket, 
-    payload: ChangeNotification, 
+  private async attemptNotification(
+    client: Socket,
+    payload: ChangeNotification,
     retryCount: number
   ): Promise<boolean> {
     return new Promise((resolve) => {
@@ -274,35 +319,81 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
         }
       }, this.NOTIFICATION_TIMEOUT);
 
+      this.logger.debug(`Emitting change event to device ${client.id}`, {
+        payload: JSON.stringify(payload)
+      });
+
       client.emit('change', payload, (ack: SocketAcknowledgement) => {
         clearTimeout(timeoutId);
-        resolve(ack?.status === 'success');
+        if (ack?.status === 'success') {
+          this.logger.debug(`Device ${client.id} acknowledged change notification`);
+          resolve(true);
+        } else {
+          this.logger.warn(`Device ${client.id} failed to acknowledge change`, { ack });
+          resolve(false);
+        }
       });
     });
   }
 
-  private async storeNotificationForLaterDelivery(
-    deviceId: string, 
-    payload: ChangeNotification
-  ): Promise<void> {
-    const device = await this.prisma.device.findFirst({
-      where: { deviceId },
-      select: { id: true, appUserId: true }
+  private isValidUUID(uuid: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
+  }
+
+  private async getOrCreateDevice(deviceId: string, appUserId: string) {
+    // First try to find the existing device
+    const existingDevice = await this.prisma.device.findFirst({
+      where: {
+        deviceId,
+        appUser: {
+          id: appUserId
+        }
+      }
     });
 
-    if (!device) {
-      throw new Error(`Device ${deviceId} not found`);
+    if (existingDevice) {
+      // Update last seen timestamp
+      return await this.prisma.device.update({
+        where: { id: existingDevice.id },
+        data: { lastSeenAt: new Date() }
+      });
     }
 
-    await this.prisma.changeLog.create({
+    // Create new device if not found
+    return await this.prisma.device.create({
       data: {
-        deviceId: device.id, // Use the device's UUID here
-        changeSet: JSON.stringify(payload.data),
-        receivedAt: new Date(),
-        appUserId: device.appUserId,
-      },
+        deviceId,
+        appUser: {
+          connect: {
+            id: appUserId
+          }
+        },
+        lastSeenAt: new Date()
+      }
     });
-    
-    this.logger.debug(`Stored notification for later delivery to device ${deviceId}`);
+  }
+
+  private async handleDuplicateConnection(deviceId: string) {
+    const existingConnection = await this.prisma.device.findFirst({
+      where: { deviceId }
+    });
+
+    if (existingConnection?.isConnected) {
+      this.logger.warn(`Duplicate connection attempt for device ${deviceId}`);
+      if (existingConnection.socketId) {
+        const socket = this.server.sockets.sockets.get(existingConnection.socketId);
+        if (socket?.connected) {
+          socket.disconnect();
+        }
+      }
+      await this.prisma.device.update({
+        where: { id: existingConnection.id },
+        data: {
+          isConnected: false,
+          socketId: null
+        }
+      });
+    }
   }
 }
