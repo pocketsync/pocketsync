@@ -168,6 +168,17 @@ export class ChangeLogsService {
     });
 
     for (const device of devices) {
+      // Create a pending change record
+      await this.prisma.changeLog.create({
+        data: {
+          appUserId,
+          deviceId: device.id,
+          changeSet,
+          receivedAt: new Date(),
+        },
+      });
+
+      // Attempt to notify the device in real-time
       this.wsGateway.notifyDevice(device.deviceId, {
         type: 'CHANGE_NOTIFICATION',
         data: changeSet,
