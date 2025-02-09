@@ -79,7 +79,8 @@ class ChangeTracker {
   }
 
   String _generateSchemaHash(List<Map<String, dynamic>> columns) {
-    final schemaString = columns.map((col) => '${col['name']}:${col['type']}').join(',');
+    final schemaString = (columns.map((col) => '${col['name']}:${col['type']}').toList()..sort()).join(',');
+
     return sha256.convert(utf8.encode(schemaString)).toString();
   }
 
@@ -144,7 +145,7 @@ class ChangeTracker {
   }
 
   String _generateUpdateCondition(List<String> columns) {
-    return columns.where((col) => col != 'last_modified').map((col) => 'OLD.$col IS NOT NEW.$col').join(' OR ');
+    return columns.where((col) => col != 'last_modified').map((col) => '(OLD.$col IS NOT NEW.$col)').join(' OR ');
   }
 
   String _generateModifiedColumnsOld(List<String> columns) {
@@ -245,13 +246,15 @@ class ChangeTracker {
 
   Future<void> markChangesAsSynced(int upToTimestamp) async {
     try {
+      db.execute('BEGIN TRANSACTION');
       db.execute('''
-        UPDATE __deltasync_changes 
-        SET sync_status = 'synced' 
-        WHERE timestamp <= ? 
-        AND sync_status = 'pending'
-      ''', [upToTimestamp]);
+      UPDATE __deltasync_changes 
+      SET sync_status = 'synced' 
+      WHERE timestamp <= ? AND sync_status = 'pending'
+    ''', [upToTimestamp]);
+      db.execute('COMMIT');
     } catch (e) {
+      db.execute('ROLLBACK');
       throw SyncError('Failed to mark changes as synced: $e');
     }
   }
