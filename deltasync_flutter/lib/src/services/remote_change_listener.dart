@@ -18,14 +18,21 @@ class RemoteChangeListener {
   })  : _db = db,
         _changeController = StreamController<ChangeSet>.broadcast() {
     _socket = io.io(
-      wsUrl,
+      '$wsUrl/changes?deviceId=$deviceId',
       io.OptionBuilder()
-          .setTransports(['websocket'])
+          .setTransports(['websocket', 'polling'])
           .setExtraHeaders({'deviceId': deviceId})
+          .setPath('/socket.io')
+          .enableAutoConnect()
+          .enableReconnection()
           .setReconnectionAttempts(3)
           .setReconnectionDelay(1000)
           .setReconnectionDelayMax(5000)
           .enableForceNewConnection()
+          .setExtraHeaders({
+            'deviceId': deviceId,
+            'withCredentials': true
+          })
           .build(),
     );
   }

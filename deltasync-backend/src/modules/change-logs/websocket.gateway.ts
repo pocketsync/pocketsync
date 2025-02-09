@@ -29,9 +29,18 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
 
   afterInit(server: Server) {
     this.logger.log('WebSocket Gateway initialized');
+    this.logger.debug('WebSocket server configuration:', {
+      namespace: 'changes',
+      transports: ['websocket', 'polling'],
+      path: '/socket.io'
+    });
+
     server.use((socket: Socket, next) => {
       const deviceId = socket.handshake.query.deviceId;
+      this.logger.debug('Connection attempt from device:', { deviceId, socketId: socket.id });
+      
       if (!deviceId) {
+        this.logger.warn('Connection rejected - missing deviceId', { socketId: socket.id });
         next(new Error('Device ID is required'));
         return;
       }
@@ -44,11 +53,12 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
       const deviceId = client.handshake.query.deviceId as string;
       if (deviceId) {
         this.deviceConnections.set(deviceId, client);
-        this.logger.log(`Device ${deviceId} connected`);
+        this.logger.log(`Device ${deviceId} connected (Socket ID: ${client.id})`);
+        this.logger.debug('Current active connections:', { count: this.deviceConnections.size });
         client.emit('connected', { status: 'success', deviceId });
       }
     } catch (error) {
-      this.logger.error('Connection error:', error);
+      this.logger.error('Connection error:', { error: error.message, socketId: client.id });
       client.disconnect();
     }
   }
@@ -58,10 +68,11 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
       const deviceId = client.handshake.query.deviceId as string;
       if (deviceId) {
         this.deviceConnections.delete(deviceId);
-        this.logger.log(`Device ${deviceId} disconnected`);
+        this.logger.log(`Device ${deviceId} disconnected (Socket ID: ${client.id})`);
+        this.logger.debug('Remaining active connections:', { count: this.deviceConnections.size });
       }
     } catch (error) {
-      this.logger.error('Disconnection error:', error);
+      this.logger.error('Disconnection error:', { error: error.message, socketId: client.id });
     }
   }
 
@@ -71,9 +82,12 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
       if (client?.connected) {
         client.emit('change', payload);
         this.logger.log(`Notified device ${deviceId} of changes`);
+        this.logger.debug('Notification payload:', { deviceId, type: payload.type });
+      } else {
+        this.logger.warn(`Unable to notify device ${deviceId} - not connected`);
       }
     } catch (error) {
-      this.logger.error(`Error notifying device ${deviceId}:`, error);
+      this.logger.error(`Error notifying device ${deviceId}:`, { error: error.message });
     }
   }
 }
