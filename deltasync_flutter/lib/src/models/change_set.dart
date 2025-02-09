@@ -3,9 +3,13 @@ class TableRows {
 
   TableRows(this.rows);
 
-  Map<String, dynamic> toJson() => {
-        'rows': rows,
-      };
+  Map<String, dynamic> toJson() => {'rows': rows};
+
+  factory TableRows.fromJson(Map<String, dynamic> json) {
+    return TableRows(
+      List<String>.from(json['rows']),
+    );
+  }
 }
 
 class TableChanges {
@@ -14,6 +18,19 @@ class TableChanges {
   TableChanges(this.changes);
 
   Map<String, dynamic> toJson() => changes.map((key, value) => MapEntry(key, value.toJson()));
+
+  factory TableChanges.fromJson(Map<String, dynamic> json) {
+    return TableChanges(
+      Map<String, TableRows>.fromEntries(
+        json.entries.map(
+          (e) => MapEntry(
+            e.key,
+            TableRows.fromJson(e.value),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class ChangeSet {
@@ -38,4 +55,14 @@ class ChangeSet {
         'updates': updates.toJson(),
         'deletions': deletions.toJson(),
       };
+
+  factory ChangeSet.fromJson(Map<String, dynamic> json) {
+    return ChangeSet(
+      timestamp: json['timestamp'],
+      version: json['version'],
+      insertions: TableChanges.fromJson(json['insertions']),
+      updates: TableChanges.fromJson(json['updates']),
+      deletions: TableChanges.fromJson(json['deletions']),
+    );
+  }
 }

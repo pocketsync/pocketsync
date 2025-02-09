@@ -6,6 +6,7 @@ import 'package:deltasync_flutter/src/services/sync_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'services/change_tracker.dart';
+import 'services/remote_change_listener.dart';
 import 'errors/sync_error.dart';
 
 const kDefaultSyncInternal = Duration(seconds: 10);
@@ -18,6 +19,7 @@ class DeltaSync {
   ChangeTracker? _changeTracker;
   SyncService? _syncService;
   DeviceManager? _deviceManager;
+  RemoteChangeListener? _remoteChangeListener;
   bool _isInitialized = false;
   int _lastSyncTimestamp = 0;
   Timer? _syncTimer;
@@ -55,6 +57,7 @@ class DeltaSync {
       await _changeTracker!.setupTracking();
       await _initializeWatcher();
       _setupSchemaChangeListener();
+      await _setupRemoteChangeListener();
 
       _isInitialized = true;
     } catch (e) {
@@ -101,16 +104,36 @@ class DeltaSync {
     }
   }
 
+  Future<void> _setupRemoteChangeListener() async {
+    if (_remoteChangeListener != null) {
+      await _remoteChangeListener!.dispose();
+    }
+
+    _remoteChangeListener = RemoteChangeListener(
+      wsUrl: _syncService!.serverUrl.replaceFirst('http', 'ws'),
+      deviceId: _deviceManager!.getDeviceId(),
+      db: _db!,
+    );
+
+    await _remoteChangeListener!.connect();
+    _remoteChangeListener!.changes.listen(
+      (changeSet) => _syncController.add(changeSet),
+      onError: (error) => _syncController.addError(SyncError('Remote change error: $error')),
+    );
+  }
+
   Future<void> dispose() async {
     _syncTimer?.cancel();
     _syncTimer = null;
     await _schemaChangeSubscription?.cancel();
     await _syncController.close();
     _syncService?.dispose();
+    await _remoteChangeListener?.dispose();
     _db?.dispose();
     _db = null;
     _changeTracker = null;
     _syncService = null;
+    _remoteChangeListener = null;
     _userId = null;
     _isInitialized = false;
   }
