@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:deltasync_flutter/src/errors/sync_error.dart';
 import 'package:sqlite3/sqlite3.dart';
 import '../models/change_set.dart';
+import 'package:crypto/crypto.dart';
 
 class ChangeTracker {
   final Database db;
@@ -12,7 +13,7 @@ class ChangeTracker {
 
   Future<void> setupTracking() async {
     db.execute('PRAGMA journal_mode=WAL');
-    
+
     await _createChangeTrackingTable();
     await _createVersionTrackingTable();
   }
@@ -46,7 +47,7 @@ class ChangeTracker {
 
   Future<void> setupTableTracking(String tableName) async {
     final schemaVersion = await _updateTableVersion(tableName);
-    
+
     // Add last_modified column if it doesn't exist
     db.execute('''
       ALTER TABLE $tableName ADD COLUMN IF NOT EXISTS last_modified INTEGER 
@@ -81,15 +82,13 @@ class ChangeTracker {
   Future<int> _updateTableVersion(String tableName) async {
     final tableInfo = db.select("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", [tableName]);
     if (tableInfo.isEmpty) throw SyncError('Table $tableName does not exist');
-    
+
     final schemaHash = _generateSchemaHash(tableInfo.first['sql'] as String);
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
     // Check if schema changed
-    final existing = db.select(
-      'SELECT schema_hash, schema_version FROM __deltasync_versions WHERE table_name = ?',
-      [tableName]
-    );
+    final existing =
+        db.select('SELECT schema_hash, schema_version FROM __deltasync_versions WHERE table_name = ?', [tableName]);
 
     if (existing.isEmpty) {
       // New table
@@ -117,6 +116,35 @@ class ChangeTracker {
     return sha256.convert(bytes).toString();
   }
 
+  Future<List<ChangeSet>> generateChangeSets(int lastSyncTimestamp) async {
+    final changeSets = <ChangeSet>[];
+    var currentBatch = 0;
+
+    while (true) {
+      final changes = db.select('''
+        SELECT * FROM __deltasync_changes 
+        WHERE timestamp > ? 
+        AND sync_status = 'pending'
+        AND retry_count < 3
+        ORDER BY timestamp ASC
+        LIMIT ? OFFSET ?
+      ''', [lastSyncTimestamp, _batchSize, currentBatch * _batchSize]);
+
+      if (changes.isEmpty) break;
+
+      try {
+        final changeSet = await _processChangeBatch(changes);
+        changeSets.add(changeSet);
+      } catch (e) {
+        throw SyncError('Failed to process change batch: $e');
+      }
+
+      currentBatch++;
+    }
+
+    return changeSets;
+  }
+
   Future<ChangeSet> _processChangeBatch(List<Map<String, dynamic>> changes) async {
     final insertionMap = <String, Set<String>>{};
     final updateMap = <String, Set<String>>{};
@@ -133,16 +161,13 @@ class ChangeTracker {
 
         switch (operation) {
           case 'INSERT':
-            insertionMap.putIfAbsent(tableName, () => {})
-              .add(jsonEncode(changeData['new']));
+            insertionMap.putIfAbsent(tableName, () => {}).add(jsonEncode(changeData['new']));
             break;
           case 'UPDATE':
-            updateMap.putIfAbsent(tableName, () => {})
-              .add(jsonEncode(changeData['new']));
+            updateMap.putIfAbsent(tableName, () => {}).add(jsonEncode(changeData['new']));
             break;
           case 'DELETE':
-            deletionMap.putIfAbsent(tableName, () => {})
-              .add(jsonEncode(changeData['old']));
+            deletionMap.putIfAbsent(tableName, () => {}).add(jsonEncode(changeData['old']));
             break;
         }
       } catch (e) {
@@ -154,15 +179,9 @@ class ChangeTracker {
     return ChangeSet(
       timestamp: maxTimestamp,
       version: currentVersion,
-      insertions: TableChanges(
-        insertionMap.map((k, v) => MapEntry(k, TableRows(v.toList())))
-      ),
-      updates: TableChanges(
-        updateMap.map((k, v) => MapEntry(k, TableRows(v.toList())))
-      ),
-      deletions: TableChanges(
-        deletionMap.map((k, v) => MapEntry(k, TableRows(v.toList())))
-      ),
+      insertions: TableChanges(insertionMap.map((k, v) => MapEntry(k, TableRows(v.toList())))),
+      updates: TableChanges(updateMap.map((k, v) => MapEntry(k, TableRows(v.toList())))),
+      deletions: TableChanges(deletionMap.map((k, v) => MapEntry(k, TableRows(v.toList())))),
     );
   }
 
@@ -188,9 +207,8 @@ class ChangeTracker {
   }
 
   String _generateColumnList(String tableName, {String prefix = 'NEW'}) {
-    final columns = db.select(
-      "SELECT name FROM pragma_table_info('$tableName')"
-    ).map((row) => row['name'] as String).toList();
+    final columns =
+        db.select("SELECT name FROM pragma_table_info('$tableName')").map((row) => row['name'] as String).toList();
 
     return columns.map((col) => "'$col', $prefix.$col").join(', ');
   }
