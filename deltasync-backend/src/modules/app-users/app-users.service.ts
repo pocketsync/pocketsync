@@ -6,7 +6,7 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 @Injectable()
 export class AppUsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async create(userId: string, createAppUserDto: CreateAppUserDto) {
     await this.validateProjectAccess(userId, createAppUserDto.projectId);
@@ -100,7 +100,7 @@ export class AppUsersService {
 
   async update(userId: string, id: string, updateAppUserDto: UpdateAppUserDto) {
     const appUser = await this.findOne(userId, id);
-    
+
     if (updateAppUserDto.projectId) {
       await this.validateProjectAccess(userId, updateAppUserDto.projectId);
     }
@@ -131,5 +131,11 @@ export class AppUsersService {
     if (project.userId !== userId) {
       throw new ForbiddenException('Access denied to this project');
     }
+  }
+
+  async findByUserIdentifier(userIdentifier: string) {
+    return this.prisma.appUser.findUnique({
+      where: { id: userIdentifier },
+    });
   }
 }

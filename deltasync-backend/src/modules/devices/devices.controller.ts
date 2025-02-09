@@ -12,7 +12,6 @@ import {
 } from '@nestjs/common';
 import { DevicesService } from './devices.service';
 import { CreateDeviceDto } from './dto/create-device.dto';
-import { UpdateDeviceDto } from './dto/update-device.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
@@ -38,15 +37,6 @@ export class DevicesController {
   @Get(':id')
   findOne(@Request() req, @Param('id') id: string) {
     return this.devicesService.findOne(req.user.id, id);
-  }
-
-  @Patch(':id')
-  update(
-    @Request() req,
-    @Param('id') id: string,
-    @Body() updateDeviceDto: UpdateDeviceDto,
-  ) {
-    return this.devicesService.update(req.user.id, id, updateDeviceDto);
   }
 
   @Delete(':id')

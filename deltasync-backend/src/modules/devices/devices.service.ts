@@ -1,12 +1,24 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDeviceDto } from './dto/create-device.dto';
-import { UpdateDeviceDto } from './dto/update-device.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { AppUsersService } from '../app-users/app-users.service';
 
 @Injectable()
 export class DevicesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private appUsersService: AppUsersService,
+  ) { }
+
+  async findByDeviceId(deviceId: string) {
+    return this.prisma.device.findFirst({
+      where: { deviceId },
+      include: {
+        appUser: true,
+      },
+    });
+  }
 
   async create(userId: string, createDeviceDto: CreateDeviceDto) {
     await this.validateAppUserAccess(userId, createDeviceDto.appUserId);
@@ -22,11 +34,8 @@ export class DevicesService {
     });
   }
 
-  async createFromSdk(createDeviceDto: CreateDeviceDto) {
-    const appUser = await this.prisma.appUser.findUnique({
-      where: { id: createDeviceDto.appUserId },
-      include: { project: true },
-    });
+  async createFromSdk(data: { deviceId: string; userIdentifier: string }) {
+    let appUser = await this.appUsersService.findByUserIdentifier(data.userIdentifier);
 
     if (!appUser) {
       throw new NotFoundException('App user not found');
@@ -34,7 +43,8 @@ export class DevicesService {
 
     return this.prisma.device.create({
       data: {
-        ...createDeviceDto,
+        deviceId: data.deviceId,
+        appUserId: appUser.id,
         lastSeenAt: new Date(),
       },
       include: {
@@ -101,20 +111,7 @@ export class DevicesService {
 
     return device;
   }
-
-  async update(userId: string, id: string, updateDeviceDto: UpdateDeviceDto) {
-    const device = await this.findOne(userId, id);
-    
-    if (updateDeviceDto.appUserId) {
-      await this.validateAppUserAccess(userId, updateDeviceDto.appUserId);
-    }
-
-    return this.prisma.device.update({
-      where: { id },
-      data: updateDeviceDto,
-    });
-  }
-
+  
   async remove(userId: string, id: string) {
     await this.findOne(userId, id);
 
