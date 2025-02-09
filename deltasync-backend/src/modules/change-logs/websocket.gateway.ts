@@ -173,7 +173,7 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
               reject(new Error('Change notification not acknowledged'));
             }
           });
-
+  
           // Set a timeout for acknowledgment
           setTimeout(() => {
             reject(new Error('Change notification timeout'));
@@ -181,13 +181,22 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
         });
       } else {
         this.logger.warn(`Device ${deviceId} not connected - storing notification for later delivery`);
-        // Store the notification for later delivery when the device reconnects
+        // Get the device to find its associated appUserId
+        const device = await this.prisma.device.findUnique({
+          where: { id: deviceId },
+          select: { appUserId: true }
+        });
+  
+        if (!device) {
+          throw new Error(`Device ${deviceId} not found`);
+        }
+  
         await this.prisma.changeLog.create({
           data: {
             deviceId,
             changeSet: JSON.stringify(payload.data),
             receivedAt: new Date(),
-            appUserId: payload.data.appUserId,
+            appUserId: device.appUserId,
           },
         });
       }

@@ -29,10 +29,7 @@ class RemoteChangeListener {
           .setReconnectionDelay(1000)
           .setReconnectionDelayMax(5000)
           .enableForceNewConnection()
-          .setExtraHeaders({
-            'deviceId': deviceId,
-            'withCredentials': true
-          })
+          .setExtraHeaders({'deviceId': deviceId, 'withCredentials': true})
           .build(),
     );
   }
@@ -133,6 +130,16 @@ class RemoteChangeListener {
           stmt.dispose();
         }
       }
+
+      // Emit change event and handle acknowledgment
+      _socket.emitWithAck('change', changeSet.toJson(), ack: (ackData) {
+        if (ackData != null && ackData['status'] == 'success') {
+          log('Device acknowledged change notification');
+        } else {
+          log('Device failed to acknowledge change');
+          throw Exception('Change notification not acknowledged');
+        }
+      });
 
       _db.execute('COMMIT');
     } catch (e) {
