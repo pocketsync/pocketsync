@@ -4,8 +4,12 @@ import '../models/todo.dart';
 
 class TodoController {
   static Database? _database;
+  static bool _closing = false;
 
   Future<Database> get database async {
+    if (_closing) {
+      throw StateError('Database is being closed');
+    }
     if (_database != null) return _database!;
     _database = await _initDatabase();
     return _database!;
@@ -56,5 +60,14 @@ class TodoController {
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  Future<void> dispose() async {
+    _closing = true;
+    if (_database != null) {
+      await _database!.close();
+      _database = null;
+    }
+    _closing = false;
   }
 }

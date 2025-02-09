@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:math' as math;
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:deltasync_flutter/src/models/change_set.dart';
 import 'package:sqlite3/sqlite3.dart';
@@ -10,6 +11,10 @@ class RemoteChangeListener {
   final StreamController<ChangeSet> _changeController;
   late final io.Socket _socket;
   bool _isConnected = false;
+  bool _isDisposed = false;
+  Timer? _reconnectTimer;
+  static const _maxReconnectAttempts = 5;
+  int _reconnectAttempts = 0;
 
   RemoteChangeListener({
     required String wsUrl,
@@ -27,25 +32,27 @@ class RemoteChangeListener {
     _socket = io.io(
       '$wsUrl/changes?deviceId=$deviceId',
       io.OptionBuilder()
-          .setTransports(['websocket', 'polling'])
-          .setExtraHeaders({'deviceId': deviceId})
-          .setPath('/socket.io')
-          .enableAutoConnect()
-          .enableReconnection()
-          .setReconnectionAttempts(3)
-          .setReconnectionDelay(1000)
-          .setReconnectionDelayMax(5000)
-          .enableForceNewConnection()
+          .setTransports(['websocket'])
           .setExtraHeaders({
             'deviceId': deviceId,
             'x-app-user-id': userId,
             'withCredentials': true,
           })
+          .setPath('/socket.io')
+          .enableAutoConnect()
+          .enableReconnection()
+          .setReconnectionAttempts(_maxReconnectAttempts)
+          .setReconnectionDelay(1000)
+          .setReconnectionDelayMax(5000)
+          .enableForceNewConnection()
           .build(),
     );
   }
 
   Future<void> connect() async {
+    if (_isDisposed) {
+      throw StateError('RemoteChangeListener has been disposed');
+    }
     if (_isConnected) return;
 
     log('Connecting to socket...');
@@ -54,25 +61,46 @@ class RemoteChangeListener {
   }
 
   void _setupSocketListeners() {
-    _socket.onConnect((_) => _onConnect());
-    _socket.onDisconnect((_) => _onDisconnect());
-    _socket.onError((error) => _onError(error));
-    _socket.on('CHANGE_NOTIFICATION', (data) => _handleMessage(data));
+    _socket
+      ..onConnect((_) => _onConnect())
+      ..onDisconnect((_) => _onDisconnect())
+      ..onError((error) => _onError(error))
+      ..onConnectError((error) => _onError(error))
+      ..on('CHANGE_NOTIFICATION', (data) => _handleMessage(data));
   }
 
   void _onConnect() {
     log('Socket.IO Connected');
     _isConnected = true;
+    _reconnectAttempts = 0;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
   }
 
   void _onDisconnect() {
     log('Socket.IO Disconnected');
     _isConnected = false;
+
+    if (!_isDisposed && _reconnectAttempts < _maxReconnectAttempts) {
+      _reconnectTimer?.cancel();
+      _reconnectTimer = Timer(
+        Duration(seconds: math.min(math.pow(2, _reconnectAttempts).toInt(), 30)),
+        () {
+          _reconnectAttempts++;
+          if (!_isDisposed) {
+            log('Attempting reconnection ($_reconnectAttempts/$_maxReconnectAttempts)');
+            _socket.connect();
+          }
+        },
+      );
+    }
   }
 
   void _onError(dynamic error) {
     log('Socket.IO Error: $error');
-    _changeController.addError(error);
+    if (!_isDisposed) {
+      _changeController.addError(error);
+    }
   }
 
   void _handleMessage(dynamic data) {
@@ -87,12 +115,14 @@ class RemoteChangeListener {
   }
 
   Future<void> _applyChanges(ChangeSet changeSet) async {
-    _db.execute('BEGIN TRANSACTION');
+    if (_isDisposed) return;
+
+    _db.execute('BEGIN IMMEDIATE TRANSACTION');
     try {
-      _applyInsertions(changeSet);
-      _applyUpdates(changeSet);
-      _applyDeletions(changeSet);
-      _emitChangeAcknowledgment(changeSet);
+      await _applyInsertions(changeSet);
+      await _applyUpdates(changeSet);
+      await _applyDeletions(changeSet);
+      await _emitChangeAcknowledgment(changeSet);
       _db.execute('COMMIT');
     } catch (e) {
       _db.execute('ROLLBACK');
@@ -100,7 +130,7 @@ class RemoteChangeListener {
     }
   }
 
-  void _applyInsertions(ChangeSet changeSet) {
+  Future<void> _applyInsertions(ChangeSet changeSet) async {
     for (var entry in changeSet.insertions.changes.entries) {
       final tableName = entry.key;
       final tableRows = entry.value;
@@ -121,7 +151,7 @@ class RemoteChangeListener {
     }
   }
 
-  void _applyUpdates(ChangeSet changeSet) {
+  Future<void> _applyUpdates(ChangeSet changeSet) async {
     for (var entry in changeSet.updates.changes.entries) {
       final tableName = entry.key;
       final tableRows = entry.value;
@@ -139,7 +169,7 @@ class RemoteChangeListener {
     }
   }
 
-  void _applyDeletions(ChangeSet changeSet) {
+  Future<void> _applyDeletions(ChangeSet changeSet) async {
     for (var entry in changeSet.deletions.changes.entries) {
       final tableName = entry.key;
       final tableRows = entry.value;
@@ -153,7 +183,7 @@ class RemoteChangeListener {
     }
   }
 
-  void _emitChangeAcknowledgment(ChangeSet changeSet) {
+  Future<void> _emitChangeAcknowledgment(ChangeSet changeSet) async {
     _socket.emitWithAck('change', changeSet.toJson(), ack: (ackData) {
       if (ackData != null && ackData['status'] == 'success') {
         log('Device acknowledged change notification');
@@ -165,10 +195,11 @@ class RemoteChangeListener {
   }
 
   Future<void> dispose() async {
-    if (!_changeController.isClosed) {
-      await _changeController.close();
-    }
+    if (_isDisposed) return;
+    _isDisposed = true;
+
+    _reconnectTimer?.cancel();
     _socket.dispose();
-    _isConnected = false;
+    await _changeController.close();
   }
 }

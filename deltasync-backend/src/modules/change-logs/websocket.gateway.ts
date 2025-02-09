@@ -167,27 +167,62 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
     try {
       const client = this.deviceConnections.get(deviceId);
       if (client?.connected) {
-        return new Promise((resolve, reject) => {
-          client.emit('change', payload, (ack: any) => {
-            if (ack?.status === 'success') {
-              this.logger.log(`Device ${deviceId} acknowledged change notification`);
-              resolve(true);
-            } else {
-              this.logger.warn(`Device ${deviceId} failed to acknowledge change`);
-              reject(new Error('Change notification not acknowledged'));
-            }
+        let retryCount = 0;
+        const maxRetries = 3;
+        const retryDelay = 1000; // 1 second
+
+        const attemptNotification = async (): Promise<boolean> => {
+          return new Promise((resolve, reject) => {
+            const timeoutId = setTimeout(() => {
+              if (retryCount < maxRetries) {
+                retryCount++;
+                this.logger.warn(`Retry attempt ${retryCount} for device ${deviceId}`);
+                setTimeout(() => attemptNotification().then(resolve).catch(reject), retryDelay);
+              } else {
+                this.logger.warn(`Max retries reached for device ${deviceId}, storing for later delivery`);
+                resolve(false);
+              }
+            }, 5000);
+
+            client.emit('change', payload, (ack: any) => {
+              clearTimeout(timeoutId);
+              if (ack?.status === 'success') {
+                this.logger.log(`Device ${deviceId} acknowledged change notification`);
+                resolve(true);
+              } else {
+                this.logger.warn(`Device ${deviceId} failed to acknowledge change`);
+                resolve(false);
+              }
+            });
+          });
+        };
+
+        const acknowledged = await attemptNotification();
+        if (!acknowledged) {
+          // Store for later delivery if all retries failed
+          const device = await this.prisma.device.findFirst({
+            where: { deviceId: deviceId },
+            select: { appUserId: true }
           });
 
-          // Set a timeout for acknowledgment
-          setTimeout(() => {
-            reject(new Error('Change notification timeout'));
-          }, 5000);
-        });
+          if (!device) {
+            throw new Error(`Device ${deviceId} not found`);
+          }
+
+          await this.prisma.changeLog.create({
+            data: {
+              deviceId,
+              changeSet: JSON.stringify(payload.data),
+              receivedAt: new Date(),
+              appUserId: device.appUserId,
+            },
+          });
+        }
+        return acknowledged;
       } else {
         this.logger.warn(`Device ${deviceId} not connected - storing notification for later delivery`);
-        // Get the device to find its associated appUserId
-        const device = await this.prisma.device.findUnique({
-          where: { id: deviceId },
+        const device = await this.prisma.device.findFirst({
+          where: { deviceId: deviceId },
           select: { appUserId: true }
         });
 
@@ -203,6 +238,7 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
             appUserId: device.appUserId,
           },
         });
+        return false;
       }
     } catch (error) {
       this.logger.error(`Error notifying device ${deviceId}:`, {
@@ -210,7 +246,7 @@ export class WebSocketGateway implements OnGatewayConnection, OnGatewayDisconnec
         stack: error.stack,
         payload: JSON.stringify(payload)
       });
-      throw error;
+      return false;
     }
   }
 }

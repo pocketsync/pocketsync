@@ -212,7 +212,14 @@ class ChangeTracker {
   }
 
   String _generateUpdateCondition(List<String> columns) {
-    return columns.where((col) => col != 'last_modified').map((col) => '(OLD.$col IS NOT NEW.$col)').join(' OR ');
+    return columns
+        .where((col) => col != 'last_modified')
+        .map((col) => '''(
+          OLD.$col IS NOT NEW.$col OR 
+          (OLD.$col IS NULL AND NEW.$col IS NOT NULL) OR 
+          (OLD.$col IS NOT NULL AND NEW.$col IS NULL)
+        )''')
+        .join(' OR ');
   }
 
   String _generateModifiedColumnsOld(List<String> columns) {
@@ -337,11 +344,18 @@ class ChangeTracker {
   }
 
   Future<void> _markChangeAsError(int changeId) async {
-    db.execute('''
-      UPDATE __deltasync_changes 
-      SET retry_count = retry_count + 1 
-      WHERE id = ?
-    ''', [changeId]);
+    try {
+      db.execute('BEGIN IMMEDIATE TRANSACTION');
+      db.execute('''
+        UPDATE __deltasync_changes 
+        SET retry_count = retry_count + 1 
+        WHERE id = ?
+      ''', [changeId]);
+      db.execute('COMMIT');
+    } catch (e) {
+      db.execute('ROLLBACK');
+      throw SyncError('Failed to mark change as error: $e');
+    }
   }
 
   String _generateColumnList(String tableName, {String prefix = 'NEW'}) {

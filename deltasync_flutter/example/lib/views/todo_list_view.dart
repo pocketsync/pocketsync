@@ -14,6 +14,26 @@ class _TodoListViewState extends State<TodoListView> {
   final TextEditingController _textController = TextEditingController();
 
   @override
+  void dispose() {
+    _textController.dispose();
+    _todoController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleTodoOperation(Future<void> Function() operation) async {
+    try {
+      await operation();
+      if (mounted) setState(() {});
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -38,11 +58,12 @@ class _TodoListViewState extends State<TodoListView> {
                   icon: const Icon(Icons.add),
                   onPressed: () {
                     if (_textController.text.isNotEmpty) {
-                      _todoController.insertTodo(
-                        Todo(title: _textController.text),
-                      );
-                      _textController.clear();
-                      setState(() {});
+                      _handleTodoOperation(() async {
+                        await _todoController.insertTodo(
+                          Todo(title: _textController.text),
+                        );
+                        _textController.clear();
+                      });
                     }
                   },
                 ),
@@ -57,6 +78,24 @@ class _TodoListViewState extends State<TodoListView> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                        const SizedBox(height: 16),
+                        Text('Error: ${snapshot.error}'),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => setState(() {}),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return const Center(child: Text('No todos yet'));
                 }
@@ -69,10 +108,11 @@ class _TodoListViewState extends State<TodoListView> {
                       leading: Checkbox(
                         value: todo.isCompleted,
                         onChanged: (bool? value) {
-                          _todoController.updateTodo(
-                            todo.copyWith(isCompleted: value),
-                          );
-                          setState(() {});
+                          _handleTodoOperation(() async {
+                            await _todoController.updateTodo(
+                              todo.copyWith(isCompleted: value),
+                            );
+                          });
                         },
                       ),
                       title: Text(
@@ -86,8 +126,9 @@ class _TodoListViewState extends State<TodoListView> {
                       trailing: IconButton(
                         icon: const Icon(Icons.delete),
                         onPressed: () {
-                          _todoController.deleteTodo(todo.id!);
-                          setState(() {});
+                          _handleTodoOperation(() async {
+                            await _todoController.deleteTodo(todo.id!);
+                          });
                         },
                       ),
                     );
@@ -99,11 +140,5 @@ class _TodoListViewState extends State<TodoListView> {
         ],
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _textController.dispose();
-    super.dispose();
   }
 }

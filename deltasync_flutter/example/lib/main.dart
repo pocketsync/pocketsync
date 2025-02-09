@@ -8,6 +8,15 @@ import 'views/todo_list_view.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Register a callback to be called before hot reload
+  if (kDebugMode) {
+    try {
+      await DeltaSync.instance.dispose();
+    } catch (e) {
+      // Ignore errors during dispose
+    }
+  }
+
   String path = join(await getDatabasesPath(), 'todo_database.db');
 
   await DeltaSync.instance.initialize(
