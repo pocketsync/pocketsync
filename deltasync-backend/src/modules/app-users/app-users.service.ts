@@ -60,9 +60,9 @@ export class AppUsersService {
     };
   }
 
-  async findOne(userId: string, id: string) {
+  async findOne(userId: string, userIdentifier: string) {
     const appUser = await this.prisma.appUser.findUnique({
-      where: { id },
+      where: { userIdentifier },
       include: {
         devices: true,
         userDatabase: true,
@@ -79,22 +79,22 @@ export class AppUsersService {
     return appUser;
   }
 
-  async update(userId: string, id: string, updateAppUserDto: UpdateAppUserDto) {
+  async update(userId: string, userIdentifier: string, updateAppUserDto: UpdateAppUserDto) {
     if (updateAppUserDto.projectId) {
       await this.validateProjectAccess(userId, updateAppUserDto.projectId);
     }
 
     return this.prisma.appUser.update({
-      where: { id },
+      where: { userIdentifier },
       data: updateAppUserDto,
     });
   }
 
-  async remove(userId: string, id: string) {
-    await this.findOne(userId, id);
+  async remove(userId: string, userIdentifier: string) {
+    await this.findOne(userId, userIdentifier);
 
     return this.prisma.appUser.delete({
-      where: { id },
+      where: { userIdentifier },
     });
   }
 

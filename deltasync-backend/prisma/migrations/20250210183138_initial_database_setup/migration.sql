@@ -1,4 +1,67 @@
 -- CreateTable
+CREATE TABLE "projects" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "api_key" VARCHAR(64) NOT NULL,
+    "name" VARCHAR(255) NOT NULL,
+    "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "user_id" UUID,
+
+    CONSTRAINT "projects_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "app_users" (
+    "user_identifier" VARCHAR(255) NOT NULL,
+    "project_id" VARCHAR(64) NOT NULL,
+    "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "app_users_pkey" PRIMARY KEY ("user_identifier")
+);
+
+-- CreateTable
+CREATE TABLE "devices" (
+    "device_id" VARCHAR(255) NOT NULL,
+    "user_identifier" VARCHAR(255) NOT NULL,
+    "last_seen_at" TIMESTAMP,
+    "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "devices_pkey" PRIMARY KEY ("device_id")
+);
+
+-- CreateTable
+CREATE TABLE "user_databases" (
+    "user_identifier" VARCHAR(255) NOT NULL,
+    "data" BYTEA NOT NULL,
+    "last_synced_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "user_databases_pkey" PRIMARY KEY ("user_identifier")
+);
+
+-- CreateTable
+CREATE TABLE "change_logs" (
+    "id" SERIAL NOT NULL,
+    "user_identifier" VARCHAR(255) NOT NULL,
+    "device_id" VARCHAR(255) NOT NULL,
+    "change_set" JSONB NOT NULL,
+    "received_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "processed_at" TIMESTAMP,
+
+    CONSTRAINT "change_logs_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "device_change_logs" (
+    "id" SERIAL NOT NULL,
+    "device_id" VARCHAR(255) NOT NULL,
+    "last_processed_change_id" INTEGER,
+    "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "device_change_logs_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "users" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "email" VARCHAR(255),
@@ -11,64 +74,6 @@ CREATE TABLE "users" (
     "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "projects" (
-    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "api_key" VARCHAR(64) NOT NULL,
-    "name" VARCHAR(255) NOT NULL,
-    "user_id" UUID NOT NULL,
-    "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "projects_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "app_users" (
-    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "project_id" UUID NOT NULL,
-    "user_identifier" VARCHAR(255) NOT NULL,
-    "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "app_users_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "devices" (
-    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "app_user_id" UUID NOT NULL,
-    "device_id" VARCHAR(255) NOT NULL,
-    "last_seen_at" TIMESTAMP,
-    "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "devices_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "user_databases" (
-    "app_user_id" UUID NOT NULL,
-    "data" BYTEA NOT NULL,
-    "last_synced_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "user_databases_pkey" PRIMARY KEY ("app_user_id")
-);
-
--- CreateTable
-CREATE TABLE "change_logs" (
-    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "app_user_id" UUID NOT NULL,
-    "device_id" UUID NOT NULL,
-    "change_set" JSONB NOT NULL,
-    "received_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "processed_at" TIMESTAMP,
-
-    CONSTRAINT "change_logs_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -116,15 +121,6 @@ CREATE TABLE "refresh_tokens" (
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "projects_api_key_key" ON "projects"("api_key");
-
--- CreateIndex
-CREATE UNIQUE INDEX "app_users_project_id_user_identifier_key" ON "app_users"("project_id", "user_identifier");
-
--- CreateIndex
-CREATE UNIQUE INDEX "devices_app_user_id_device_id_key" ON "devices"("app_user_id", "device_id");
-
--- CreateIndex
 CREATE UNIQUE INDEX "oauth_providers_name_key" ON "oauth_providers"("name");
 
 -- CreateIndex
@@ -134,22 +130,28 @@ CREATE UNIQUE INDEX "user_social_connections_provider_id_provider_user_id_key" O
 CREATE UNIQUE INDEX "refresh_tokens_token_key" ON "refresh_tokens"("token");
 
 -- AddForeignKey
-ALTER TABLE "projects" ADD CONSTRAINT "projects_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "projects" ADD CONSTRAINT "projects_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "app_users" ADD CONSTRAINT "app_users_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "projects"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "devices" ADD CONSTRAINT "devices_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "devices" ADD CONSTRAINT "devices_user_identifier_fkey" FOREIGN KEY ("user_identifier") REFERENCES "app_users"("user_identifier") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "user_databases" ADD CONSTRAINT "user_databases_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "user_databases" ADD CONSTRAINT "user_databases_user_identifier_fkey" FOREIGN KEY ("user_identifier") REFERENCES "app_users"("user_identifier") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "change_logs" ADD CONSTRAINT "change_logs_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "change_logs" ADD CONSTRAINT "change_logs_user_identifier_fkey" FOREIGN KEY ("user_identifier") REFERENCES "app_users"("user_identifier") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "change_logs" ADD CONSTRAINT "change_logs_device_id_fkey" FOREIGN KEY ("device_id") REFERENCES "devices"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "change_logs" ADD CONSTRAINT "change_logs_device_id_fkey" FOREIGN KEY ("device_id") REFERENCES "devices"("device_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "device_change_logs" ADD CONSTRAINT "device_change_logs_device_id_fkey" FOREIGN KEY ("device_id") REFERENCES "devices"("device_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "device_change_logs" ADD CONSTRAINT "device_change_logs_last_processed_change_id_fkey" FOREIGN KEY ("last_processed_change_id") REFERENCES "change_logs"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "user_social_connections" ADD CONSTRAINT "user_social_connections_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
