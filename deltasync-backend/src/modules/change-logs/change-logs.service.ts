@@ -3,22 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ChangeSetDto } from './dto/change-set.dto';
 import { ChangesHandler } from './changes-handler';
 import { AppUser, ChangeLog, Device } from '@prisma/client';
-
-interface DatabaseState {
-  version: number;
-  timestamp: number;
-  insertions: Record<string, TableData>;
-  updates: Record<string, TableData>;
-  deletions: Record<string, TableData>;
-  lastModified: string;
-}
-
-interface TableData {
-  rows: Array<{
-    row_id: string;
-    [key: string]: any;
-  }>;
-}
+import { DatabaseStateManager } from './database-state';
 
 @Injectable()
 export class ChangeLogsService {
@@ -27,6 +12,7 @@ export class ChangeLogsService {
   constructor(
     private prisma: PrismaService,
     private changesHandler: ChangesHandler,
+    private databaseStateManager: DatabaseStateManager,
   ) { }
 
   async processChange(userIdentifier: string, deviceId: string, changeSet: ChangeSetDto) {
@@ -164,12 +150,9 @@ export class ChangeLogsService {
     }) || await this.prisma.userDatabase.create({
       data: {
         userIdentifier,
-        data: Buffer.from(JSON.stringify({
-          version: 0,
-          timestamp: Date.now(),
-          operations: [],
-          lastModified: new Date().toISOString(),
-        })),
+        data: this.databaseStateManager.serializeState(
+          this.databaseStateManager.createEmptyState()
+        ),
         lastSyncedAt: new Date(),
       },
     });
@@ -195,11 +178,6 @@ export class ChangeLogsService {
           deviceId
         }
       },
-    });
-
-    this.logger.debug(`Found ${devices.length} other devices to notify`, {
-      sourceDeviceId: deviceId,
-      targetDevices: devices.map(d => d.deviceId)
     });
 
     for (const device of devices) {

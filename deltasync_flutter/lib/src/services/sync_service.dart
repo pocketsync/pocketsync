@@ -68,8 +68,7 @@ class SyncService {
           'changeSet': changeSet.toJson(),
         },
         options: Options(
-          validateStatus: (status) =>
-              status != null && status >= 200 && status < 300,
+          validateStatus: (status) => status != null && status >= 200 && status < 300,
         ),
       );
 
@@ -156,7 +155,6 @@ class RetryInterceptor extends Interceptor {
         error.type == DioExceptionType.connectionTimeout ||
         error.type == DioExceptionType.sendTimeout ||
         error.type == DioExceptionType.receiveTimeout ||
-        error.response?.statusCode == 503 ||
-        error.response?.statusCode == 502;
+        (error.response?.statusCode ?? 0) >= 500;
   }
 }
