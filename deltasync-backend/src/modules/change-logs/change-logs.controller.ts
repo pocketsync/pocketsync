@@ -71,7 +71,9 @@ export class ChangeLogsController {
       throw new UnauthorizedException('Both user identifier and device identifier are required');
     }
 
+    await this.getOrCreateUserFromId(userIdentifier, projectId)
     const device = await this.getOrCreateDeviceFromId(deviceIdentifier, userIdentifier, projectId)
+    
     const changes = await this.changesService.fetchMissingChanges(device, data)
 
     return changes

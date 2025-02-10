@@ -17,8 +17,8 @@ class ChangeTracker {
     return "$deviceId:$localId";
   }
 
-  int _extractLocalId(String globalId) {
-    return int.parse(globalId.split(':')[1]);
+  int? _extractLocalId(String globalId) {
+    return int.tryParse(globalId.split(':')[1]);
   }
 
   ChangeTracker(this.db, this.deviceId);
@@ -326,7 +326,7 @@ class ChangeTracker {
         final changeData = jsonDecode(change['change_data'] as String);
         final operation = change['operation'] as String;
         final timestamp = change['timestamp'] as int;
-        final rowId = change['row_id'] as int;
+        final rowId = change['row_id'] as String;
         maxTimestamp = timestamp > maxTimestamp ? timestamp : maxTimestamp;
 
         switch (operation) {
@@ -383,15 +383,24 @@ class ChangeTracker {
   Future<void> applyChangeSet(ChangeSet changeSet) async {
     db.execute('BEGIN TRANSACTION');
     try {
-      // Apply deletions first to avoid conflicts
+// Apply deletions first to avoid conflicts
       for (final tableName in changeSet.deletions.changes.keys) {
         final rows = changeSet.deletions.changes[tableName]!.rows;
         for (final rowData in rows) {
-          final data = json.decode(rowData);
-          final localId = _extractLocalId(data['id'] ?? data['row_id']);
-          db.execute('DELETE FROM $tableName WHERE rowid = ?', [localId]);
+          try {
+            final data = json.decode(rowData);
+            final localId = _extractLocalId(data['id'] ?? data['row_id']);
 
-          log('Deleted row with ID $localId in $tableName');
+            final exists = db.select('SELECT 1 FROM $tableName WHERE rowid = ?', [localId]).isNotEmpty;
+            if (exists) {
+              db.execute('DELETE FROM $tableName WHERE rowid = ?', [localId]);
+              log('Deleted row with ID $localId in $tableName');
+            } else {
+              log('Row with ID $localId not found in $tableName, skipping deletion');
+            }
+          } catch (e) {
+            log('Error deleting row in $tableName: $e');
+          }
         }
       }
 
@@ -401,53 +410,66 @@ class ChangeTracker {
         for (final rowData in rows) {
           final data = json.decode(rowData);
           final globalId = data['id'] ?? data['row_id'];
-          final localId = _extractLocalId(globalId);
+          int? localId = _extractLocalId(globalId);
+
+          // Remove id and rowid from data to avoid conflicts
           data.remove('id');
-          data.remove('row_id');
+          data.remove('rowid');
+
+          if (data.isEmpty) continue;
 
           final setClause = data.keys.map((key) => '$key = ?').join(', ');
           final values = [...data.values];
 
           final exists = db.select('SELECT 1 FROM $tableName WHERE rowid = ?', [localId]).isNotEmpty;
+
           if (exists) {
+            // Update existing row
             db.execute(
               'UPDATE $tableName SET $setClause, last_modified = ? WHERE rowid = ?',
               [...values, changeSet.timestamp, localId],
             );
             log('Updated row with ID $localId in $tableName');
+          } else {
+            // Insert new row if it doesn't exist
+            final columns = data.keys.join(', ');
+            final placeholders = List.filled(data.length + 2, '?').join(', ');
+            final insertValues = [localId, ...data.values, changeSet.timestamp];
+
+            db.execute(
+              'INSERT INTO $tableName (id, $columns, last_modified) VALUES ($placeholders)',
+              insertValues,
+            );
+            log('Inserted new row with ID $localId in $tableName');
           }
         }
       }
 
-      // Apply insertions
       for (final tableName in changeSet.insertions.changes.keys) {
         final rows = changeSet.insertions.changes[tableName]!.rows;
         for (final rowData in rows) {
           final data = json.decode(rowData);
-          final globalId = data.remove('row_id') ?? data.remove('id');
-          final localId = _extractLocalId(globalId);
 
-          final exists = db.select('SELECT 1 FROM $tableName WHERE rowid = ?', [localId]).isNotEmpty;
-          if (exists) {
-            final setClause = data.keys.map((key) => '$key = ?').join(', ');
-            final values = [...data.values];
+          // Remove 'row_id' or 'id' from incoming data
+          var globalId = data.remove('row_id') ?? data.remove('id');
+          int? localId = _extractLocalId(globalId);
 
-            db.execute(
-              'UPDATE $tableName SET $setClause, last_modified = ? WHERE rowid = ?',
-              [...values, changeSet.timestamp, localId],
-            );
-            log('Updated existing row with ID $localId in $tableName');
-          } else {
-            final columns = data.keys.join(', ');
-            final placeholders = List.filled(data.length, '?').join(', ');
-            final values = data.values.toList();
-
-            db.execute(
-              'INSERT INTO $tableName ($columns, last_modified) VALUES ($placeholders, ?)',
-              [...values, changeSet.timestamp],
-            );
-            log('Inserted new row in $tableName');
+          // Ensure localId is an integer
+          if (localId == null) {
+            final maxIdResult = db.select('SELECT MAX(id) as maxId FROM $tableName');
+            localId = (maxIdResult.first['maxId'] ?? 0) + 1;
+            log('Generated new integer id: $localId');
           }
+
+          final columns = data.keys.join(', ');
+          final placeholders = List.filled(data.length + 2, '?').join(', '); // +2 for id and last_modified
+          final values = [localId, ...data.values, changeSet.timestamp];
+
+          db.execute(
+            'INSERT INTO $tableName (id, $columns, last_modified) VALUES ($placeholders)',
+            values,
+          );
+          log('Inserted new row in $tableName with id $localId');
         }
       }
 
