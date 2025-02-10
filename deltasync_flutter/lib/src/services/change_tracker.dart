@@ -210,14 +210,11 @@ class ChangeTracker {
   }
 
   String _generateUpdateCondition(List<String> columns) {
-    return columns
-        .where((col) => col != 'last_modified')
-        .map((col) => '''(
+    return columns.where((col) => col != 'last_modified').map((col) => '''(
           OLD.$col IS NOT NEW.$col OR 
           (OLD.$col IS NULL AND NEW.$col IS NOT NULL) OR 
           (OLD.$col IS NOT NULL AND NEW.$col IS NULL)
-        )''')
-        .join(' OR ');
+        )''').join(' OR ');
   }
 
   String _generateModifiedColumnsOld(List<String> columns) {
@@ -338,6 +335,61 @@ class ChangeTracker {
     } catch (e) {
       db.execute('ROLLBACK');
       throw SyncError('Failed to mark changes as synced: $e');
+    }
+  }
+
+  Future<void> applyChangeSet(ChangeSet changeSet) async {
+    db.execute('BEGIN TRANSACTION');
+    try {
+      // Apply deletions first to avoid conflicts
+      for (final tableName in changeSet.deletions.changes.keys) {
+        final rows = changeSet.deletions.changes[tableName]!.rows;
+        for (final rowData in rows) {
+          final data = json.decode(rowData);
+          db.execute('DELETE FROM $tableName WHERE rowid = ?', [data['rowid']]);
+        }
+      }
+
+      // Apply updates
+      for (final tableName in changeSet.updates.changes.keys) {
+        final rows = changeSet.updates.changes[tableName]!.rows;
+        for (final rowData in rows) {
+          final data = json.decode(rowData);
+          final rowId = data['rowid'];
+          data.remove('rowid');
+
+          final setClause = data.keys.map((key) => '$key = ?').join(', ');
+          final values = [...data.values, rowId];
+
+          db.execute(
+            'UPDATE $tableName SET $setClause, last_modified = ? WHERE rowid = ?',
+            [...values, changeSet.timestamp, rowId],
+          );
+        }
+      }
+
+      // Apply insertions
+      for (final tableName in changeSet.insertions.changes.keys) {
+        final rows = changeSet.insertions.changes[tableName]!.rows;
+        for (final rowData in rows) {
+          final data = json.decode(rowData);
+          data.remove('rowid');
+
+          final columns = data.keys.join(', ');
+          final placeholders = List.filled(data.length, '?').join(', ');
+          final values = data.values.toList();
+
+          db.execute(
+            'INSERT INTO $tableName ($columns, last_modified) VALUES ($placeholders, ?)',
+            [...values, changeSet.timestamp],
+          );
+        }
+      }
+
+      db.execute('COMMIT');
+    } catch (e) {
+      db.execute('ROLLBACK');
+      throw SyncError('Failed to apply change set: $e');
     }
   }
 

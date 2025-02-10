@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:math';
+import 'package:deltasync_flutter/src/models/change_log.dart';
 import 'package:deltasync_flutter/src/models/change_set.dart';
 import 'package:deltasync_flutter/src/models/delta_sync_options.dart';
 import 'package:deltasync_flutter/src/services/device_manager.dart';
@@ -19,7 +21,7 @@ class DeltaSync {
   SyncService? _syncService;
   DeviceManager? _deviceManager;
   bool _isInitialized = false;
-  int _lastSyncTimestamp = 0;
+  int _lastProcessedChangeId = 0;
   Timer? _syncTimer;
   String? _userId;
   final _syncController = StreamController<ChangeSet>.broadcast();
@@ -106,8 +108,21 @@ class DeltaSync {
 
     _isSyncing = true;
     try {
-      final changeSets = await _changeTracker!.generateChangeSets(_lastSyncTimestamp);
-      for (final changeSet in changeSets) {
+      // Fetch remote changes first
+      final remoteChanges = await _syncService!.fetchChanges(_lastProcessedChangeId);
+      _updateLastProcessChange(remoteChanges);
+      for (final changeLog in remoteChanges) {
+        if (!_isInitialized) break;
+        await _changeTracker!.applyChangeSet(changeLog.changeSet);
+        _lastProcessedChangeId = changeLog.id;
+        if (_isInitialized) {
+          _syncController.add(changeLog.changeSet);
+        }
+      }
+
+      // Then process and upload local changes
+      final localChangeSets = await _changeTracker!.generateChangeSets(_lastProcessedChangeId);
+      for (final changeSet in localChangeSets) {
         if (!_isInitialized) break;
         await _syncService!.uploadChanges(changeSet);
         if (_isInitialized) {
@@ -170,16 +185,25 @@ class DeltaSync {
 
   Future<List<ChangeSet>> getChanges() async {
     if (!_isInitialized) throw StateError('DeltaSync not initialized');
-    return await _changeTracker!.generateChangeSets(_lastSyncTimestamp);
+    return await _changeTracker!.generateChangeSets(_lastProcessedChangeId);
   }
 
-  Future<void> markChangesSynced(int timestamp) async {
+  Future<void> markChangesSynced(int changeId) async {
     if (!_isInitialized) throw StateError('DeltaSync not initialized');
     try {
-      await _changeTracker!.markChangesAsSynced(timestamp);
-      _lastSyncTimestamp = timestamp;
+      await _changeTracker!.markChangesAsSynced(changeId);
+      _lastProcessedChangeId = changeId;
     } catch (e) {
       throw SyncError('Failed to mark changes as synced: $e');
+    }
+  }
+
+  Future<void> _updateLastProcessChange(Iterable<ChangeLog> changes) async {
+    if (changes.isEmpty) return;
+
+    final maxChangeId = changes.map((change) => change.id).reduce(max);
+    if (maxChangeId > _lastProcessedChangeId) {
+      _lastProcessedChangeId = maxChangeId;
     }
   }
 
