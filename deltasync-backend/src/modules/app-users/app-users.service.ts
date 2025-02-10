@@ -80,8 +80,6 @@ export class AppUsersService {
   }
 
   async update(userId: string, id: string, updateAppUserDto: UpdateAppUserDto) {
-    const appUser = await this.findOne(userId, id);
-
     if (updateAppUserDto.projectId) {
       await this.validateProjectAccess(userId, updateAppUserDto.projectId);
     }
@@ -126,7 +124,7 @@ export class AppUsersService {
     });
   }
 
-  async createFromSdk(data: { userIdentifier: string; projectId: string }) {
+  async createFromSdk(data: CreateAppUserDto) {
     const project = await this.prisma.project.findUnique({
       where: { id: data.projectId },
     });
@@ -136,10 +134,7 @@ export class AppUsersService {
     }
 
     return this.prisma.appUser.create({
-      data: {
-        userIdentifier: data.userIdentifier,
-        projectId: data.projectId,
-      },
+      data,
       include: {
         project: true,
       },

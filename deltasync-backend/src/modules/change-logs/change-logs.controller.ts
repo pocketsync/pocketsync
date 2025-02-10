@@ -14,6 +14,31 @@ export class ChangeLogsController {
     private readonly appUsersService: AppUsersService,
   ) { }
 
+  private async getOrCreateUserFromId(userId: string, projectId: string) {
+    let appUser = await this.appUsersService.findByUserIdentifier(userId, projectId);
+    if (!appUser) {
+      appUser = await this.appUsersService.createFromSdk({
+        userIdentifier: userId,
+        projectId: projectId,
+      });
+    }
+
+    return appUser
+  }
+
+  private async getOrCreateDeviceFromId(deviceId: string, userId: string, projectId: string) {
+    let device = await this.devicesService.findByDeviceId(deviceId);
+    if (!device) {
+      device = await this.devicesService.createFromSdk({
+        deviceId: deviceId,
+        userIdentifier: userId,
+        projectId: projectId,
+      });
+    }
+
+    return device
+  }
+
   @Post()
   async submitChange(
     @Headers('x-user-identifier') userIdentifier: string,
@@ -24,31 +49,31 @@ export class ChangeLogsController {
       throw new UnauthorizedException('User identifier is required');
     }
 
-    // Ensure app user exists or create it
-    let appUser = await this.appUsersService.findByUserIdentifier(userIdentifier, projectId);
-
-    if (!appUser) {
-      appUser = await this.appUsersService.createFromSdk({
-        userIdentifier,
-        projectId: projectId,
-      });
-    }
-
-    // Ensure device exists or create it
-    let device = await this.devicesService.findByDeviceId(submission.deviceId);
-
-    if (!device) {
-      device = await this.devicesService.createFromSdk({
-        deviceId: submission.deviceId,
-        userIdentifier: appUser.userIdentifier,
-        projectId: projectId,
-      });
-    }
+    const appUser = await this.getOrCreateUserFromId(userIdentifier, projectId)
+    const device = await this.getOrCreateDeviceFromId(submission.deviceId, userIdentifier, projectId)
 
     return this.changesService.processChange(
       appUser.id,
       device.id,
       submission.changeSet,
     );
+  }
+
+  async fetchChanges(
+    @Headers('x-user-identifier') userIdentifier: string,
+    @Headers('x-device-id') deviceIdentifier: string,
+    @Headers('x-project-id') projectId: string,
+    @Body() data: { lastProcessedChangeId: string }
+  ) {
+    if (!userIdentifier || !deviceIdentifier) {
+      throw new UnauthorizedException('Both user identifier and device identifier are required');
+    }
+
+    const device = await this.getOrCreateDeviceFromId(deviceIdentifier, userIdentifier, projectId)
+    const appUser = await this.getOrCreateUserFromId(userIdentifier, projectId)
+
+    const changes = await this.changesService.fetchMissingChanges(device, appUser, dataa)
+
+    return changes
   }
 }

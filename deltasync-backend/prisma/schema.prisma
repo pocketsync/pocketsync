@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,6 +5,74 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model Project {
+  apiKey    String      @id @map("api_key") @db.VarChar(64)
+  name      String      @db.VarChar(255)
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamp()
+  appUsers  AppUser[]
+
+  @@map("projects")
+}
+
+model AppUser {
+  userIdentifier String      @id @map("user_identifier") @db.VarChar(255)
+  projectId      String      @map("project_id") @db.VarChar(64)
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamp()
+  project        Project     @relation(fields: [projectId], references: [apiKey])
+  devices        Device[]
+  userDatabase   UserDatabase?
+  changeLogs     ChangeLog[]
+
+  @@map("app_users")
+}
+
+model Device {
+  deviceId      String      @id @map("device_id") @db.VarChar(255)
+  userIdentifier String     @map("user_identifier") @db.VarChar(255)
+  lastSeenAt    DateTime?   @map("last_seen_at") @db.Timestamp()
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamp()
+  appUser       AppUser     @relation(fields: [userIdentifier], references: [userIdentifier])
+  changeLogs    ChangeLog[]
+  deviceChangeLogs DeviceChangeLog[]
+
+  @@map("devices")
+}
+
+model UserDatabase {
+  userIdentifier String   @id @map("user_identifier") @db.VarChar(255)
+  data          Bytes     @db.ByteA
+  lastSyncedAt  DateTime  @default(now()) @map("last_synced_at") @db.Timestamp()
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt     DateTime  @default(now()) @map("updated_at") @db.Timestamp()
+  appUser       AppUser   @relation(fields: [userIdentifier], references: [userIdentifier])
+
+  @@map("user_databases")
+}
+
+model ChangeLog {
+  id           Int        @id @default(autoincrement())
+  userIdentifier String   @map("user_identifier") @db.VarChar(255)
+  deviceId     String     @map("device_id") @db.VarChar(255)
+  changeSet    Json       @map("change_set") @db.JsonB
+  receivedAt   DateTime   @default(now()) @map("received_at") @db.Timestamp()
+  processed    Boolean    @default(false)
+  appUser      AppUser    @relation(fields: [userIdentifier], references: [userIdentifier])
+  device       Device     @relation(fields: [deviceId], references: [deviceId])
+
+  @@map("change_logs")
+}
+
+model DeviceChangeLog {
+  id                     Int       @id @default(autoincrement())
+  deviceId               String    @map("device_id") @db.VarChar(255)
+  lastProcessedChangeId  Int?      @map("last_processed_change_id")
+  updatedAt              DateTime  @default(now()) @map("updated_at") @db.Timestamp()
+  device                 Device    @relation(fields: [deviceId], references: [deviceId])
+  changeLog              ChangeLog @relation(fields: [lastProcessedChangeId], references: [id])
+
+  @@map("device_change_logs")
 }
 
 model User {
@@ -27,73 +89,6 @@ model User {
   socialConnections    UserSocialConnection[]
   refreshTokens        RefreshToken[]
   @@map("users")
-}
-
-model Project {
-  id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  apiKey    String     @unique @map("api_key") @db.VarChar(64)
-  name      String     @db.VarChar(255)
-  userId    String     @map("user_id") @db.Uuid
-  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamp()
-  updatedAt DateTime   @default(now()) @map("updated_at") @db.Timestamp()
-  user      User       @relation(fields: [userId], references: [id])
-  appUsers  AppUser[]
-
-  @@map("projects")
-}
-
-model AppUser {
-  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  projectId      String         @map("project_id") @db.Uuid
-  userIdentifier String         @map("user_identifier") @db.VarChar(255)
-  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamp()
-  updatedAt      DateTime       @default(now()) @map("updated_at") @db.Timestamp()
-  project        Project        @relation(fields: [projectId], references: [id])
-  devices        Device[]
-  userDatabase   UserDatabase?
-  changeLogs     ChangeLog[]
-
-  @@unique([projectId, userIdentifier])
-
-  @@map("app_users")
-}
-
-model Device {
-  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  appUserId     String      @map("app_user_id") @db.Uuid
-  deviceId      String      @map("device_id") @db.VarChar(255)
-  socketId      String?     @map("socket_id") @db.VarChar(255)
-  isConnected   Boolean     @default(false) @map("is_connected")
-  lastSeenAt    DateTime?   @map("last_seen_at") @db.Timestamp()
-  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamp()
-  updatedAt     DateTime    @default(now()) @map("updated_at") @db.Timestamp()
-  appUser       AppUser     @relation(fields: [appUserId], references: [id])
-  changeLogs    ChangeLog[]
-
-  @@unique([appUserId, deviceId])
-  @@map("devices")
-}
-
-model UserDatabase {
-  appUserId     String   @id @map("app_user_id") @db.Uuid
-  data          Bytes    @db.ByteA
-  lastSyncedAt  DateTime @default(now()) @map("last_synced_at") @db.Timestamp()
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamp()
-  updatedAt     DateTime @default(now()) @map("updated_at") @db.Timestamp()
-  appUser       AppUser  @relation(fields: [appUserId], references: [id])
-  @@map("user_databases")
-}
-
-model ChangeLog {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  appUserId   String    @map("app_user_id") @db.Uuid
-  deviceId    String    @map("device_id") @db.Uuid
-  changeSet   Json      @map("change_set") @db.JsonB
-  receivedAt  DateTime  @default(now()) @map("received_at") @db.Timestamp()
-  processedAt DateTime? @map("processed_at") @db.Timestamp()
-  appUser     AppUser   @relation(fields: [appUserId], references: [id])
-  device      Device    @relation(fields: [deviceId], references: [id])
-  @@map("change_logs")
 }
 
 model OAuthProvider {
