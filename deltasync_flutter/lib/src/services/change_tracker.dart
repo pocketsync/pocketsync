@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 import 'package:deltasync_flutter/src/errors/sync_error.dart';
 import 'package:deltasync_flutter/src/models/schema_change.dart';
 import 'package:sqlite3/sqlite3.dart';
@@ -376,6 +377,8 @@ class ChangeTracker {
         for (final rowData in rows) {
           final data = json.decode(rowData);
           db.execute('DELETE FROM $tableName WHERE rowid = ?', [data['rowid']]);
+
+          log('Deleted ${data['rowid']} in $tableName');
         }
       }
 
@@ -390,28 +393,45 @@ class ChangeTracker {
           final setClause = data.keys.map((key) => '$key = ?').join(', ');
           final values = [...data.values, rowId];
 
-          db.execute(
-            'UPDATE $tableName SET $setClause, last_modified = ? WHERE rowid = ?',
-            [...values, changeSet.timestamp, rowId],
-          );
+          final exists = db.select('SELECT 1 FROM $tableName WHERE rowid = ?', [rowId]).isNotEmpty;
+          if (exists) {
+            db.execute(
+              'UPDATE $tableName SET $setClause, last_modified = ? WHERE rowid = ?',
+              [...values, changeSet.timestamp, rowId],
+            );
+          }
+
+          log('Updated $values in $tableName');
         }
       }
 
-      // Apply insertions
       for (final tableName in changeSet.insertions.changes.keys) {
         final rows = changeSet.insertions.changes[tableName]!.rows;
         for (final rowData in rows) {
           final data = json.decode(rowData);
-          data.remove('rowid');
+          final rowId = data.remove('row_id');
 
-          final columns = data.keys.join(', ');
-          final placeholders = List.filled(data.length, '?').join(', ');
-          final values = data.values.toList();
+          final exists = db.select('SELECT 1 FROM $tableName WHERE rowid = ?', [rowId]).isNotEmpty;
+          if (exists) {
+            final setClause = data.keys.map((key) => '$key = ?').join(', ');
+            final values = [...data.values];
 
-          db.execute(
-            'INSERT INTO $tableName ($columns, last_modified) VALUES ($placeholders, ?)',
-            [...values, changeSet.timestamp],
-          );
+            db.execute(
+              'UPDATE $tableName SET $setClause, last_modified = ? WHERE rowid = ?',
+              [...values, changeSet.timestamp, rowId],
+            );
+          } else {
+            final columns = data.keys.join(', ');
+            final placeholders = List.filled(data.length, '?').join(', ');
+            final values = data.values.toList();
+
+            db.execute(
+              'INSERT INTO $tableName ($columns, last_modified) VALUES ($placeholders, ?)',
+              [...values, changeSet.timestamp],
+            );
+
+            log('Inserted $values in $tableName');
+          }
         }
       }
 

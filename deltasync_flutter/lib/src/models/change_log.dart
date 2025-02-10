@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:deltasync_flutter/src/models/change_set.dart';
 
 class ChangeLog {
@@ -17,23 +19,14 @@ class ChangeLog {
     this.processedAt,
   });
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'user_identifier': userIdentifier,
-        'device_id': deviceId,
-        'change_set': changeSet.toJson(),
-        'received_at': receivedAt.toIso8601String(),
-        'processed_at': processedAt?.toIso8601String(),
-      };
-
   factory ChangeLog.fromJson(Map<String, dynamic> json) {
     return ChangeLog(
       id: json['id'],
-      userIdentifier: json['user_identifier'],
-      deviceId: json['device_id'],
-      changeSet: ChangeSet.fromJson(json['change_set']),
-      receivedAt: DateTime.parse(json['received_at']),
-      processedAt: json['processed_at'] != null ? DateTime.parse(json['processed_at']) : null,
+      userIdentifier: json['userIdentifier'],
+      deviceId: json['deviceId'],
+      changeSet: ChangeSet.fromJson(jsonDecode(json['changeSet'])),
+      receivedAt: DateTime.parse(json['receivedAt']),
+      processedAt: json['processedAt'] != null ? DateTime.parse(json['processedAt']) : null,
     );
   }
 

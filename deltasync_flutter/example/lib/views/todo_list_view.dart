@@ -38,6 +38,16 @@ class _TodoListViewState extends State<TodoListView> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Todo List'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              _handleTodoOperation(() async {
+                await _todoController.getTodos();
+              });
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
