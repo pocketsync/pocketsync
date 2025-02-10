@@ -10,14 +10,16 @@ class ChangeTracker {
   final Database db;
   static const int _batchSize = 1000;
   static const int currentVersion = 1;
+  final String deviceId;
 
-  ChangeTracker(this.db);
+  ChangeTracker(this.db, this.deviceId);
 
   Future<void> setupTracking() async {
     db.execute('PRAGMA journal_mode=WAL');
 
     await _createChangeTrackingTable();
     await _createVersionTrackingTable();
+    await _createDeviceSyncStateTable();
   }
 
   Future<void> _createChangeTrackingTable() async {
@@ -243,6 +245,34 @@ class ChangeTracker {
     _schemaChangeController.close();
   }
 
+  Future<void> _createDeviceSyncStateTable() async {
+    db.execute('''
+      CREATE TABLE IF NOT EXISTS __deltasync_device_state (
+        device_id TEXT PRIMARY KEY,
+        last_processed_change_id INTEGER NOT NULL DEFAULT 0,
+        last_sync_timestamp INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+  }
+
+  Future<int> getLastProcessedChangeId() async {
+    final result = db.select(
+      'SELECT last_processed_change_id FROM __deltasync_device_state WHERE device_id = ?',
+      [deviceId]
+    );
+    return result.isEmpty ? 0 : result.first['last_processed_change_id'] as int;
+  }
+
+  Future<void> updateLastProcessedChangeId(int changeId) async {
+    db.execute('''
+      INSERT INTO __deltasync_device_state (device_id, last_processed_change_id, last_sync_timestamp)
+      VALUES (?, ?, ?)
+      ON CONFLICT(device_id) DO UPDATE SET
+        last_processed_change_id = excluded.last_processed_change_id,
+        last_sync_timestamp = excluded.last_sync_timestamp
+    ''', [deviceId, changeId, DateTime.now().millisecondsSinceEpoch ~/ 1000]);
+  }
+
   Future<List<ChangeSet>> generateChangeSets(int lastSyncTimestamp) async {
     final changeSets = <ChangeSet>[];
     var currentBatch = 0;
@@ -253,9 +283,10 @@ class ChangeTracker {
         WHERE timestamp > ? 
         AND sync_status = 'pending'
         AND retry_count < 3
+        AND id > ?
         ORDER BY timestamp ASC
         LIMIT ? OFFSET ?
-      ''', [lastSyncTimestamp, _batchSize, currentBatch * _batchSize]);
+      ''', [lastSyncTimestamp, await getLastProcessedChangeId(), _batchSize, currentBatch * _batchSize]);
 
       if (changes.isEmpty) break;
 

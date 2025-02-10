@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:math';
-import 'package:deltasync_flutter/src/models/change_log.dart';
 import 'package:deltasync_flutter/src/models/change_set.dart';
 import 'package:deltasync_flutter/src/models/delta_sync_options.dart';
 import 'package:deltasync_flutter/src/services/device_manager.dart';
@@ -43,8 +41,9 @@ class DeltaSync {
       _syncInterval = syncInterval;
       _db = sqlite3.open(dbPath);
       _sharedPreferences = await SharedPreferences.getInstance();
-      _changeTracker = ChangeTracker(_db!);
       _deviceManager = DeviceManager(_sharedPreferences!);
+      _changeTracker = ChangeTracker(_db!, _deviceManager!.getDeviceId());
+      _lastProcessedChangeId = await _changeTracker!.getLastProcessedChangeId();
 
       _syncService = SyncService(
         serverUrl: options.serverUrl,
@@ -110,10 +109,10 @@ class DeltaSync {
     try {
       // Fetch remote changes first
       final remoteChanges = await _syncService!.fetchChanges(_lastProcessedChangeId);
-      _updateLastProcessChange(remoteChanges);
       for (final changeLog in remoteChanges) {
         if (!_isInitialized) break;
         await _changeTracker!.applyChangeSet(changeLog.changeSet);
+        await _changeTracker!.updateLastProcessedChangeId(changeLog.id);
         _lastProcessedChangeId = changeLog.id;
         if (_isInitialized) {
           _syncController.add(changeLog.changeSet);
@@ -190,20 +189,14 @@ class DeltaSync {
 
   Future<void> markChangesSynced(int changeId) async {
     if (!_isInitialized) throw StateError('DeltaSync not initialized');
+    await _changeTracker!.updateLastProcessedChangeId(changeId);
+    _lastProcessedChangeId = changeId;
+    if (!_isInitialized) throw StateError('DeltaSync not initialized');
     try {
       await _changeTracker!.markChangesAsSynced(changeId);
       _lastProcessedChangeId = changeId;
     } catch (e) {
       throw SyncError('Failed to mark changes as synced: $e');
-    }
-  }
-
-  Future<void> _updateLastProcessChange(Iterable<ChangeLog> changes) async {
-    if (changes.isEmpty) return;
-
-    final maxChangeId = changes.map((change) => change.id).reduce(max);
-    if (maxChangeId > _lastProcessedChangeId) {
-      _lastProcessedChangeId = maxChangeId;
     }
   }
 

@@ -1,5 +1,6 @@
 import 'dart:developer';
 
+import 'package:deltasync_flutter/src/models/change_log.dart';
 import 'package:deltasync_flutter/src/services/change_tracker.dart';
 import 'package:deltasync_flutter/src/services/device_manager.dart';
 import 'package:dio/dio.dart';
@@ -95,7 +96,7 @@ class SyncService {
     }
   }
 
-  Future<Iterable<ChangeSet>> fetchChanges(int lastProcessedChangeId) async {
+  Future<Iterable<ChangeLog>> fetchChanges(int lastProcessedChangeId) async {
     if (_isDisposed) {
       throw StateError('SyncService has been disposed');
     }
@@ -121,8 +122,8 @@ class SyncService {
 
       log('Fetched changes from server: ${response.data}');
 
-      final Iterable<dynamic> changeSetsJson = response.data as Iterable<dynamic>;
-      return changeSetsJson.map((json) => ChangeSet.fromJson(json));
+      final Iterable<dynamic> changeLogsJson = response.data as Iterable<dynamic>;
+      return changeLogsJson.map((json) => ChangeLog.fromJson(json));
     } on DioException catch (e) {
       if (e.type == DioExceptionType.connectionError ||
           e.type == DioExceptionType.connectionTimeout ||
