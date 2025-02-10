@@ -7,5 +7,5 @@ export class CreateDeviceDto {
 
   @IsUUID()
   @IsNotEmpty()
-  appUserId: string;
+  userIdentifier: string;
 }

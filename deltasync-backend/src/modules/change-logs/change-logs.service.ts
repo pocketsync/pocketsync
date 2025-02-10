@@ -2,6 +2,7 @@ import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common
 import { PrismaService } from '../prisma/prisma.service';
 import { ChangeSetDto } from './dto/change-set.dto';
 import { ChangesHandler } from './changes-handler';
+import { AppUser, Device } from '@prisma/client';
 
 interface DatabaseState {
   version: number;
@@ -28,15 +29,15 @@ export class ChangeLogsService {
     private changesHandler: ChangesHandler,
   ) { }
 
-  async processChange(appUserId: string, deviceId: string, changeSet: ChangeSetDto) {
-    this.logger.log(`Processing change for user ${appUserId} from device ${deviceId}`);
+  async processChange(userIdentifier: string, deviceId: string, changeSet: ChangeSetDto) {
+    this.logger.log(`Processing change for user ${userIdentifier} from device ${deviceId}`);
     try {
       // 1. Record the change in the log (if it doesn't already exist)
-      const changeLog = await this.createOrFindChangeLog(appUserId, deviceId, changeSet);
+      const changeLog = await this.createOrFindChangeLog(userIdentifier, deviceId, changeSet);
       this.logger.log(`Change log ${changeLog.id} ${changeLog.processedAt ? 'already exists' : 'created'}`);
 
       // 2. Get user's current database state
-      const userDb = await this.getOrCreateUserDatabase(appUserId);
+      const userDb = await this.getOrCreateUserDatabase(userIdentifier);
       this.logger.log(`Retrieved user database state, last synced at ${userDb.lastSyncedAt}`);
 
       // 3. Apply changes and resolve conflicts
@@ -45,7 +46,7 @@ export class ChangeLogsService {
 
       // 4. Update the server-side database
       await this.prisma.userDatabase.update({
-        where: { appUserId },
+        where: { userIdentifier },
         data: {
           data: updatedData,
           lastSyncedAt: new Date(),
@@ -60,14 +61,14 @@ export class ChangeLogsService {
       });
 
       // 6. Notify other devices
-      await this.addToChangeQueue(appUserId, deviceId, changeSet);
+      await this.addToChangeQueue(userIdentifier, deviceId, changeSet);
       this.logger.log('Change processing completed successfully');
 
       return changeLog;
     } catch (error) {
       this.logger.error('Error processing change', {
         error: error.message,
-        userId: appUserId,
+        userIdentifier,
         deviceId,
         stack: error.stack
       });
@@ -77,41 +78,38 @@ export class ChangeLogsService {
 
   async fetchMissingChanges(device: Device, appUser: AppUser, data: { lastProcessedChangeId: string }) {
     // TODO: Return changes that came after lastProcessedChangeId
-    return []
   }
 
-  private async createOrFindChangeLog(appUserId: string, deviceId: string, changeSet: ChangeSetDto) {
+  private async createOrFindChangeLog(userIdentifier: string, deviceId: string, changeSet: ChangeSetDto) {
     this.logger.debug('Checking for existing change log within last 100s');
-    
-    if (!this.isValidUUID(appUserId)) {
-      throw new Error('Invalid app user ID format');
+
+    if (!this.isValidUUID(userIdentifier)) {
+      throw new Error('Invalid user identifier format');
     }
 
     const device = await this.prisma.device.findFirst({
       where: {
-        id: deviceId,
-        appUser: {
-          id: appUserId
-        }
+        deviceId,
+        userIdentifier,
       },
-      select: { 
-        id: true,
+      select: {
+        userIdentifier: true,
         appUser: {
           select: {
-            id: true
+            userIdentifier: true
           }
         }
       }
     });
 
     if (!device) {
-      throw new Error(`Device ${deviceId} not found for user ${appUserId}`);
+      throw new Error(`Device ${deviceId} not found for user ${userIdentifier}`);
     }
 
     const existingChangeLog = await this.prisma.changeLog.findFirst({
       where: {
-        appUserId: device.appUser.id,
-        deviceId: device.id,
+        userIdentifier,
+        deviceId,
         changeSet: { equals: JSON.stringify(changeSet) },
         receivedAt: {
           gte: new Date(Date.now() - 100000),
@@ -125,20 +123,20 @@ export class ChangeLogsService {
 
     return await this.prisma.changeLog.create({
       data: {
-        appUserId: device.appUser.id,
-        deviceId: device.id,
+        userIdentifier,
+        deviceId,
         changeSet: JSON.stringify(changeSet),
         receivedAt: new Date(),
       },
     });
   }
 
-  private async getOrCreateUserDatabase(appUserId: string) {
+  private async getOrCreateUserDatabase(userIdentifier: string) {
     return await this.prisma.userDatabase.findFirst({
-      where: { appUserId },
+      where: { userIdentifier },
     }) || await this.prisma.userDatabase.create({
       data: {
-        appUserId,
+        userIdentifier,
         data: Buffer.from(JSON.stringify({
           version: 0,
           timestamp: Date.now(),
@@ -164,12 +162,12 @@ export class ChangeLogsService {
       try {
         const bufferData = Buffer.from(currentData);
         const parsedData = JSON.parse(bufferData.toString('utf8').trim());
-        
+
         // Validate parsed data structure
         if (!this.isValidDatabaseState(parsedData)) {
           throw new Error('Invalid database state structure');
         }
-        
+
         currentState = parsedData;
         this.logger.debug(`Current database state parsed, version: ${currentState.version}`);
       } catch (error) {
@@ -236,34 +234,34 @@ export class ChangeLogsService {
     return uuidRegex.test(uuid);
   }
 
-  private addToChangeQueue(appUserId: string, deviceId: string, changeSet: ChangeSetDto) {
-    if (!this.isValidUUID(appUserId)) {
-      throw new Error('Invalid app user ID format');
+  private async addToChangeQueue(userIdentifier: string, deviceId: string, changeSet: ChangeSetDto) {
+    if (!this.isValidUUID(userIdentifier)) {
+      throw new Error('Invalid user identifier format');
     }
 
     const sourceDevice = await this.prisma.device.findFirst({
-      where: { id: sourceDeviceId, appUserId }
+      where: { deviceId, userIdentifier }
     });
 
     if (!sourceDevice) {
-      throw new Error(`Source device ${sourceDeviceId} not found for user ${appUserId}`);
+      throw new Error(`Source device ${deviceId} not found for user ${userIdentifier}`);
     }
 
     const devices = await this.prisma.device.findMany({
       where: {
-        appUser: { id: appUserId },
+        userIdentifier,
         NOT: {
-          deviceId: sourceDeviceId
+          deviceId
         }
       },
     });
 
     this.logger.debug(`Found ${devices.length} other devices to notify`, {
-      sourceDeviceId,
+      sourceDeviceId: deviceId,
       targetDevices: devices.map(d => d.deviceId)
     });
 
-    for (device in devices) {
+    for (var device in devices) {
       // TODO: Save an entry to device_change_logs
     }
   }

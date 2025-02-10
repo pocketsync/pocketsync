@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateDeviceDto } from './dto/create-device.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { AppUsersService } from '../app-users/app-users.service';
+import { Device } from '@prisma/client';
 
 @Injectable()
 export class DevicesService {
@@ -11,7 +12,7 @@ export class DevicesService {
     private appUsersService: AppUsersService,
   ) { }
 
-  async findByDeviceId(deviceId: string) {
+  async findByDeviceId(deviceId: string): Promise<Device | null> {
     return this.prisma.device.findFirst({
       where: { deviceId },
       include: {
@@ -21,7 +22,7 @@ export class DevicesService {
   }
 
   async create(userId: string, createDeviceDto: CreateDeviceDto) {
-    await this.validateAppUserAccess(userId, createDeviceDto.appUserId);
+    await this.validateAppUserAccess(userId, createDeviceDto.userIdentifier);
 
     return this.prisma.device.create({
       data: {
@@ -34,9 +35,9 @@ export class DevicesService {
     });
   }
 
-  async createFromSdk(data: { deviceId: string; userIdentifier: string, projectId: string }) {
+  async createFromSdk(data: { deviceId: string; userIdentifier: string, projectId: string }): Promise<Device> {
     let appUser = await this.appUsersService.findByUserIdentifier(data.userIdentifier, data.projectId);
-    
+
     if (!appUser) {
       throw new NotFoundException('App user not found');
     }
@@ -44,7 +45,7 @@ export class DevicesService {
     return this.prisma.device.create({
       data: {
         deviceId: data.deviceId,
-        appUserId: appUser.id,
+        userIdentifier: appUser.userIdentifier,
         lastSeenAt: new Date(),
       },
       include: {
@@ -53,13 +54,13 @@ export class DevicesService {
     });
   }
 
-  async findAll(userId: string, appUserId: string, { page = 1, limit = 10 }: PaginationQueryDto) {
-    await this.validateAppUserAccess(userId, appUserId);
+  async findAll(userId: string, userIdentifier: string, { page = 1, limit = 10 }: PaginationQueryDto) {
+    await this.validateAppUserAccess(userId, userIdentifier);
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
       this.prisma.device.findMany({
-        where: { appUserId },
+        where: { userIdentifier },
         include: {
           _count: {
             select: { changeLogs: true },
@@ -70,7 +71,7 @@ export class DevicesService {
         orderBy: { lastSeenAt: 'desc' },
       }),
       this.prisma.device.count({
-        where: { appUserId },
+        where: { userIdentifier },
       }),
     ]);
 
@@ -87,9 +88,9 @@ export class DevicesService {
     };
   }
 
-  async findOne(userId: string, id: string) {
+  async findOne(userId: string, deviceId: string) {
     const device = await this.prisma.device.findUnique({
-      where: { id },
+      where: { deviceId },
       include: {
         appUser: {
           include: {
@@ -107,31 +108,31 @@ export class DevicesService {
       throw new NotFoundException('Device not found');
     }
 
-    await this.validateAppUserAccess(userId, device.appUserId);
+    await this.validateAppUserAccess(userId, device.userIdentifier);
 
     return device;
   }
-  
-  async remove(userId: string, id: string) {
-    await this.findOne(userId, id);
+
+  async remove(userId: string, deviceId: string) {
+    await this.findOne(userId, deviceId);
 
     return this.prisma.device.delete({
-      where: { id },
+      where: { deviceId },
     });
   }
 
-  async updateLastSeen(userId: string, id: string) {
-    await this.findOne(userId, id);
+  async updateLastSeen(userId: string, deviceId: string) {
+    await this.findOne(userId, deviceId);
 
     return this.prisma.device.update({
-      where: { id },
+      where: { deviceId },
       data: { lastSeenAt: new Date() },
     });
   }
 
-  private async validateAppUserAccess(userId: string, appUserId: string) {
+  private async validateAppUserAccess(userId: string, userIdentifier: string) {
     const appUser = await this.prisma.appUser.findUnique({
-      where: { id: appUserId },
+      where: { userIdentifier },
       include: { project: true },
     });
 
@@ -139,7 +140,7 @@ export class DevicesService {
       throw new NotFoundException('App user not found');
     }
 
-    if (appUser.project.userId !== userId) {
+    if (appUser.userIdentifier !== userId) {
       throw new ForbiddenException('Access denied to this app user');
     }
   }

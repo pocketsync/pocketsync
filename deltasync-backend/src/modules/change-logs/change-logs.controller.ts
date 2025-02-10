@@ -53,8 +53,8 @@ export class ChangeLogsController {
     const device = await this.getOrCreateDeviceFromId(submission.deviceId, userIdentifier, projectId)
 
     return this.changesService.processChange(
-      appUser.id,
-      device.id,
+      appUser.userIdentifier,
+      device.deviceId,
       submission.changeSet,
     );
   }
@@ -72,7 +72,7 @@ export class ChangeLogsController {
     const device = await this.getOrCreateDeviceFromId(deviceIdentifier, userIdentifier, projectId)
     const appUser = await this.getOrCreateUserFromId(userIdentifier, projectId)
 
-    const changes = await this.changesService.fetchMissingChanges(device, appUser, dataa)
+    const changes = await this.changesService.fetchMissingChanges(device, appUser, data)
 
     return changes
   }

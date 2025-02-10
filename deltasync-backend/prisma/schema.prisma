@@ -12,6 +12,8 @@ model Project {
   name      String      @db.VarChar(255)
   createdAt DateTime    @default(now()) @map("created_at") @db.Timestamp()
   appUsers  AppUser[]
+  user      User?       @relation(fields: [userId], references: [id])
+  userId    String?     @map("user_id") @db.Uuid
 
   @@map("projects")
 }
@@ -57,9 +59,10 @@ model ChangeLog {
   deviceId     String     @map("device_id") @db.VarChar(255)
   changeSet    Json       @map("change_set") @db.JsonB
   receivedAt   DateTime   @default(now()) @map("received_at") @db.Timestamp()
-  processed    Boolean    @default(false)
+  processedAt  DateTime?  @map("processed_at") @db.Timestamp()
   appUser      AppUser    @relation(fields: [userIdentifier], references: [userIdentifier])
   device       Device     @relation(fields: [deviceId], references: [deviceId])
+  deviceChangeLogs DeviceChangeLog[]
 
   @@map("change_logs")
 }
@@ -70,7 +73,7 @@ model DeviceChangeLog {
   lastProcessedChangeId  Int?      @map("last_processed_change_id")
   updatedAt              DateTime  @default(now()) @map("updated_at") @db.Timestamp()
   device                 Device    @relation(fields: [deviceId], references: [deviceId])
-  changeLog              ChangeLog @relation(fields: [lastProcessedChangeId], references: [id])
+  changeLog              ChangeLog? @relation(fields: [lastProcessedChangeId], references: [id])
 
   @@map("device_change_logs")
 }
