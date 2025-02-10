@@ -12,7 +12,7 @@ CREATE TABLE "projects" (
 -- CreateTable
 CREATE TABLE "app_users" (
     "user_identifier" VARCHAR(255) NOT NULL,
-    "project_id" VARCHAR(64) NOT NULL,
+    "project_id" UUID NOT NULL,
     "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "app_users_pkey" PRIMARY KEY ("user_identifier")
@@ -44,21 +44,12 @@ CREATE TABLE "change_logs" (
     "id" SERIAL NOT NULL,
     "user_identifier" VARCHAR(255) NOT NULL,
     "device_id" VARCHAR(255) NOT NULL,
+    "original_id" VARCHAR(255) NOT NULL,
     "change_set" JSONB NOT NULL,
     "received_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "processed_at" TIMESTAMP,
 
     CONSTRAINT "change_logs_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "device_change_logs" (
-    "id" SERIAL NOT NULL,
-    "device_id" VARCHAR(255) NOT NULL,
-    "last_processed_change_id" INTEGER,
-    "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "device_change_logs_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -146,12 +137,6 @@ ALTER TABLE "change_logs" ADD CONSTRAINT "change_logs_user_identifier_fkey" FORE
 
 -- AddForeignKey
 ALTER TABLE "change_logs" ADD CONSTRAINT "change_logs_device_id_fkey" FOREIGN KEY ("device_id") REFERENCES "devices"("device_id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "device_change_logs" ADD CONSTRAINT "device_change_logs_device_id_fkey" FOREIGN KEY ("device_id") REFERENCES "devices"("device_id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "device_change_logs" ADD CONSTRAINT "device_change_logs_last_processed_change_id_fkey" FOREIGN KEY ("last_processed_change_id") REFERENCES "change_logs"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "user_social_connections" ADD CONSTRAINT "user_social_connections_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -56,6 +56,7 @@ model ChangeLog {
   id           Int        @id @default(autoincrement())
   userIdentifier String   @map("user_identifier") @db.VarChar(255)
   deviceId     String     @map("device_id") @db.VarChar(255)
+  originalId   String     @map("original_id") @db.VarChar(255)
   changeSet    Json       @map("change_set") @db.JsonB
   receivedAt   DateTime   @default(now()) @map("received_at") @db.Timestamp()
   processedAt  DateTime?  @map("processed_at") @db.Timestamp()

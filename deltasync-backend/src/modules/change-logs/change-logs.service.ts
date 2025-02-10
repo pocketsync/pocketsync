@@ -27,7 +27,7 @@ export class ChangeLogsService {
       this.logger.log(`Retrieved user database state, last synced at ${userDb.lastSyncedAt}`);
 
       // 3. Apply changes and resolve conflicts
-      const updatedData = await this.resolveConflicts(userDb.data, changeSet);
+      const updatedData = await this.resolveConflicts(userDb.data, changeSet, deviceId);
       this.logger.log('Conflicts resolved, merging changes into database');
 
       // 4. Update the server-side database
@@ -46,8 +46,6 @@ export class ChangeLogsService {
         data: { processedAt: new Date() },
       });
 
-      // 6. Notify other devices
-      await this.addToChangeQueue(userIdentifier, deviceId, changeSet);
       this.logger.log('Change processing completed successfully');
 
       return changeLog;
@@ -62,9 +60,9 @@ export class ChangeLogsService {
     }
   }
 
-  async fetchMissingChanges(device: Device, data: { lastProcessedChangeId: number }): Promise<ChangeLog []> {
+  async fetchMissingChanges(device: Device, data: { lastProcessedChangeId: number }): Promise<ChangeLog[]> {
     this.logger.debug(`Fetching changes after ID ${data.lastProcessedChangeId} for device ${device.deviceId}`);
-    
+
     return this.prisma.changeLog.findMany({
       where: {
         userIdentifier: device.userIdentifier,
@@ -80,6 +78,22 @@ export class ChangeLogsService {
 
   private async createOrFindChangeLog(userIdentifier: string, deviceId: string, changeSet: ChangeSetDto) {
     this.logger.debug('Checking for existing change log within last 100s');
+
+    // Extract original row IDs from the change set
+    const originalIds = new Set<string>();
+    Object.values(changeSet.insertions).forEach(table =>
+      table.rows.forEach(row => originalIds.add(row.row_id))
+    );
+    Object.values(changeSet.updates).forEach(table =>
+      table.rows.forEach(row => originalIds.add(row.row_id))
+    );
+    Object.values(changeSet.deletions).forEach(table =>
+      table.rows.forEach(row => originalIds.add(row.row_id))
+    );
+
+    if (originalIds.size === 0) {
+      throw new Error('No row IDs found in change set');
+    }
 
     const device = await this.prisma.device.findFirst({
       where: {
@@ -115,10 +129,13 @@ export class ChangeLogsService {
       return existingChangeLog;
     }
 
+    // Create a new change log with the original ID format (deviceId:localId)
+    const firstOriginalId = Array.from(originalIds)[0];
     return await this.prisma.changeLog.create({
       data: {
         userIdentifier,
         deviceId,
+        originalId: firstOriginalId,
         changeSet: JSON.stringify(changeSet),
         receivedAt: new Date(),
       },
@@ -139,20 +156,132 @@ export class ChangeLogsService {
     });
   }
 
-  private async resolveConflicts(currentData: Uint8Array | undefined, changeSet: ChangeSetDto): Promise<Buffer> {
+  private async resolveConflicts(currentData: Uint8Array | undefined, changeSet: ChangeSetDto, deviceId: string): Promise<Buffer> {
+    // Extract all row IDs from the incoming change set
+    const rowIds = new Set<string>();
+    Object.values(changeSet.insertions).forEach(table =>
+      table.rows.forEach(row => rowIds.add(row.originalId || row.row_id))
+    );
+    Object.values(changeSet.updates).forEach(table =>
+      table.rows.forEach(row => rowIds.add(row.originalId || row.row_id))
+    );
+    Object.values(changeSet.deletions).forEach(table =>
+      table.rows.forEach(row => rowIds.add(row.originalId || row.row_id))
+    );
+
+    // Find pending changes for any of these rows
+    const pendingChanges = await this.prisma.changeLog.findMany({
+      where: {
+        originalId: { in: Array.from(rowIds) },
+        processedAt: null,
+        receivedAt: { lt: new Date() }
+      },
+      orderBy: {
+        receivedAt: 'desc'
+      }
+    });
+
+    if (pendingChanges.length > 0) {
+      this.logger.debug(`Found ${pendingChanges.length} pending changes for affected rows`);
+
+      // Group all changes by row ID for efficient conflict resolution
+      const changesByRow = new Map<string, Array<{ change: any, receivedAt: Date, deviceId?: string }>>();
+
+      // Add pending changes to the map
+      pendingChanges.forEach(change => {
+        const parsedChangeSet = JSON.parse(change.changeSet as string);
+        this.addChangeSetToMap(parsedChangeSet, change.receivedAt, change.deviceId, changesByRow);
+      });
+
+      // Add current change set to the map
+      this.addChangeSetToMap(changeSet, new Date(), deviceId, changesByRow);
+
+      // Resolve conflicts for each row
+      let mergedState = currentData ?
+        this.databaseStateManager.deserializeState(currentData) :
+        this.databaseStateManager.createEmptyState();
+
+      for (const [rowId, changes] of changesByRow.entries()) {
+        // Sort changes by timestamp and device ID
+        const sortedChanges = changes.sort((a, b) => {
+          const timeComparison = b.receivedAt.getTime() - a.receivedAt.getTime();
+          if (timeComparison !== 0) return timeComparison;
+          return (b.deviceId || '').localeCompare(a.deviceId || '');
+        });
+
+        // Apply the most recent change for this row
+        const latestChange = sortedChanges[0];
+        mergedState = await this.applyRowChange(mergedState, rowId, latestChange.change);
+      }
+
+      return Buffer.from(JSON.stringify(mergedState));
+    }
+
+    // If no pending changes, proceed with normal conflict resolution
     return this.changesHandler.resolveConflicts(currentData, changeSet);
   }
 
-  private async addToChangeQueue(userIdentifier: string, deviceId: string, changeSet: ChangeSetDto) {
-    const sourceDevice = await this.prisma.device.findFirst({
-      where: { deviceId, userIdentifier }
-    });
+  private addChangeSetToMap(
+    changeSet: any,
+    receivedAt: Date,
+    deviceId: string | undefined,
+    changesByRow: Map<string, Array<{ change: any, receivedAt: Date, deviceId?: string }>>
+  ) {
+    const processChanges = (changes: Record<string, any>) => {
+      Object.values(changes).forEach(table => {
+        table.rows.forEach((row: any) => {
+          const rowId = row.originalId || row.row_id;
+          if (!changesByRow.has(rowId)) {
+            changesByRow.set(rowId, []);
+          }
+          changesByRow.get(rowId)?.push({
+            change: { type: 'update', row },
+            receivedAt,
+            deviceId
+          });
+        });
+      });
+    };
 
-    if (!sourceDevice) {
-      throw new Error(`Source device ${deviceId} not found for user ${userIdentifier}`);
+    processChanges(changeSet.insertions);
+    processChanges(changeSet.updates);
+    processChanges(changeSet.deletions);
+  }
+
+  private async applyRowChange(state: any, rowId: string, change: { type: string, row: any }): Promise<any> {
+    // Create a new state object to avoid mutating the input
+    const newState = { ...state };
+
+    // Apply the change based on its type
+    switch (change.type) {
+      case 'insert':
+      case 'update':
+        // Update or insert the row in the appropriate table
+        const table = change.row.table_name;
+        if (!newState[table]) {
+          newState[table] = { rows: [] };
+        }
+        const existingRowIndex = newState[table].rows.findIndex((r: any) =>
+          (r.originalId || r.row_id) === rowId
+        );
+        if (existingRowIndex >= 0) {
+          newState[table].rows[existingRowIndex] = change.row;
+        } else {
+          newState[table].rows.push(change.row);
+        }
+        break;
+
+      case 'delete':
+        // Remove the row from the table
+        const deleteTable = change.row.table_name;
+        if (newState[deleteTable]) {
+          newState[deleteTable].rows = newState[deleteTable].rows.filter((r: any) =>
+            (r.originalId || r.row_id) !== rowId
+          );
+        }
+        break;
     }
 
-    // No need to create device change logs anymore as we're tracking changes directly through the ChangeLog model
-    this.logger.debug('Change queued for processing by other devices');
+    return newState;
   }
 }
