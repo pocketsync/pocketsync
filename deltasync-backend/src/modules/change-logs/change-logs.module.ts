@@ -4,10 +4,11 @@ import { ChangeLogsController } from './change-logs.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AppUsersService } from '../app-users/app-users.service';
 import { DevicesService } from '../devices/devices.service';
+import { ChangesHandler } from './changes-handler';
 
 @Module({
   imports: [PrismaModule],
   controllers: [ChangeLogsController],
-  providers: [ChangeLogsService, AppUsersService, DevicesService],
+  providers: [ChangeLogsService, AppUsersService, DevicesService, ChangesHandler],
 })
 export class ChangeLogsModule { }

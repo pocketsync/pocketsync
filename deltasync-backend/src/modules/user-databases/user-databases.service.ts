@@ -10,7 +10,7 @@ export class UserDatabasesService {
     async create(createUserDatabaseDto: CreateUserDatabaseDto) {
         return this.prisma.userDatabase.create({
             data: {
-                appUserId: createUserDatabaseDto.appUserId,
+                userIdentifier: createUserDatabaseDto.userIdentifier,
                 data: Buffer.from(createUserDatabaseDto.data, 'base64'),
                 lastSyncedAt: new Date(),
             },
@@ -20,9 +20,9 @@ export class UserDatabasesService {
         });
     }
 
-    async findOne(appUserId: string) {
+    async findOne(userIdentifier: string) {
         const userDatabase = await this.prisma.userDatabase.findUnique({
-            where: { appUserId },
+            where: { userIdentifier },
             include: {
                 appUser: {
                     include: {
@@ -39,9 +39,9 @@ export class UserDatabasesService {
         return userDatabase
     }
 
-    async update(appUserId: string, updateUserDatabaseDto: UpdateUserDatabaseDto) {
+    async update(userIdentifier: string, updateUserDatabaseDto: UpdateUserDatabaseDto) {
         return this.prisma.userDatabase.update({
-            where: { appUserId },
+            where: { userIdentifier },
             data: {
                 data: updateUserDatabaseDto.data
                     ? Buffer.from(updateUserDatabaseDto.data, 'base64')
@@ -51,9 +51,9 @@ export class UserDatabasesService {
         });
     }
 
-    async remove(appUserId: string) {
+    async remove(userIdentifier: string) {
         return this.prisma.userDatabase.delete({
-            where: { appUserId },
+            where: { userIdentifier },
         });
     }
 }
