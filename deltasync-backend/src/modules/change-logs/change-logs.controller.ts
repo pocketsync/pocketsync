@@ -72,7 +72,7 @@ export class ChangeLogsController {
     const device = await this.getOrCreateDeviceFromId(deviceIdentifier, userIdentifier, projectId)
     const appUser = await this.getOrCreateUserFromId(userIdentifier, projectId)
 
-    const changes = await this.changesService.fetchMissingChanges(device, appUser, data)
+    const changes = await this.changesService.fetchMissingChanges(device, data)
 
     return changes
   }
