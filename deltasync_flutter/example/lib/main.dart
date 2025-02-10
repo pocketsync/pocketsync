@@ -14,8 +14,8 @@ void main() async {
     dbPath: path,
     syncInterval: const Duration(seconds: 3),
     options: DeltaSyncOptions(
-      projectId: '458b8533-37dd-4f64-b272-b877cff24c4b',
-      projectApiKey: '920babf9-6de5-4890-ad82-8e7757b2a539',
+      projectId: 'b6e648dd-ea26-45e7-aa0c-40238e7b946a',
+      projectApiKey: '4785f8da-d559-4b89-a288-7ef7c61aa719',
       serverUrl: defaultTargetPlatform == TargetPlatform.android ? 'http://10.0.2.2:3000' : 'http://127.0.0.1:3000',
     ),
   );

@@ -2,8 +2,8 @@ import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common
 import { PrismaService } from '../prisma/prisma.service';
 import { ChangeSetDto } from './dto/change-set.dto';
 import { ChangesHandler } from './changes-handler';
-import { AppUser, ChangeLog, Device } from '@prisma/client';
 import { DatabaseStateManager } from './database-state';
+import { ChangeLog, Device } from '@prisma/client';
 
 @Injectable()
 export class ChangeLogsService {
@@ -64,37 +64,18 @@ export class ChangeLogsService {
 
   async fetchMissingChanges(device: Device, data: { lastProcessedChangeId: number }): Promise<ChangeLog []> {
     this.logger.debug(`Fetching changes after ID ${data.lastProcessedChangeId} for device ${device.deviceId}`);
-    const lastProcessedChange = await this.prisma.changeLog.findFirst({
+    
+    return this.prisma.changeLog.findMany({
       where: {
-        id: data.lastProcessedChangeId,
-      },
-    });
-
-    const changes = await this.prisma.deviceChangeLog.findMany({
-      where: {
-        deviceId: device.deviceId,
-        changeLog: {
-          processedAt: { gte: lastProcessedChange?.processedAt || new Date(0) }
-        }
+        userIdentifier: device.userIdentifier,
+        id: { gt: data.lastProcessedChangeId },
+        processedAt: { not: null },
+        NOT: { deviceId: device.deviceId }
       },
       orderBy: {
-        updatedAt: 'asc'
-      },
-      include: {
-        changeLog: {
-          select: {
-            id: true,
-            userIdentifier: true,
-            deviceId: true,
-            changeSet: true,
-            receivedAt: true,
-            processedAt: true
-          }
-        }
+        id: 'asc'
       }
     });
-
-    return changes.map(change => change.changeLog as ChangeLog);
   }
 
   private async createOrFindChangeLog(userIdentifier: string, deviceId: string, changeSet: ChangeSetDto) {
@@ -171,24 +152,7 @@ export class ChangeLogsService {
       throw new Error(`Source device ${deviceId} not found for user ${userIdentifier}`);
     }
 
-    const devices = await this.prisma.device.findMany({
-      where: {
-        userIdentifier,
-        NOT: {
-          deviceId
-        }
-      },
-    });
-
-    for (const device of devices) {
-      await this.prisma.deviceChangeLog.create({
-        data: {
-          deviceId: device.deviceId,
-          lastProcessedChangeId: null,
-          updatedAt: new Date(),
-        },
-      });
-      this.logger.debug(`Created device change log for device ${device.deviceId}`);
-    }
+    // No need to create device change logs anymore as we're tracking changes directly through the ChangeLog model
+    this.logger.debug('Change queued for processing by other devices');
   }
 }

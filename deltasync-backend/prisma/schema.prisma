@@ -38,8 +38,6 @@ model Device {
   createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamp()
   appUser       AppUser     @relation(fields: [userIdentifier], references: [userIdentifier])
   changeLogs    ChangeLog[]
-  deviceChangeLogs DeviceChangeLog[]
-
   @@map("devices")
 }
 
@@ -63,21 +61,9 @@ model ChangeLog {
   processedAt  DateTime?  @map("processed_at") @db.Timestamp()
   appUser      AppUser    @relation(fields: [userIdentifier], references: [userIdentifier])
   device       Device     @relation(fields: [deviceId], references: [deviceId])
-  deviceChangeLogs DeviceChangeLog[]
-
   @@map("change_logs")
 }
 
-model DeviceChangeLog {
-  id                     Int       @id @default(autoincrement())
-  deviceId               String    @map("device_id") @db.VarChar(255)
-  lastProcessedChangeId  Int?      @map("last_processed_change_id")
-  updatedAt              DateTime  @default(now()) @map("updated_at") @db.Timestamp()
-  device                 Device    @relation(fields: [deviceId], references: [deviceId])
-  changeLog              ChangeLog? @relation(fields: [lastProcessedChangeId], references: [id])
-
-  @@map("device_change_logs")
-}
 
 model User {
   id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
