@@ -63,7 +63,7 @@ export class ChangeLogsController {
     @Headers('x-user-identifier') userIdentifier: string,
     @Headers('x-device-id') deviceIdentifier: string,
     @Headers('x-project-id') projectId: string,
-    @Body() data: { lastProcessedChangeId: string }
+    @Body() data: { lastProcessedChangeId: number }
   ) {
     if (!userIdentifier || !deviceIdentifier) {
       throw new UnauthorizedException('Both user identifier and device identifier are required');

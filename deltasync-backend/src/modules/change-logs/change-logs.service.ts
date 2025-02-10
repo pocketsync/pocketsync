@@ -76,16 +76,41 @@ export class ChangeLogsService {
     }
   }
 
-  async fetchMissingChanges(device: Device, appUser: AppUser, data: { lastProcessedChangeId: string }) {
-    // TODO: Return changes that came after lastProcessedChangeId
+  async fetchMissingChanges(device: Device, appUser: AppUser, data: { lastProcessedChangeId: number }) {
+    this.logger.debug(`Fetching changes after ID ${data.lastProcessedChangeId} for device ${device.deviceId}`);
+    const lastProcessedChange = await this.prisma.changeLog.findFirst({
+      where: {
+        id: data.lastProcessedChangeId,
+      },
+    });
+
+    return await this.prisma.deviceChangeLog.findMany({
+      where: {
+        deviceId: device.deviceId,
+        changeLog: {
+          processedAt: { gte: lastProcessedChange?.processedAt || new Date(0) }
+        }
+      },
+      orderBy: {
+        updatedAt: 'asc'
+      },
+      include: {
+        changeLog: {
+          select: {
+            id: true,
+            userIdentifier: true,
+            deviceId: true,
+            changeSet: true,
+            receivedAt: true,
+            processedAt: true
+          }
+        }
+      }
+    });
   }
 
   private async createOrFindChangeLog(userIdentifier: string, deviceId: string, changeSet: ChangeSetDto) {
     this.logger.debug('Checking for existing change log within last 100s');
-
-    if (!this.isValidUUID(userIdentifier)) {
-      throw new Error('Invalid user identifier format');
-    }
 
     const device = await this.prisma.device.findFirst({
       where: {
@@ -229,16 +254,7 @@ export class ChangeLogsService {
     return mergedChanges;
   }
 
-  private isValidUUID(uuid: string): boolean {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(uuid);
-  }
-
   private async addToChangeQueue(userIdentifier: string, deviceId: string, changeSet: ChangeSetDto) {
-    if (!this.isValidUUID(userIdentifier)) {
-      throw new Error('Invalid user identifier format');
-    }
-
     const sourceDevice = await this.prisma.device.findFirst({
       where: { deviceId, userIdentifier }
     });
@@ -261,8 +277,15 @@ export class ChangeLogsService {
       targetDevices: devices.map(d => d.deviceId)
     });
 
-    for (var device in devices) {
-      // TODO: Save an entry to device_change_logs
+    for (const device of devices) {
+      await this.prisma.deviceChangeLog.create({
+        data: {
+          deviceId: device.deviceId,
+          lastProcessedChangeId: null,
+          updatedAt: new Date(),
+        },
+      });
+      this.logger.debug(`Created device change log for device ${device.deviceId}`);
     }
   }
 }
