@@ -13,6 +13,14 @@ class ChangeTracker {
   static const int currentVersion = 1;
   final String deviceId;
 
+  String _generateGlobalId(int localId) {
+    return "$deviceId:$localId";
+  }
+
+  int _extractLocalId(String globalId) {
+    return int.parse(globalId.split(':')[1]);
+  }
+
   ChangeTracker(this.db, this.deviceId);
 
   Future<void> setupTracking() async {
@@ -28,7 +36,7 @@ class ChangeTracker {
       CREATE TABLE IF NOT EXISTS __deltasync_changes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         table_name TEXT NOT NULL,
-        row_id INTEGER NOT NULL,
+        row_id TEXT NOT NULL,
         operation TEXT NOT NULL,
         timestamp INTEGER NOT NULL,
         sync_status TEXT DEFAULT 'pending',
@@ -106,15 +114,17 @@ class ChangeTracker {
         final existingRows = db.select('SELECT oid as rowid, * FROM $tableName');
 
         for (final row in existingRows) {
-          final rowId = row['rowid'];
+          final localId = row['rowid'] as int;
+          final globalId = _generateGlobalId(localId);
           final rowData = Map<String, dynamic>.from(row);
-          rowData.remove('rowid'); // Remove rowid from the data to avoid duplication
+          rowData.remove('rowid');
+          rowData['id'] = globalId; // Remove rowid from the data to avoid duplication
 
           // Check if there's already a pending insert for this row
           final existingChange = db.select('''
             SELECT id FROM __deltasync_changes 
             WHERE table_name = ? AND row_id = ? AND operation = 'INSERT' AND sync_status = 'pending'
-          ''', [tableName, rowId]);
+          ''', [tableName, globalId]);
 
           if (existingChange.isEmpty) {
             db.execute('''
@@ -123,10 +133,10 @@ class ChangeTracker {
               ) VALUES (?, ?, ?, ?, ?, ?)
             ''', [
               tableName,
-              rowId,
+              globalId,
               'INSERT',
               now,
-              jsonEncode({'new': rowData, 'schema_version': schemaVersion, 'row_id': rowId}),
+              jsonEncode({'new': rowData, 'schema_version': schemaVersion, 'row_id': globalId}),
               'pending'
             ]);
           }
@@ -154,7 +164,7 @@ class ChangeTracker {
           table_name, row_id, operation, timestamp, change_data
         ) VALUES (
           '$tableName',
-          NEW.rowid,
+          '$deviceId:' || NEW.rowid,
           'UPDATE',
           strftime('%s', 'now'),
           json_object(
@@ -162,7 +172,8 @@ class ChangeTracker {
               json_object(${_generateModifiedColumnsOld(columns)}),
               json_object(${_generateModifiedColumnsNew(columns)})
             ),
-            'schema_version', $schemaVersion
+            'schema_version', $schemaVersion,
+            'id', '$deviceId:' || NEW.rowid
           )
         );
         UPDATE $tableName SET last_modified = strftime('%s', 'now') 
@@ -178,13 +189,13 @@ class ChangeTracker {
           table_name, row_id, operation, timestamp, change_data
         ) VALUES (
           '$tableName',
-          NEW.rowid,
+          '$deviceId:' || NEW.rowid,
           'INSERT',
           strftime('%s', 'now'),
           json_object(
             'new', json_object(${_generateColumnList(tableName)}),
             'schema_version', $schemaVersion,
-            'row_id', NEW.rowid
+            'id', '$deviceId:' || NEW.rowid
           )
         );
         UPDATE $tableName SET last_modified = strftime('%s', 'now') 
@@ -200,12 +211,13 @@ class ChangeTracker {
           table_name, row_id, operation, timestamp, change_data
         ) VALUES (
           '$tableName',
-          OLD.rowid,
+          '$deviceId:' || OLD.rowid,
           'DELETE',
           strftime('%s', 'now'),
           json_object(
             'old', json_object(${_generateColumnList(tableName, prefix: 'OLD')}),
-            'schema_version', $schemaVersion
+            'schema_version', $schemaVersion,
+            'id', '$deviceId:' || OLD.rowid
           )
         );
       END;
@@ -376,9 +388,10 @@ class ChangeTracker {
         final rows = changeSet.deletions.changes[tableName]!.rows;
         for (final rowData in rows) {
           final data = json.decode(rowData);
-          db.execute('DELETE FROM $tableName WHERE rowid = ?', [data['rowid']]);
+          final localId = _extractLocalId(data['id'] ?? data['row_id']);
+          db.execute('DELETE FROM $tableName WHERE rowid = ?', [localId]);
 
-          log('Deleted ${data['rowid']} in $tableName');
+          log('Deleted row with ID $localId in $tableName');
         }
       }
 
@@ -387,39 +400,43 @@ class ChangeTracker {
         final rows = changeSet.updates.changes[tableName]!.rows;
         for (final rowData in rows) {
           final data = json.decode(rowData);
-          final rowId = data['rowid'];
-          data.remove('rowid');
+          final globalId = data['id'] ?? data['row_id'];
+          final localId = _extractLocalId(globalId);
+          data.remove('id');
+          data.remove('row_id');
 
           final setClause = data.keys.map((key) => '$key = ?').join(', ');
-          final values = [...data.values, rowId];
+          final values = [...data.values];
 
-          final exists = db.select('SELECT 1 FROM $tableName WHERE rowid = ?', [rowId]).isNotEmpty;
+          final exists = db.select('SELECT 1 FROM $tableName WHERE rowid = ?', [localId]).isNotEmpty;
           if (exists) {
             db.execute(
               'UPDATE $tableName SET $setClause, last_modified = ? WHERE rowid = ?',
-              [...values, changeSet.timestamp, rowId],
+              [...values, changeSet.timestamp, localId],
             );
+            log('Updated row with ID $localId in $tableName');
           }
-
-          log('Updated $values in $tableName');
         }
       }
 
+      // Apply insertions
       for (final tableName in changeSet.insertions.changes.keys) {
         final rows = changeSet.insertions.changes[tableName]!.rows;
         for (final rowData in rows) {
           final data = json.decode(rowData);
-          final rowId = data.remove('row_id');
+          final globalId = data.remove('row_id') ?? data.remove('id');
+          final localId = _extractLocalId(globalId);
 
-          final exists = db.select('SELECT 1 FROM $tableName WHERE rowid = ?', [rowId]).isNotEmpty;
+          final exists = db.select('SELECT 1 FROM $tableName WHERE rowid = ?', [localId]).isNotEmpty;
           if (exists) {
             final setClause = data.keys.map((key) => '$key = ?').join(', ');
             final values = [...data.values];
 
             db.execute(
               'UPDATE $tableName SET $setClause, last_modified = ? WHERE rowid = ?',
-              [...values, changeSet.timestamp, rowId],
+              [...values, changeSet.timestamp, localId],
             );
+            log('Updated existing row with ID $localId in $tableName');
           } else {
             final columns = data.keys.join(', ');
             final placeholders = List.filled(data.length, '?').join(', ');
@@ -429,8 +446,7 @@ class ChangeTracker {
               'INSERT INTO $tableName ($columns, last_modified) VALUES ($placeholders, ?)',
               [...values, changeSet.timestamp],
             );
-
-            log('Inserted $values in $tableName');
+            log('Inserted new row in $tableName');
           }
         }
       }

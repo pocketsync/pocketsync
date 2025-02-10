@@ -64,6 +64,10 @@ export class ChangesHandler {
 
       for (const newRow of tableData.rows) {
         const parsedRow = typeof newRow === 'string' ? JSON.parse(newRow) : newRow;
+        // Ensure row_id is prefixed with deviceId to maintain uniqueness across devices
+        if (!parsedRow.row_id.includes(':')) {
+          this.logger.warn('Row ID missing device prefix, this may cause conflicts');
+        }
         existingRowsMap.set(parsedRow.row_id, parsedRow);
       }
 
