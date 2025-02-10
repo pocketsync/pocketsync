@@ -141,7 +141,7 @@ export class ChangeLogsService {
     // Create a new change log with the first global ID
     const firstGlobalId = Array.from(globalIds)[0];
     this.logger.debug(`Creating new change log with global ID: ${firstGlobalId}`);
-    
+
     return await this.prisma.changeLog.create({
       data: {
         userIdentifier,
@@ -170,29 +170,47 @@ export class ChangeLogsService {
   private async resolveConflicts(currentData: Uint8Array | undefined, changeSet: ChangeSetDto, deviceId: string): Promise<Buffer> {
     // Extract all row IDs from the incoming change set
     const globalIds = new Set<string>();
-    Object.entries(changeSet.insertions).forEach(([tableName, table]) =>
-      table.rows.forEach(row => {
-        const id = row.global_id;
-        if (id) globalIds.add(id);
-      })
-    );
-    Object.entries(changeSet.updates).forEach(([tableName, table]) =>
-      table.rows.forEach(row => {
-        const id = row.global_id;
-        if (id) globalIds.add(id);
-      })
-    );
-    Object.entries(changeSet.deletions).forEach(([tableName, table]) =>
-      table.rows.forEach(row => {
-        const id = row.global_id;
-        if (id) globalIds.add(id);
-      })
-    );
+    const changesByGlobalId = new Map<string, Array<{
+      type: 'insert' | 'update' | 'delete',
+      tableName: string,
+      data: any,
+      deviceId: string,
+      receivedAt: Date
+    }>>();
+
+    // Process incoming changes
+    const processTableChanges = (type: 'insert' | 'update' | 'delete', changes: Record<string, any>) => {
+      Object.entries(changes).forEach(([tableName, table]) => {
+        table.rows.forEach(row => {
+          const globalId = row.global_id;
+          if (!globalId) {
+            this.logger.error('Row missing global_id in conflict resolution', { row: JSON.stringify(row) });
+            throw new Error('Row missing global_id in conflict resolution');
+          }
+          globalIds.add(globalId);
+
+          if (!changesByGlobalId.has(globalId)) {
+            changesByGlobalId.set(globalId, []);
+          }
+          changesByGlobalId.get(globalId)?.push({
+            type,
+            tableName,
+            data: row,
+            deviceId,
+            receivedAt: new Date()
+          });
+        });
+      });
+    };
+
+    processTableChanges('insert', changeSet.insertions);
+    processTableChanges('update', changeSet.updates);
+    processTableChanges('delete', changeSet.deletions);
 
     // Find pending changes for any of these rows
     const pendingChanges = await this.prisma.changeLog.findMany({
       where: {
-        originalId: { in: Array.from(globalIds) },  // Match against global_ids stored in originalId
+        originalId: { in: Array.from(globalIds) },
         processedAt: null,
         receivedAt: { lt: new Date() }
       },
@@ -204,24 +222,41 @@ export class ChangeLogsService {
     if (pendingChanges.length > 0) {
       this.logger.debug(`Found ${pendingChanges.length} pending changes for affected rows`);
 
-      // Group all changes by row ID for efficient conflict resolution
-      const changesByRow = new Map<string, Array<{ change: any, receivedAt: Date, deviceId?: string }>>();
-
-      // Add pending changes to the map
-      pendingChanges.forEach(change => {
+      // Add pending changes to our change map
+      for (const change of pendingChanges) {
         const parsedChangeSet = JSON.parse(change.changeSet as string);
-        this.addChangeSetToMap(parsedChangeSet, change.receivedAt, change.deviceId, changesByRow);
-      });
 
-      // Add current change set to the map
-      this.addChangeSetToMap(changeSet, new Date(), deviceId, changesByRow);
+        const processPendingChanges = (type: 'insert' | 'update' | 'delete', changes: Record<string, any>) => {
+          Object.entries(changes).forEach(([tableName, table]) => {
+            table.rows.forEach(row => {
+              const globalId = row.global_id;
+              if (globalId) {
+                if (!changesByGlobalId.has(globalId)) {
+                  changesByGlobalId.set(globalId, []);
+                }
+                changesByGlobalId.get(globalId)?.push({
+                  type,
+                  tableName,
+                  data: row,
+                  deviceId: change.deviceId,
+                  receivedAt: change.receivedAt
+                });
+              }
+            });
+          });
+        };
 
-      // Resolve conflicts for each row
+        processPendingChanges('insert', parsedChangeSet.insertions);
+        processPendingChanges('update', parsedChangeSet.updates);
+        processPendingChanges('delete', parsedChangeSet.deletions);
+      }
+
+      // Resolve conflicts for each global ID
       let mergedState = currentData ?
         this.databaseStateManager.deserializeState(currentData) :
         this.databaseStateManager.createEmptyState();
 
-      for (const [rowId, changes] of changesByRow.entries()) {
+      for (const [globalId, changes] of changesByGlobalId.entries()) {
         // Sort changes by timestamp and device ID
         const sortedChanges = changes.sort((a, b) => {
           const timeComparison = b.receivedAt.getTime() - a.receivedAt.getTime();
@@ -229,9 +264,40 @@ export class ChangeLogsService {
           return (b.deviceId || '').localeCompare(a.deviceId || '');
         });
 
-        // Apply the most recent change for this row
+        // Apply the most recent change
         const latestChange = sortedChanges[0];
-        mergedState = await this.applyRowChange(mergedState, rowId, latestChange.change);
+        const tableName = latestChange.tableName;
+
+        if (!mergedState[tableName]) {
+          mergedState[tableName] = { rows: [] };
+        }
+
+        switch (latestChange.type) {
+          case 'insert':
+          case 'update':
+            const existingRowIndex = mergedState[tableName].rows.findIndex(
+              (r: any) => r.global_id === globalId
+            );
+
+            if (existingRowIndex >= 0) {
+              mergedState[tableName].rows[existingRowIndex] = {
+                ...latestChange.data,
+                global_id: globalId
+              };
+            } else {
+              mergedState[tableName].rows.push({
+                ...latestChange.data,
+                global_id: globalId
+              });
+            }
+            break;
+
+          case 'delete':
+            mergedState[tableName].rows = mergedState[tableName].rows.filter(
+              (r: any) => r.global_id !== globalId
+            );
+            break;
+        }
       }
 
       return Buffer.from(JSON.stringify(mergedState));
@@ -245,7 +311,13 @@ export class ChangeLogsService {
     changeSet: any,
     receivedAt: Date,
     deviceId: string | undefined,
-    changesByRow: Map<string, Array<{ change: any, receivedAt: Date, deviceId?: string }>>
+    changesByRow: Map<string, Array<{
+      type: 'insert' | 'update' | 'delete',
+      tableName: string,
+      data: any,
+      deviceId?: string,
+      receivedAt: Date
+    }>>
   ) {
     const processChanges = (changes: Record<string, any>, type: 'insert' | 'update' | 'delete') => {
       Object.entries(changes).forEach(([tableName, table]) => {
@@ -256,9 +328,11 @@ export class ChangeLogsService {
               changesByRow.set(rowId, []);
             }
             changesByRow.get(rowId)?.push({
-              change: { type, row, tableName },
-              receivedAt,
-              deviceId
+              type,
+              tableName,
+              data: row,
+              deviceId,
+              receivedAt
             });
           }
         });

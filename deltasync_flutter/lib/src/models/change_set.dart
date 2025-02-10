@@ -1,13 +1,21 @@
+import 'dart:convert';
+
 class TableRows {
-  final List<String> rows;
+  final List<Map<String, dynamic>> rows;
 
   TableRows(this.rows);
 
-  Map<String, dynamic> toJson() => {'rows': rows};
+  Map<String, dynamic> toJson() => {
+    'rows': rows,
+  };
 
   factory TableRows.fromJson(Map<String, dynamic> json) {
     return TableRows(
-      List<String>.from(json['rows']),
+      List<Map<String, dynamic>>.from(
+        (json['rows'] as List).map((row) => 
+          row is String ? jsonDecode(row) : row as Map<String, dynamic>
+        ),
+      ),
     );
   }
 }
@@ -17,7 +25,8 @@ class TableChanges {
 
   TableChanges(this.changes);
 
-  Map<String, dynamic> toJson() => changes.map((key, value) => MapEntry(key, value.toJson()));
+  Map<String, dynamic> toJson() => 
+    changes.map((key, value) => MapEntry(key, value.toJson()));
 
   factory TableChanges.fromJson(Map<String, dynamic> json) {
     return TableChanges(
@@ -25,7 +34,7 @@ class TableChanges {
         json.entries.map(
           (e) => MapEntry(
             e.key,
-            TableRows.fromJson(e.value),
+            TableRows.fromJson(e.value as Map<String, dynamic>),
           ),
         ),
       ),

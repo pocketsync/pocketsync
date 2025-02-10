@@ -49,14 +49,15 @@ class SyncService {
       ..add(
         RetryInterceptor(
           dio: _dio,
-          logPrint: print,
+          logPrint: log,
           retries: _maxRetries,
           retryDelays: _retryDelays,
         ),
       )
       ..add(LogInterceptor(
-        logPrint: print,
+        logPrint: (message) => log(message.toString()),
         requestBody: true,
+        responseBody: true,
       ));
   }
 
@@ -67,6 +68,8 @@ class SyncService {
 
     try {
       final deviceId = deviceManager.getDeviceId();
+      log('Uploading changes for device $deviceId: ${changeSet.toJson()}');
+
       final response = await _dio.post(
         '/sdk/changes',
         data: {
@@ -75,6 +78,12 @@ class SyncService {
         },
         options: Options(
           validateStatus: (status) => status != null && status >= 200 && status < 300,
+          headers: {
+            'Content-Type': 'application/json',
+            'x-project-id': projectId,
+            'x-api-key': apiKey,
+            'x-user-identifier': userIdentifier,
+          }
         ),
       );
 
@@ -82,10 +91,11 @@ class SyncService {
         throw SyncError('Invalid response from server: empty response');
       }
 
-      log('Data uploaded with response: ${response.data}');
-
+      log('Changes uploaded successfully: ${response.data}');
       await changeTracker.markChangesAsSynced(changeSet.timestamp);
     } on DioException catch (e) {
+      log('Error uploading changes: ${e.message}\nResponse: ${e.response?.data}');
+      
       if (e.type == DioExceptionType.connectionError ||
           e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.sendTimeout ||
@@ -95,13 +105,18 @@ class SyncService {
       if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
         throw SyncError('Authentication failed: ${e.message}', innerError: e);
       }
+      if (e.response?.statusCode == 500) {
+        log('Server error details: ${e.response?.data}');
+        throw SyncError('Server error: ${e.response?.data ?? e.message}', innerError: e);
+      }
       throw SyncError('Failed to communicate with sync server: ${e.message}', innerError: e);
     } catch (e) {
+      log('Unexpected error during sync: $e');
       throw SyncError('Unexpected error during sync: $e');
     }
   }
 
-  Future<Iterable<ChangeLog>> fetchChanges(int lastProcessedChangeId) async {
+  Future<List<ChangeLog>> fetchChanges(int lastProcessedChangeId) async {
     if (_isDisposed) {
       throw StateError('SyncService has been disposed');
     }
@@ -110,38 +125,42 @@ class SyncService {
       final deviceId = deviceManager.getDeviceId();
       final response = await _dio.get(
         '/sdk/changes',
+        data: {'lastProcessedChangeId': lastProcessedChangeId},
         options: Options(
-          headers: {
-            'x-device-id': deviceId,
-          },
           validateStatus: (status) => status != null && status >= 200 && status < 300,
+          headers: {
+            'Content-Type': 'application/json',
+            'x-project-id': projectId,
+            'x-api-key': apiKey,
+            'x-user-identifier': userIdentifier,
+            'x-device-id': deviceId,
+          }
         ),
-        data: {
-          'lastProcessedChangeId': lastProcessedChangeId,
-        },
       );
 
       if (response.data == null) {
-        throw SyncError('Invalid response from server: empty response');
+        return [];
       }
 
-      log('Fetched changes from server: ${response.data}');
-
-      final Iterable<dynamic> changeLogsJson = response.data as Iterable<dynamic>;
-      return changeLogsJson.map((json) => ChangeLog.fromJson(json));
+      return (response.data as List)
+          .map((item) => ChangeLog.fromJson(item))
+          .toList();
     } on DioException catch (e) {
+      log('Error fetching changes: ${e.message}\nResponse: ${e.response?.data}');
+      
       if (e.type == DioExceptionType.connectionError ||
           e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.sendTimeout ||
           e.type == DioExceptionType.receiveTimeout) {
-        throw SyncError('Network error while fetching changes: ${e.message}', innerError: e);
+        throw SyncError('Network error: ${e.message}', innerError: e);
       }
       if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
-        throw SyncError('Authentication failed while fetching changes: ${e.message}', innerError: e);
+        throw SyncError('Authentication failed: ${e.message}', innerError: e);
       }
-      throw SyncError('Failed to fetch changes from server: ${e.message}', innerError: e);
+      throw SyncError('Failed to fetch changes: ${e.message}', innerError: e);
     } catch (e) {
-      throw SyncError('Unexpected error while fetching changes: $e');
+      log('Unexpected error fetching changes: $e');
+      throw SyncError('Unexpected error fetching changes: $e');
     }
   }
 

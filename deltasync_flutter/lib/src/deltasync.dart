@@ -112,11 +112,11 @@ class DeltaSync {
 
   Future<void> _checkForChanges() async {
     if (!_isInitialized) return;
-    
+
     // Check if we're already syncing or if we've synced too recently
     if (_isSyncing) {
       // Check for stuck sync state
-      if (_lastSyncAttempt != null && 
+      if (_lastSyncAttempt != null &&
           DateTime.now().difference(_lastSyncAttempt!) > _syncTimeout) {
         log('Sync appears stuck, resetting sync state');
         _isSyncing = false;
@@ -129,65 +129,63 @@ class DeltaSync {
     await _syncLock.synchronized(() async {
       _isSyncing = true;
       _lastSyncAttempt = DateTime.now();
-      
-      try {
-        // Convert timestamps to milliseconds for consistency
-        final lastProcessedId = _lastProcessedChangeId;
-        
-        // Fetch remote changes first
-        final remoteChanges = await _syncService!.fetchChanges(lastProcessedId);
-        
-        if (remoteChanges.isNotEmpty) {
-          log('Applying ${remoteChanges.length} remote changes');
-          _db!.execute('BEGIN TRANSACTION');
-          try {
-            for (final changeLog in remoteChanges) {
-              if (!_isInitialized) break;
-              
-              await _changeTracker!.applyChangeSet(changeLog.changeSet);
-              await _changeTracker!.updateLastProcessedChangeId(changeLog.id);
-              _lastProcessedChangeId = changeLog.id;
-              
-              if (_isInitialized) {
-                _syncController.add(changeLog.changeSet);
-              }
-            }
-            _db!.execute('COMMIT');
-          } catch (e) {
-            log('Error applying remote changes: $e');
-            _db!.execute('ROLLBACK');
-            rethrow;
-          }
-        }
 
-        // Then process and upload local changes
-        final localChangeSets = await _changeTracker!.generateChangeSets(lastProcessedId);
-        log('${localChangeSets.length} local changes found');
-        
+      try {
+        // First process and upload local changes
+        final localChangeSets =
+            await _changeTracker!.generateChangeSets(_lastProcessedChangeId);
+        log('Found ${localChangeSets.length} local changes to sync');
+
         if (localChangeSets.isNotEmpty) {
           for (final changeSet in localChangeSets) {
             if (!_isInitialized) break;
-            
-            _db!.execute('BEGIN TRANSACTION');
+
             try {
+              log('Uploading change set: ${changeSet.toJson()}');
               await _syncService!.uploadChanges(changeSet);
               await _changeTracker!.markChangesAsSynced(changeSet.timestamp);
-              
+
               if (_isInitialized) {
                 _syncController.add(changeSet);
               }
-              _db!.execute('COMMIT');
-            } catch (e) {
-              _db!.execute('ROLLBACK');
+            } catch (e, stack) {
               // Log the error but continue processing other changes
-              log('Failed to sync change set with timestamp ${changeSet.timestamp}: $e');
+              log('Failed to sync change set: $e\n$stack');
               await _changeTracker!.markChangeAsRetry(changeSet.timestamp);
             }
           }
         }
-      } catch (e) {
+
+        // Then fetch and apply remote changes
+        final remoteChanges =
+            await _syncService!.fetchChanges(_lastProcessedChangeId);
+
+        if (remoteChanges.isNotEmpty) {
+          log('Applying ${remoteChanges.length} remote changes');
+
+          for (final changeLog in remoteChanges) {
+            if (!_isInitialized) break;
+
+            _db!.execute('BEGIN TRANSACTION');
+            try {
+              await _changeTracker!.applyChangeSet(changeLog.changeSet);
+              await _changeTracker!.updateLastProcessedChangeId(changeLog.id);
+              _lastProcessedChangeId = changeLog.id;
+
+              if (_isInitialized) {
+                _syncController.add(changeLog.changeSet);
+              }
+              _db!.execute('COMMIT');
+            } catch (e, stack) {
+              log('Error applying remote changes: $e\n$stack');
+              _db!.execute('ROLLBACK');
+              // Don't rethrow - we want to continue processing other changes
+            }
+          }
+        }
+      } catch (e, stack) {
         if (_isInitialized) {
-          log('Sync error: $e');
+          log('Sync error: $e\n$stack');
           _syncController.addError(SyncError('Failed to sync changes: $e'));
         }
       } finally {
@@ -213,14 +211,16 @@ class DeltaSync {
   }
 
   void _setupSchemaChangeListener() {
-    _schemaChangeSubscription = _changeTracker!.schemaChanges.listen((schemaChange) {
+    _schemaChangeSubscription =
+        _changeTracker!.schemaChanges.listen((schemaChange) {
       _syncController.addError(SyncError(
         'Schema changed for table ${schemaChange.tableName} '
         'to version ${schemaChange.version}',
       ));
       pauseSync();
     }, onError: (error) {
-      _syncController.addError(SyncError('Failed to monitor schema changes: $error'));
+      _syncController
+          .addError(SyncError('Failed to monitor schema changes: $error'));
     });
   }
 
@@ -240,7 +240,8 @@ class DeltaSync {
 
   void _startPeriodicSync(Duration? interval) {
     _syncTimer?.cancel();
-    _syncTimer = Timer.periodic(interval ?? kDefaultSyncInternal, (_) => _checkForChanges());
+    _syncTimer = Timer.periodic(
+        interval ?? kDefaultSyncInternal, (_) => _checkForChanges());
   }
 
   Future<List<ChangeSet>> getChanges() async {
