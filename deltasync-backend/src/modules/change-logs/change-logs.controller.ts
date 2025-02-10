@@ -1,9 +1,10 @@
-import { Controller, Post, Body, UseGuards, Headers, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Headers, UnauthorizedException, Get } from '@nestjs/common';
 import { ChangeLogsService } from './change-logs.service';
 import { DevicesService } from '../devices/devices.service';
 import { ApiKeyAuthGuard } from '../../common/guards/api-key-auth.guard';
 import { ChangeSubmissionDto } from './dto/change-submission.dto';
 import { AppUsersService } from '../app-users/app-users.service';
+import { ChangeSetDto } from './dto/change-set.dto';
 
 @Controller('sdk/changes')
 @UseGuards(ApiKeyAuthGuard)
@@ -59,6 +60,7 @@ export class ChangeLogsController {
     );
   }
 
+  @Get()
   async fetchChanges(
     @Headers('x-user-identifier') userIdentifier: string,
     @Headers('x-device-id') deviceIdentifier: string,
@@ -70,10 +72,8 @@ export class ChangeLogsController {
     }
 
     const device = await this.getOrCreateDeviceFromId(deviceIdentifier, userIdentifier, projectId)
-    const appUser = await this.getOrCreateUserFromId(userIdentifier, projectId)
-
     const changes = await this.changesService.fetchMissingChanges(device, data)
 
-    return changes
+    return changes.map((change) => change.changeSet)
   }
 }

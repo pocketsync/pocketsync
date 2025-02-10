@@ -95,9 +95,53 @@ class SyncService {
     }
   }
 
+  Future<Iterable<ChangeSet>> fetchChanges(int lastProcessedChangeId) async {
+    if (_isDisposed) {
+      throw StateError('SyncService has been disposed');
+    }
+
+    try {
+      final deviceId = deviceManager.getDeviceId();
+      final response = await _dio.get(
+        '/sdk/changes',
+        options: Options(
+          headers: {
+            'x-device-id': deviceId,
+          },
+          validateStatus: (status) => status != null && status >= 200 && status < 300,
+        ),
+        data: {
+          'lastProcessedChangeId': lastProcessedChangeId,
+        },
+      );
+
+      if (response.data == null) {
+        throw SyncError('Invalid response from server: empty response');
+      }
+
+      log('Fetched changes from server: ${response.data}');
+
+      final Iterable<dynamic> changeSetsJson = response.data as Iterable<dynamic>;
+      return changeSetsJson.map((json) => ChangeSet.fromJson(json));
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.connectionError ||
+          e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.sendTimeout ||
+          e.type == DioExceptionType.receiveTimeout) {
+        throw SyncError('Network error while fetching changes: ${e.message}', innerError: e);
+      }
+      if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
+        throw SyncError('Authentication failed while fetching changes: ${e.message}', innerError: e);
+      }
+      throw SyncError('Failed to fetch changes from server: ${e.message}', innerError: e);
+    } catch (e) {
+      throw SyncError('Unexpected error while fetching changes: $e');
+    }
+  }
+
   void dispose() {
     _isDisposed = true;
-    _dio.close(force: true); // Force close any pending requests
+    _dio.close(force: true);
   }
 }
 
