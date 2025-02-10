@@ -125,6 +125,7 @@ class DeltaSync {
       for (final changeSet in localChangeSets) {
         if (!_isInitialized) break;
         await _syncService!.uploadChanges(changeSet);
+        await _changeTracker!.markChangesAsSynced(changeSet.timestamp);
         if (_isInitialized) {
           _syncController.add(changeSet);
         }

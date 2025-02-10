@@ -383,7 +383,7 @@ class ChangeTracker {
   Future<void> applyChangeSet(ChangeSet changeSet) async {
     db.execute('BEGIN TRANSACTION');
     try {
-// Apply deletions first to avoid conflicts
+      // Apply deletions first to avoid conflicts
       for (final tableName in changeSet.deletions.changes.keys) {
         final rows = changeSet.deletions.changes[tableName]!.rows;
         for (final rowData in rows) {
@@ -445,21 +445,32 @@ class ChangeTracker {
         }
       }
 
+      // Apply insertions
       for (final tableName in changeSet.insertions.changes.keys) {
         final rows = changeSet.insertions.changes[tableName]!.rows;
         for (final rowData in rows) {
           final data = json.decode(rowData);
 
-          // Remove 'row_id' or 'id' from incoming data
+          // Remove 'id' or 'row_id' from the incoming data
           var globalId = data.remove('row_id') ?? data.remove('id');
           int? localId = _extractLocalId(globalId);
 
-          // Ensure localId is an integer
           if (localId == null) {
+            // Generate a new unique ID by checking for the next available ID
             final maxIdResult = db.select('SELECT MAX(id) as maxId FROM $tableName');
             localId = (maxIdResult.first['maxId'] ?? 0) + 1;
             log('Generated new integer id: $localId');
+          } else {
+            // Check if localId already exists in the table
+            final existingRow = db.select('SELECT 1 FROM $tableName WHERE id = ?', [localId]);
+            if (existingRow.isNotEmpty) {
+              log('ID $localId already exists in $tableName. Skipping insertion.');
+              continue; // Skip this row to avoid conflict
+            }
           }
+
+          // Remove any remaining 'id' just to be safe
+          data.remove('id');
 
           final columns = data.keys.join(', ');
           final placeholders = List.filled(data.length + 2, '?').join(', '); // +2 for id and last_modified
