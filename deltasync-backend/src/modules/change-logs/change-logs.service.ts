@@ -79,19 +79,28 @@ export class ChangeLogsService {
   private async createOrFindChangeLog(userIdentifier: string, deviceId: string, changeSet: ChangeSetDto) {
     this.logger.debug('Checking for existing change log within last 100s');
 
-    // Extract original row IDs from the change set
-    const originalIds = new Set<string>();
-    Object.values(changeSet.insertions).forEach(table =>
-      table.rows.forEach(row => originalIds.add(row.row_id))
-    );
-    Object.values(changeSet.updates).forEach(table =>
-      table.rows.forEach(row => originalIds.add(row.row_id))
-    );
-    Object.values(changeSet.deletions).forEach(table =>
-      table.rows.forEach(row => originalIds.add(row.row_id))
-    );
+    const globalIds = new Set<string>();
+    ['insertions', 'updates', 'deletions'].forEach(changeType => {
+      const tables = changeSet[changeType] as Record<string, { rows?: Array<any> }>;
 
-    if (originalIds.size === 0) {
+      if (tables) {
+        Object.values(tables).forEach(table => {
+          if (table?.rows?.length) {
+            table.rows.forEach(row => {
+              const globalId = row.global_id;
+              if (!globalId) {
+                this.logger.error('Row missing global_id', { row: JSON.stringify(row) });
+                throw new Error('Row missing global_id');
+              }
+              globalIds.add(globalId);
+            });
+          }
+        });
+      }
+    });
+
+    if (globalIds.size === 0) {
+      this.logger.error('No global IDs found in change set', { changeSet: JSON.stringify(changeSet) });
       throw new Error('No row IDs found in change set');
     }
 
@@ -129,13 +138,15 @@ export class ChangeLogsService {
       return existingChangeLog;
     }
 
-    // Create a new change log with the original ID format (deviceId:localId)
-    const firstOriginalId = Array.from(originalIds)[0];
+    // Create a new change log with the first global ID
+    const firstGlobalId = Array.from(globalIds)[0];
+    this.logger.debug(`Creating new change log with global ID: ${firstGlobalId}`);
+    
     return await this.prisma.changeLog.create({
       data: {
         userIdentifier,
         deviceId,
-        originalId: firstOriginalId,
+        originalId: firstGlobalId,  // Store the global_id in originalId for backwards compatibility
         changeSet: JSON.stringify(changeSet),
         receivedAt: new Date(),
       },
@@ -158,21 +169,30 @@ export class ChangeLogsService {
 
   private async resolveConflicts(currentData: Uint8Array | undefined, changeSet: ChangeSetDto, deviceId: string): Promise<Buffer> {
     // Extract all row IDs from the incoming change set
-    const rowIds = new Set<string>();
-    Object.values(changeSet.insertions).forEach(table =>
-      table.rows.forEach(row => rowIds.add(row.originalId || row.row_id))
+    const globalIds = new Set<string>();
+    Object.entries(changeSet.insertions).forEach(([tableName, table]) =>
+      table.rows.forEach(row => {
+        const id = row.global_id;
+        if (id) globalIds.add(id);
+      })
     );
-    Object.values(changeSet.updates).forEach(table =>
-      table.rows.forEach(row => rowIds.add(row.originalId || row.row_id))
+    Object.entries(changeSet.updates).forEach(([tableName, table]) =>
+      table.rows.forEach(row => {
+        const id = row.global_id;
+        if (id) globalIds.add(id);
+      })
     );
-    Object.values(changeSet.deletions).forEach(table =>
-      table.rows.forEach(row => rowIds.add(row.originalId || row.row_id))
+    Object.entries(changeSet.deletions).forEach(([tableName, table]) =>
+      table.rows.forEach(row => {
+        const id = row.global_id;
+        if (id) globalIds.add(id);
+      })
     );
 
     // Find pending changes for any of these rows
     const pendingChanges = await this.prisma.changeLog.findMany({
       where: {
-        originalId: { in: Array.from(rowIds) },
+        originalId: { in: Array.from(globalIds) },  // Match against global_ids stored in originalId
         processedAt: null,
         receivedAt: { lt: new Date() }
       },
@@ -227,56 +247,63 @@ export class ChangeLogsService {
     deviceId: string | undefined,
     changesByRow: Map<string, Array<{ change: any, receivedAt: Date, deviceId?: string }>>
   ) {
-    const processChanges = (changes: Record<string, any>) => {
-      Object.values(changes).forEach(table => {
+    const processChanges = (changes: Record<string, any>, type: 'insert' | 'update' | 'delete') => {
+      Object.entries(changes).forEach(([tableName, table]) => {
         table.rows.forEach((row: any) => {
-          const rowId = row.originalId || row.row_id;
-          if (!changesByRow.has(rowId)) {
-            changesByRow.set(rowId, []);
+          const rowId = row.global_id;
+          if (rowId) {
+            if (!changesByRow.has(rowId)) {
+              changesByRow.set(rowId, []);
+            }
+            changesByRow.get(rowId)?.push({
+              change: { type, row, tableName },
+              receivedAt,
+              deviceId
+            });
           }
-          changesByRow.get(rowId)?.push({
-            change: { type: 'update', row },
-            receivedAt,
-            deviceId
-          });
         });
       });
     };
 
-    processChanges(changeSet.insertions);
-    processChanges(changeSet.updates);
-    processChanges(changeSet.deletions);
+    processChanges(changeSet.insertions, 'insert');
+    processChanges(changeSet.updates, 'update');
+    processChanges(changeSet.deletions, 'delete');
   }
 
-  private async applyRowChange(state: any, rowId: string, change: { type: string, row: any }): Promise<any> {
+  private async applyRowChange(state: any, rowId: string, change: { type: string, row: any, tableName: string }): Promise<any> {
     // Create a new state object to avoid mutating the input
     const newState = { ...state };
+    const table = change.tableName;
 
     // Apply the change based on its type
     switch (change.type) {
       case 'insert':
       case 'update':
         // Update or insert the row in the appropriate table
-        const table = change.row.table_name;
         if (!newState[table]) {
           newState[table] = { rows: [] };
         }
         const existingRowIndex = newState[table].rows.findIndex((r: any) =>
-          (r.originalId || r.row_id) === rowId
+          r.global_id === rowId
         );
         if (existingRowIndex >= 0) {
-          newState[table].rows[existingRowIndex] = change.row;
+          newState[table].rows[existingRowIndex] = {
+            ...change.row,
+            global_id: rowId  // Ensure we keep the global_id
+          };
         } else {
-          newState[table].rows.push(change.row);
+          newState[table].rows.push({
+            ...change.row,
+            global_id: rowId  // Ensure we keep the global_id
+          });
         }
         break;
 
       case 'delete':
         // Remove the row from the table
-        const deleteTable = change.row.table_name;
-        if (newState[deleteTable]) {
-          newState[deleteTable].rows = newState[deleteTable].rows.filter((r: any) =>
-            (r.originalId || r.row_id) !== rowId
+        if (newState[table]) {
+          newState[table].rows = newState[table].rows.filter((r: any) =>
+            r.global_id !== rowId
           );
         }
         break;

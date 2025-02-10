@@ -159,6 +159,9 @@ class ChangeTracker {
   }
 
   void _createTriggers(String tableName, int schemaVersion) {
+    // Common global_id format for all operations
+    final globalIdExpr = "'$deviceId:' || NEW.rowid";
+    
     db.execute('''
       CREATE TRIGGER IF NOT EXISTS after_update_$tableName
       AFTER UPDATE ON $tableName
@@ -170,7 +173,7 @@ class ChangeTracker {
           table_name, row_id, operation, timestamp, change_data
         ) VALUES (
           '$tableName',
-          '$deviceId:' || NEW.rowid,
+          $globalIdExpr,
           'UPDATE',
           (strftime('%s', 'now') * 1000),
           json_object(
@@ -183,8 +186,7 @@ class ChangeTracker {
                 ]).map((row) => row['name'] as String).toList())})
             ),
             'schema_version', $schemaVersion,
-            'original_id', NEW.rowid,
-            'global_id', '$deviceId:' || NEW.rowid
+            'global_id', $globalIdExpr
           )
         );
         UPDATE $tableName SET last_modified = (strftime('%s', 'now') * 1000) 
@@ -200,14 +202,13 @@ class ChangeTracker {
           table_name, row_id, operation, timestamp, change_data
         ) VALUES (
           '$tableName',
-          '$deviceId:' || NEW.rowid,
+          $globalIdExpr,
           'INSERT',
           (strftime('%s', 'now') * 1000),
           json_object(
             'new', json_object(${_generateColumnList(tableName)}),
             'schema_version', $schemaVersion,
-            'original_id', NEW.rowid,
-            'global_id', '$deviceId:' || NEW.rowid
+            'global_id', $globalIdExpr
           )
         );
         UPDATE $tableName SET last_modified = (strftime('%s', 'now') * 1000) 
@@ -229,7 +230,6 @@ class ChangeTracker {
           json_object(
             'old', json_object(${_generateColumnList(tableName, prefix: 'OLD')}),
             'schema_version', $schemaVersion,
-            'original_id', OLD.rowid,
             'global_id', '$deviceId:' || OLD.rowid
           )
         );
@@ -385,29 +385,32 @@ class ChangeTracker {
         final changeData = jsonDecode(change['change_data'] as String);
         final operation = change['operation'] as String;
         final timestamp = change['timestamp'] as int;
+        final globalId = changeData['global_id'] as String;
 
         maxTimestamp = timestamp > maxTimestamp ? timestamp : maxTimestamp;
 
         switch (operation) {
           case 'INSERT':
             final insertData = changeData['new'] as Map<String, dynamic>;
-            insertData['original_id'] = changeData['original_id'];
-            insertData['global_id'] = changeData['global_id'];
+            // Only keep the global_id for identification
+            insertData.clear();
+            insertData['global_id'] = globalId;
+            insertData.addAll(changeData['new'] as Map<String, dynamic>);
             insertionMap.putIfAbsent(tableName, () => {}).add(jsonEncode(insertData));
             break;
           case 'UPDATE':
             final modifiedColumns = changeData['modified_columns'] as Map<String, dynamic>;
             final updateData = Map.fromEntries(modifiedColumns.entries.where((e) => e.value != null));
             if (updateData.isNotEmpty) {
-              updateData['original_id'] = changeData['original_id'];
-              updateData['global_id'] = changeData['global_id'];
+              // Only keep the global_id for identification
+              updateData.clear();
+              updateData['global_id'] = globalId;
+              updateData.addAll(modifiedColumns);
               updateMap.putIfAbsent(tableName, () => {}).add(jsonEncode(updateData));
             }
             break;
           case 'DELETE':
-            final deleteData = changeData['old'] as Map<String, dynamic>;
-            deleteData['original_id'] = changeData['original_id'];
-            deleteData['global_id'] = changeData['global_id'];
+            final deleteData = {'global_id': globalId};
             deletionMap.putIfAbsent(tableName, () => {}).add(jsonEncode(deleteData));
             break;
         }

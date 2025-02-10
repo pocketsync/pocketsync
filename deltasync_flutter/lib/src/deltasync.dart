@@ -138,6 +138,7 @@ class DeltaSync {
         final remoteChanges = await _syncService!.fetchChanges(lastProcessedId);
         
         if (remoteChanges.isNotEmpty) {
+          log('Applying ${remoteChanges.length} remote changes');
           _db!.execute('BEGIN TRANSACTION');
           try {
             for (final changeLog in remoteChanges) {
@@ -153,6 +154,7 @@ class DeltaSync {
             }
             _db!.execute('COMMIT');
           } catch (e) {
+            log('Error applying remote changes: $e');
             _db!.execute('ROLLBACK');
             rethrow;
           }
@@ -160,31 +162,27 @@ class DeltaSync {
 
         // Then process and upload local changes
         final localChangeSets = await _changeTracker!.generateChangeSets(lastProcessedId);
-        log('${localChangeSets.length} changes found on local database.');
+        log('${localChangeSets.length} local changes found');
         
         if (localChangeSets.isNotEmpty) {
-          _db!.execute('BEGIN TRANSACTION');
-          try {
-            for (final changeSet in localChangeSets) {
-              if (!_isInitialized) break;
+          for (final changeSet in localChangeSets) {
+            if (!_isInitialized) break;
+            
+            _db!.execute('BEGIN TRANSACTION');
+            try {
+              await _syncService!.uploadChanges(changeSet);
+              await _changeTracker!.markChangesAsSynced(changeSet.timestamp);
               
-              try {
-                await _syncService!.uploadChanges(changeSet);
-                await _changeTracker!.markChangesAsSynced(changeSet.timestamp);
-                
-                if (_isInitialized) {
-                  _syncController.add(changeSet);
-                }
-              } catch (e) {
-                // Log the error but continue processing other changes
-                log('Failed to sync change: $e');
-                await _changeTracker!.markChangeAsRetry(changeSet.timestamp);
+              if (_isInitialized) {
+                _syncController.add(changeSet);
               }
+              _db!.execute('COMMIT');
+            } catch (e) {
+              _db!.execute('ROLLBACK');
+              // Log the error but continue processing other changes
+              log('Failed to sync change set with timestamp ${changeSet.timestamp}: $e');
+              await _changeTracker!.markChangeAsRetry(changeSet.timestamp);
             }
-            _db!.execute('COMMIT');
-          } catch (e) {
-            _db!.execute('ROLLBACK');
-            rethrow;
           }
         }
       } catch (e) {

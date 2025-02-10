@@ -45,14 +45,19 @@ class SyncService {
       sendTimeout: const Duration(seconds: 30),
     ));
 
-    _dio.interceptors.add(
-      RetryInterceptor(
-        dio: _dio,
+    _dio.interceptors
+      ..add(
+        RetryInterceptor(
+          dio: _dio,
+          logPrint: print,
+          retries: _maxRetries,
+          retryDelays: _retryDelays,
+        ),
+      )
+      ..add(LogInterceptor(
         logPrint: print,
-        retries: _maxRetries,
-        retryDelays: _retryDelays,
-      ),
-    );
+        requestBody: true,
+      ));
   }
 
   Future<void> uploadChanges(ChangeSet changeSet) async {
