@@ -17,7 +17,7 @@ class ChangeTracker {
     return "$deviceId:$localId";
   }
 
-  int? _extractLocalId(String globalId) {
+  int? _extractSourceLocalId(String globalId) {
     return int.tryParse(globalId.split(':')[1]);
   }
 
@@ -389,7 +389,7 @@ class ChangeTracker {
         for (final rowData in rows) {
           try {
             final data = json.decode(rowData);
-            final localId = _extractLocalId(data['id'] ?? data['row_id']);
+            final localId = _extractSourceLocalId(data['id'] ?? data['row_id']);
 
             final exists = db.select('SELECT 1 FROM $tableName WHERE rowid = ?', [localId]).isNotEmpty;
             if (exists) {
@@ -410,7 +410,7 @@ class ChangeTracker {
         for (final rowData in rows) {
           final data = json.decode(rowData);
           final globalId = data['id'] ?? data['row_id'];
-          int? localId = _extractLocalId(globalId);
+          int? localId = _extractSourceLocalId(globalId);
 
           // Remove id and rowid from data to avoid conflicts
           data.remove('id');
@@ -451,26 +451,15 @@ class ChangeTracker {
         for (final rowData in rows) {
           final data = json.decode(rowData);
 
-          // Remove 'id' or 'row_id' from the incoming data
           var globalId = data.remove('row_id') ?? data.remove('id');
-          int? localId = _extractLocalId(globalId);
+          int? localId = _extractSourceLocalId(globalId);
 
-          if (localId == null) {
-            // Generate a new unique ID by checking for the next available ID
+          final existingRow = db.select('SELECT 1 FROM $tableName WHERE id = ?', [localId]);
+          if (existingRow.isNotEmpty) {
+            // Remove 'id' or 'row_id' from the incoming data
             final maxIdResult = db.select('SELECT MAX(id) as maxId FROM $tableName');
             localId = (maxIdResult.first['maxId'] ?? 0) + 1;
-            log('Generated new integer id: $localId');
-          } else {
-            // Check if localId already exists in the table
-            final existingRow = db.select('SELECT 1 FROM $tableName WHERE id = ?', [localId]);
-            if (existingRow.isNotEmpty) {
-              log('ID $localId already exists in $tableName. Skipping insertion.');
-              continue; // Skip this row to avoid conflict
-            }
           }
-
-          // Remove any remaining 'id' just to be safe
-          data.remove('id');
 
           final columns = data.keys.join(', ');
           final placeholders = List.filled(data.length + 2, '?').join(', '); // +2 for id and last_modified

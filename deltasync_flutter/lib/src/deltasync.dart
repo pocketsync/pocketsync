@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 import 'package:deltasync_flutter/src/models/change_set.dart';
 import 'package:deltasync_flutter/src/models/delta_sync_options.dart';
 import 'package:deltasync_flutter/src/services/device_manager.dart';
@@ -122,6 +123,7 @@ class DeltaSync {
 
       // Then process and upload local changes
       final localChangeSets = await _changeTracker!.generateChangeSets(_lastProcessedChangeId);
+      log('${localChangeSets.length} change found on local database.');
       for (final changeSet in localChangeSets) {
         if (!_isInitialized) break;
         await _syncService!.uploadChanges(changeSet);
@@ -172,6 +174,7 @@ class DeltaSync {
       WHERE type='table' 
       AND name NOT LIKE 'sqlite_%'
       AND name NOT LIKE '__deltasync_%'
+      AND name NOT LIKE 'android_%'
     ''').map((row) => row['name'] as String).toList();
 
     for (final table in tables) {

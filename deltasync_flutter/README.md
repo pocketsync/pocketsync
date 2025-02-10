@@ -1,5 +1,10 @@
 # DeltaSync Flutter
 
+
+### This project is still in early alpha
+#### Warnings
+- Using integers as primary keys may not work as expected
+
 Usage:
 ```dart
 await DeltaSync.instance.initialize(
