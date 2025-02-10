@@ -6,6 +6,7 @@ import 'package:deltasync_flutter/src/services/device_manager.dart';
 import 'package:deltasync_flutter/src/services/sync_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqlite3/sqlite3.dart';
+import 'package:synchronized/synchronized.dart';
 import 'services/change_tracker.dart';
 import 'errors/sync_error.dart';
 
@@ -28,6 +29,11 @@ class DeltaSync {
   SharedPreferences? _sharedPreferences;
   Duration? _syncInterval;
   bool _isSyncing = false;
+
+  // Add new fields for sync state management
+  final _syncLock = Lock();
+  static const _syncTimeout = Duration(minutes: 5);
+  DateTime? _lastSyncAttempt;
 
   Stream<ChangeSet> get changes => _syncController.stream;
 
@@ -105,40 +111,92 @@ class DeltaSync {
   }
 
   Future<void> _checkForChanges() async {
-    if (!_isInitialized || _isSyncing) return;
-
-    _isSyncing = true;
-    try {
-      // Fetch remote changes first
-      final remoteChanges = await _syncService!.fetchChanges(_lastProcessedChangeId);
-      for (final changeLog in remoteChanges) {
-        if (!_isInitialized) break;
-        await _changeTracker!.applyChangeSet(changeLog.changeSet);
-        await _changeTracker!.updateLastProcessedChangeId(changeLog.id);
-        _lastProcessedChangeId = changeLog.id;
-        if (_isInitialized) {
-          _syncController.add(changeLog.changeSet);
-        }
+    if (!_isInitialized) return;
+    
+    // Check if we're already syncing or if we've synced too recently
+    if (_isSyncing) {
+      // Check for stuck sync state
+      if (_lastSyncAttempt != null && 
+          DateTime.now().difference(_lastSyncAttempt!) > _syncTimeout) {
+        log('Sync appears stuck, resetting sync state');
+        _isSyncing = false;
+      } else {
+        return;
       }
-
-      // Then process and upload local changes
-      final localChangeSets = await _changeTracker!.generateChangeSets(_lastProcessedChangeId);
-      log('${localChangeSets.length} change found on local database.');
-      for (final changeSet in localChangeSets) {
-        if (!_isInitialized) break;
-        await _syncService!.uploadChanges(changeSet);
-        await _changeTracker!.markChangesAsSynced(changeSet.timestamp);
-        if (_isInitialized) {
-          _syncController.add(changeSet);
-        }
-      }
-    } catch (e) {
-      if (_isInitialized) {
-        _syncController.addError(SyncError('Failed to sync changes: $e'));
-      }
-    } finally {
-      _isSyncing = false;
     }
+
+    // Use a lock to prevent concurrent sync operations
+    await _syncLock.synchronized(() async {
+      _isSyncing = true;
+      _lastSyncAttempt = DateTime.now();
+      
+      try {
+        // Convert timestamps to milliseconds for consistency
+        final lastProcessedId = _lastProcessedChangeId;
+        
+        // Fetch remote changes first
+        final remoteChanges = await _syncService!.fetchChanges(lastProcessedId);
+        
+        if (remoteChanges.isNotEmpty) {
+          _db!.execute('BEGIN TRANSACTION');
+          try {
+            for (final changeLog in remoteChanges) {
+              if (!_isInitialized) break;
+              
+              await _changeTracker!.applyChangeSet(changeLog.changeSet);
+              await _changeTracker!.updateLastProcessedChangeId(changeLog.id);
+              _lastProcessedChangeId = changeLog.id;
+              
+              if (_isInitialized) {
+                _syncController.add(changeLog.changeSet);
+              }
+            }
+            _db!.execute('COMMIT');
+          } catch (e) {
+            _db!.execute('ROLLBACK');
+            rethrow;
+          }
+        }
+
+        // Then process and upload local changes
+        final localChangeSets = await _changeTracker!.generateChangeSets(lastProcessedId);
+        log('${localChangeSets.length} changes found on local database.');
+        
+        if (localChangeSets.isNotEmpty) {
+          _db!.execute('BEGIN TRANSACTION');
+          try {
+            for (final changeSet in localChangeSets) {
+              if (!_isInitialized) break;
+              
+              try {
+                await _syncService!.uploadChanges(changeSet);
+                await _changeTracker!.markChangesAsSynced(changeSet.timestamp);
+                
+                if (_isInitialized) {
+                  _syncController.add(changeSet);
+                }
+              } catch (e) {
+                // Log the error but continue processing other changes
+                log('Failed to sync change: $e');
+                await _changeTracker!.markChangeAsRetry(changeSet.timestamp);
+              }
+            }
+            _db!.execute('COMMIT');
+          } catch (e) {
+            _db!.execute('ROLLBACK');
+            rethrow;
+          }
+        }
+      } catch (e) {
+        if (_isInitialized) {
+          log('Sync error: $e');
+          _syncController.addError(SyncError('Failed to sync changes: $e'));
+        }
+      } finally {
+        _isSyncing = false;
+        _lastSyncAttempt = null;
+      }
+    });
   }
 
   Future<void> dispose() async {

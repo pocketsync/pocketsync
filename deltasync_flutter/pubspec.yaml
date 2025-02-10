@@ -16,6 +16,7 @@ dependencies:
   shared_preferences: ^2.2.0
   sqlite3: ^2.7.3
   sqlite3_flutter_libs: ^0.5.30
+  synchronized: ^3.3.0+3
   uuid: ^4.5.1
 
 
