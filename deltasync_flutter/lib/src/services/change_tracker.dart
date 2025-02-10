@@ -17,9 +17,9 @@ class ChangeTracker {
   Future<void> setupTracking() async {
     db.execute('PRAGMA journal_mode=WAL');
 
+    await _createDeviceSyncStateTable();
     await _createChangeTrackingTable();
     await _createVersionTrackingTable();
-    await _createDeviceSyncStateTable();
   }
 
   Future<void> _createChangeTrackingTable() async {
@@ -256,10 +256,8 @@ class ChangeTracker {
   }
 
   Future<int> getLastProcessedChangeId() async {
-    final result = db.select(
-      'SELECT last_processed_change_id FROM __deltasync_device_state WHERE device_id = ?',
-      [deviceId]
-    );
+    final result =
+        db.select('SELECT last_processed_change_id FROM __deltasync_device_state WHERE device_id = ?', [deviceId]);
     return result.isEmpty ? 0 : result.first['last_processed_change_id'] as int;
   }
 

@@ -43,6 +43,8 @@ class DeltaSync {
       _sharedPreferences = await SharedPreferences.getInstance();
       _deviceManager = DeviceManager(_sharedPreferences!);
       _changeTracker = ChangeTracker(_db!, _deviceManager!.getDeviceId());
+
+      await _changeTracker!.setupTracking();
       _lastProcessedChangeId = await _changeTracker!.getLastProcessedChangeId();
 
       _syncService = SyncService(
@@ -54,7 +56,6 @@ class DeltaSync {
         deviceManager: _deviceManager!,
       );
 
-      await _changeTracker!.setupTracking();
       await _initializeWatcher();
       _setupSchemaChangeListener();
 
