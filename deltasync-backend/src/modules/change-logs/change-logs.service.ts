@@ -2,7 +2,7 @@ import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common
 import { PrismaService } from '../prisma/prisma.service';
 import { ChangeSetDto } from './dto/change-set.dto';
 import { ChangesHandler } from './changes-handler';
-import { AppUser, Device } from '@prisma/client';
+import { AppUser, ChangeLog, Device } from '@prisma/client';
 
 interface DatabaseState {
   version: number;
@@ -76,7 +76,7 @@ export class ChangeLogsService {
     }
   }
 
-  async fetchMissingChanges(device: Device, appUser: AppUser, data: { lastProcessedChangeId: number }) {
+  async fetchMissingChanges(device: Device, appUser: AppUser, data: { lastProcessedChangeId: number }): Promise<ChangeLog []> {
     this.logger.debug(`Fetching changes after ID ${data.lastProcessedChangeId} for device ${device.deviceId}`);
     const lastProcessedChange = await this.prisma.changeLog.findFirst({
       where: {
@@ -84,7 +84,7 @@ export class ChangeLogsService {
       },
     });
 
-    return await this.prisma.deviceChangeLog.findMany({
+    const changes = await this.prisma.deviceChangeLog.findMany({
       where: {
         deviceId: device.deviceId,
         changeLog: {
@@ -107,6 +107,8 @@ export class ChangeLogsService {
         }
       }
     });
+
+    return changes.map(change => change.changeLog as ChangeLog);
   }
 
   private async createOrFindChangeLog(userIdentifier: string, deviceId: string, changeSet: ChangeSetDto) {
