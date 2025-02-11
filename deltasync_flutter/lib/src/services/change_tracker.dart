@@ -409,14 +409,19 @@ class ChangeTracker {
         final timestamp = change['timestamp'] as int;
         final globalId = changeData['global_id'] as String?;
 
+        if (globalId == null) {
+          log('Warning: Row missing global_id in change: $changeData');
+          continue;
+        }
+
         maxTimestamp = timestamp > maxTimestamp ? timestamp : maxTimestamp;
 
         switch (operation) {
           case 'INSERT':
             final insertData = changeData['new'] as Map<String, dynamic>;
-            // Only keep the global_id for identification
+            // Create clean data with required ID fields
             final cleanData = <String, dynamic>{
-              'global_id': globalId,
+              'global_id': globalId, // Use global_id as expected by backend
               ...insertData
             };
             insertionMap.putIfAbsent(tableName, () => []).add(cleanData);
@@ -426,14 +431,16 @@ class ChangeTracker {
                 changeData['modified_columns'] as Map<String, dynamic>;
             if (modifiedColumns.isNotEmpty) {
               final cleanData = <String, dynamic>{
-                'global_id': globalId,
+                'global_id': globalId, // Use global_id as expected by backend
                 ...modifiedColumns
               };
               updateMap.putIfAbsent(tableName, () => []).add(cleanData);
             }
             break;
           case 'DELETE':
-            final cleanData = {'global_id': globalId};
+            final cleanData = {
+              'global_id': globalId
+            }; // Use global_id as expected by backend
             deletionMap.putIfAbsent(tableName, () => []).add(cleanData);
             break;
         }
@@ -460,85 +467,30 @@ class ChangeTracker {
   }
 
   Future<void> applyChangeSet(ChangeSet changeSet) async {
-    final remoteIds = <String>{};
-    for (final tableName in [
-      ...changeSet.insertions.changes.keys,
-      ...changeSet.updates.changes.keys
-    ]) {
-      final rows = [
-        ...changeSet.insertions.changes[tableName]?.rows ?? [],
-        ...changeSet.updates.changes[tableName]?.rows ?? []
-      ];
-      for (final rowData in rows) {
-        final globalId =
-            rowData['id']?.toString() ?? rowData['global_id']?.toString();
-        if (globalId == null) {
-          log('Warning: Row missing global_id: $rowData');
-          continue;
-        }
-
-        final parts = globalId.split(':');
-        if (parts.length != 2) {
-          log('Warning: Invalid global_id format: $globalId');
-          continue;
-        }
-
-        final remoteId = int.tryParse(parts[1]);
-        if (remoteId == null) {
-          log('Warning: Invalid remote ID in global_id: $globalId');
-          continue;
-        }
-
-        remoteIds.add(globalId);
-      }
-    }
-
-    // Check for any pending local changes that might conflict
-    for (final tableName
-        in remoteIds.isNotEmpty ? await _getTablesWithPendingChanges() : []) {
-      final pendingChanges = db.select('''
-        SELECT * FROM __deltasync_changes 
-        WHERE table_name = ? 
-        AND sync_status = 'pending'
-        AND row_id IN (${List.filled(remoteIds.length, '?').join(',')})
-      ''', [tableName, ...remoteIds]);
-
-      if (pendingChanges.isNotEmpty) {
-        // Mark these changes as superseded by remote changes
-        final changeIds = pendingChanges.map((c) => c['id'] as int).toList();
-        db.execute('''
-          UPDATE __deltasync_changes 
-          SET sync_status = 'superseded'
-          WHERE id IN (${List.filled(changeIds.length, '?').join(',')})
-        ''', changeIds);
-      }
-    }
-
-    // Apply deletions first to avoid conflicts
+    // Process deletions first
     for (final tableName in changeSet.deletions.changes.keys) {
       final rows = changeSet.deletions.changes[tableName]!.rows;
       for (final rowData in rows) {
         try {
-          final globalId =
-              rowData['id']?.toString() ?? rowData['global_id']?.toString();
-          if (globalId == null) {
-            log('Warning: Row missing global_id: $rowData');
+          final rawId = rowData['global_id']?.toString() ?? // Prefer global_id
+              rowData['id']?.toString();
+          if (rawId == null) {
+            log('Warning: Row missing ID: $rowData');
             continue;
           }
 
-          final parts = globalId.split(':');
-          if (parts.length != 2) {
-            log('Warning: Invalid global_id format: $globalId');
-            continue;
-          }
+          String globalId;
+          int? localId;
 
-          final remoteId = int.tryParse(parts[1]);
-          if (remoteId == null) {
-            log('Warning: Invalid remote ID in global_id: $globalId');
-            continue;
+          // Check if this is already a global ID (contains device prefix)
+          if (rawId.contains(':')) {
+            globalId = rawId;
+            localId = _extractSourceLocalId(globalId);
+          } else {
+            // This is a plain ID from the server
+            localId = int.tryParse(rawId);
+            globalId = '$deviceId:$rawId';
           }
-
-          final localId = _extractSourceLocalId(globalId);
 
           if (localId != null) {
             final exists = db.select('SELECT 1 FROM $tableName WHERE rowid = ?',
@@ -548,8 +500,8 @@ class ChangeTracker {
               log('Deleted row with ID $localId in $tableName');
             }
           }
-        } catch (e) {
-          log('Error deleting row in $tableName: $e');
+        } catch (e, stack) {
+          log('Error processing deletion: $e\n$stack');
         }
       }
     }
@@ -563,64 +515,75 @@ class ChangeTracker {
       final insertions = changeSet.insertions.changes[tableName]?.rows ?? [];
 
       for (final rowData in [...updates, ...insertions]) {
-        final globalId =
-            rowData['id']?.toString() ?? rowData['global_id']?.toString();
-        if (globalId == null) {
-          log('Warning: Row missing global_id: $rowData');
+        final rawId = rowData['global_id']?.toString() ?? // Prefer global_id
+            rowData['id']?.toString();
+        if (rawId == null) {
+          log('Warning: Row missing ID: $rowData');
           continue;
         }
 
-        final parts = globalId.split(':');
-        if (parts.length != 2) {
-          log('Warning: Invalid global_id format: $globalId');
-          continue;
+        String deviceId;
+        int? remoteId;
+
+        // Check if this is already a global ID (contains device prefix)
+        if (rawId.contains(':')) {
+          final parts = rawId.split(':');
+          if (parts.length != 2) {
+            log('Warning: Invalid global_id format: $rawId');
+            continue;
+          }
+          deviceId = parts[0];
+          remoteId = int.tryParse(parts[1]);
+        } else {
+          // This is a plain ID from the server
+          remoteId = int.tryParse(rawId);
+          deviceId = this.deviceId; // Assume it's from our device
         }
 
-        final deviceId = parts[0];
-        final remoteId = int.tryParse(parts[1]);
         if (remoteId == null) {
-          log('Warning: Invalid remote ID in global_id: $globalId');
+          log('Warning: Invalid ID format: $rawId');
           continue;
         }
 
-        // Remove metadata fields
-        rowData.remove('id');
-        rowData.remove('global_id');
+        // Create a copy of rowData to avoid modifying the original
+        final cleanData = Map<String, dynamic>.from(rowData)
+          ..remove('global_id') // Remove ID fields from database operations
+          ..remove('id');
 
         if (deviceId == this.deviceId) {
           // This is our own change coming back from the server
-
           final exists = db.select('SELECT 1 FROM $tableName WHERE rowid = ?',
               [remoteId]).isNotEmpty;
           if (exists) {
             // Update existing row
-            final setClause = rowData.keys.map((key) => '$key = ?').join(', ');
+            final setClause =
+                cleanData.keys.map((key) => '$key = ?').join(', ');
             db.execute(
               'UPDATE $tableName SET $setClause, last_modified = ? WHERE rowid = ?',
-              [...rowData.values, changeSet.timestamp, remoteId],
+              [...cleanData.values, changeSet.timestamp, remoteId],
             );
             log('Updated existing row with ID $remoteId in $tableName');
           }
         } else {
           // This is a change from another device
-          final columns = rowData.keys.join(', ');
-          final placeholders = List.filled(rowData.length + 2, '?').join(', ');
-          final values = [remoteId, ...rowData.values, changeSet.timestamp];
+          final columns = cleanData.keys.join(', ');
+          final placeholders =
+              List.filled(cleanData.length + 2, '?').join(', ');
 
           try {
             db.execute(
-              'INSERT INTO $tableName (id, $columns, last_modified) VALUES ($placeholders)',
-              values,
+              'INSERT INTO $tableName (rowid, $columns, last_modified) VALUES ($placeholders)',
+              [remoteId, ...cleanData.values, changeSet.timestamp],
             );
-            log('Inserted remote row with ID $remoteId in $tableName');
+            log('Inserted new row with ID $remoteId in $tableName');
           } catch (e) {
             if (e.toString().contains('UNIQUE constraint failed')) {
               // Row already exists, update it instead
               final setClause =
-                  rowData.keys.map((key) => '$key = ?').join(', ');
+                  cleanData.keys.map((key) => '$key = ?').join(', ');
               db.execute(
-                'UPDATE $tableName SET $setClause, last_modified = ? WHERE id = ?',
-                [...rowData.values, changeSet.timestamp, remoteId],
+                'UPDATE $tableName SET $setClause, last_modified = ? WHERE rowid = ?',
+                [...cleanData.values, changeSet.timestamp, remoteId],
               );
               log('Updated existing remote row with ID $remoteId in $tableName');
             } else {
@@ -630,14 +593,6 @@ class ChangeTracker {
         }
       }
     }
-  }
-
-  Future<List<String>> _getTablesWithPendingChanges() async {
-    return db
-        .select(
-            'SELECT DISTINCT table_name FROM __deltasync_changes WHERE sync_status = "pending"')
-        .map((row) => row['table_name'] as String)
-        .toList();
   }
 
   Future<void> _markChangeAsError(int changeId) async {
