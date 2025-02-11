@@ -137,21 +137,18 @@ class DeltaSync {
         log('Found ${localChangeSets.length} local changes to sync');
 
         if (localChangeSets.isNotEmpty) {
-          for (final changeSet in localChangeSets) {
-            if (!_isInitialized) break;
+          try {
+            log('Uploading change set: ${localChangeSets.map((c) => c.toJson())}');
+            await _syncService!.uploadChanges(localChangeSets);
 
-            try {
-              log('Uploading change set: ${changeSet.toJson()}');
-              await _syncService!.uploadChanges(changeSet);
-
-              if (_isInitialized) {
-                _syncController.add(changeSet);
+            if (_isInitialized) {
+              for (var change in localChangeSets) {
+                _syncController.add(change);
               }
-            } catch (e, stack) {
-              // Log the error but continue processing other changes
-              log('Failed to sync change set: $e\n$stack');
-              await _changeTracker!.markChangeAsRetry(changeSet.timestamp);
             }
+          } catch (e, stack) {
+            // Log the error but continue processing other changes
+            log('Failed to sync change set: $e\n$stack');
           }
         }
 
@@ -250,18 +247,6 @@ class DeltaSync {
   Future<List<ChangeSet>> getChanges() async {
     if (!_isInitialized) throw StateError('DeltaSync not initialized');
     return await _changeTracker!.generateChangeSets(_lastProcessedChangeId);
-  }
-
-  Future<void> markChangesSynced(int changeId) async {
-    if (!_isInitialized) throw StateError('DeltaSync not initialized');
-    try {
-      await _changeTracker!.markChangesAsSynced(changeId);
-      if (_lastProcessedChangeId != changeId) {
-        _lastProcessedChangeId = changeId;
-      }
-    } catch (e) {
-      throw SyncError('Failed to mark changes as synced: $e');
-    }
   }
 
   Future<void> pauseSync() async {

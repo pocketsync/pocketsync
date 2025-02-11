@@ -45,20 +45,21 @@ export class ChangeLogsController {
   async submitChange(
     @Headers('x-user-identifier') userIdentifier: string,
     @Headers('x-project-id') projectId: string,
+    @Headers('x-device-id') deviceId: string,
     @Body() submission: ChangeSubmissionDto,
   ) {
-    if (!userIdentifier) {
-      throw new UnauthorizedException('User identifier is required');
+    if (!userIdentifier || !deviceId) {
+      throw new UnauthorizedException('User identifier and device id are required');
     }
 
     const appUser = await this.getOrCreateUserFromId(userIdentifier, projectId)
-    const device = await this.getOrCreateDeviceFromId(submission.deviceId, userIdentifier, projectId)
+    const device = await this.getOrCreateDeviceFromId(deviceId, userIdentifier, projectId)
 
     try {
       await this.changesService.processChange(
         appUser.userIdentifier,
         device.deviceId,
-        submission.changeSet,
+        submission.changeSets,
       );
       return {
         status: 'success',

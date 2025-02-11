@@ -39,6 +39,7 @@ class SyncService {
         'x-project-id': projectId,
         'x-api-key': apiKey,
         'x-user-identifier': userIdentifier,
+        'x-device-id': deviceManager.getDeviceId(),
       },
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
@@ -55,30 +56,17 @@ class SyncService {
     );
   }
 
-  Future<void> uploadChanges(ChangeSet changeSet) async {
+  Future<void> uploadChanges(List<ChangeSet> changeSets) async {
     if (_isDisposed) {
       throw StateError('SyncService has been disposed');
     }
 
     try {
-      final deviceId = deviceManager.getDeviceId();
-      log('Uploading changes for device $deviceId: ${changeSet.toJson()}');
-
       final response = await _dio.post(
         '/sdk/changes',
         data: {
-          'deviceId': deviceId,
-          'changeSet': changeSet.toJson(),
+          'changeSets': changeSets.map((set) => set.toJson()).toList(),
         },
-        options: Options(
-            validateStatus: (status) =>
-                status != null && status >= 200 && status < 300,
-            headers: {
-              'Content-Type': 'application/json',
-              'x-project-id': projectId,
-              'x-api-key': apiKey,
-              'x-user-identifier': userIdentifier,
-            }),
       );
 
       if (response.data == null) {
@@ -89,14 +77,15 @@ class SyncService {
       final responseData = response.data as Map<String, dynamic>;
       if (responseData['status'] != 'success') {
         throw SyncError(
-            'Server failed to process changes: ${responseData['error']}');
+          'Server failed to process changes: ${responseData['error']}',
+        );
       }
 
       log('Changes uploaded successfully: ${response.data}');
 
       // Only mark changes as synced if server confirms success
       if (responseData['processed'] == true) {
-        await changeTracker.markChangesAsSynced(changeSet.timestamp);
+        await changeTracker.markChangesAsSynced(changeSets);
       } else {
         log('Warning: Server did not confirm changes were processed');
         throw SyncError('Server did not confirm changes were processed');
@@ -132,20 +121,9 @@ class SyncService {
     }
 
     try {
-      final deviceId = deviceManager.getDeviceId();
       final response = await _dio.get(
         '/sdk/changes',
         data: {'lastProcessedChangeId': lastProcessedChangeId},
-        options: Options(
-            validateStatus: (status) =>
-                status != null && status >= 200 && status < 300,
-            headers: {
-              'Content-Type': 'application/json',
-              'x-project-id': projectId,
-              'x-api-key': apiKey,
-              'x-user-identifier': userIdentifier,
-              'x-device-id': deviceId,
-            }),
       );
 
       if (response.data == null) {

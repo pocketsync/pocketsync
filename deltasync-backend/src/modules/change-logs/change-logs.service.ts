@@ -1,7 +1,6 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChangeSetDto } from './dto/change-set.dto';
-import { DatabaseStateManager } from './database-state';
 import { ChangeLog, Device } from '@prisma/client';
 
 @Injectable()
@@ -10,23 +9,13 @@ export class ChangeLogsService {
 
   constructor(
     private prisma: PrismaService,
-    private databaseStateManager: DatabaseStateManager,
   ) { }
 
-  async processChange(userIdentifier: string, deviceId: string, changeSet: ChangeSetDto) {
+  async processChange(userIdentifier: string, deviceId: string, changeSets: ChangeSetDto[]) {
     this.logger.log(`Processing change for user ${userIdentifier} from device ${deviceId}`);
     try {
-      // 1. Record the change in the log (if it doesn't already exist)
-      const changeLog = await this.createOrFindChangeLog(userIdentifier, deviceId, changeSet);
+      const changeLog = await this.createChangLog(userIdentifier, deviceId, changeSets);
       this.logger.log(`Change log ${changeLog.id} ${changeLog.processedAt ? 'already exists' : 'created'}`);
-
-      // 2. Mark the change as processed
-      await this.prisma.changeLog.update({
-        where: { id: changeLog.id },
-        data: { processedAt: new Date() },
-      });
-
-      this.logger.log('Change processing completed successfully');
 
       return changeLog;
     } catch (error) {
@@ -41,8 +30,6 @@ export class ChangeLogsService {
   }
 
   async fetchMissingChanges(device: Device, data: { lastProcessedChangeId: number }): Promise<ChangeLog[]> {
-    this.logger.debug(`Fetching changes after ID ${data.lastProcessedChangeId} for device ${device.deviceId}`);
-
     const changes = await this.prisma.changeLog.findMany({
       where: {
         userIdentifier: device.userIdentifier,
@@ -54,73 +41,35 @@ export class ChangeLogsService {
         id: 'asc'
       }
     });
-    this.logger.debug(`Found ${changes.length} changes for ${device.deviceId}`);
+    if (changes.length === 0) {
+      this.logger.log(`No changes found for ${device.deviceId}`);
+    } else {
+      this.logger.debug(`Found ${changes.length} changes for ${device.deviceId}`);
+    }
+
     return changes;
   }
 
-  private async createOrFindChangeLog(userIdentifier: string, deviceId: string, changeSet: ChangeSetDto) {
-    this.logger.debug('Checking for existing change log within last 100s');
+  private async createChangLog(userIdentifier: string, deviceId: string, changeSets: ChangeSetDto[]) {
+    this.logger.debug('Merging change sets and creating change log');
 
-    const globalIds = new Set<string>();
-    ['insertions', 'updates', 'deletions'].forEach(changeType => {
-      const tables = changeSet[changeType] as Record<string, { rows?: Array<any> }>;
-
-      if (tables) {
-        Object.values(tables).forEach(table => {
-          if (table?.rows?.length) {
-            table.rows.forEach(row => {
-              const globalId = row.global_id;
-              if (!globalId) {
-                this.logger.error('Row missing global_id', { row: JSON.stringify(row) });
-                throw new Error('Row missing global_id');
-              }
-              globalIds.add(globalId);
-            });
-          }
-        });
-      }
-    });
+    const mergedChangeSet = this.mergeChangeSets(changeSets);
+    const globalIds = this.extractGlobalIds(mergedChangeSet);
 
     if (globalIds.size === 0) {
-      this.logger.error('No global IDs found in change set', { changeSet: JSON.stringify(changeSet) });
-      throw new Error('No row IDs found in change set');
+      this.logger.error('No global IDs found in merged change set');
+      throw new Error('No row IDs found in merged change set');
     }
 
     const device = await this.prisma.device.findFirst({
-      where: {
-        deviceId,
-        userIdentifier,
-      },
-      select: {
-        userIdentifier: true,
-        appUser: {
-          select: {
-            userIdentifier: true
-          }
-        }
-      }
+      where: { deviceId, userIdentifier },
+      select: { userIdentifier: true },
     });
 
     if (!device) {
       throw new Error(`Device ${deviceId} not found for user ${userIdentifier}`);
     }
 
-    const existingChangeLog = await this.prisma.changeLog.findFirst({
-      where: {
-        userIdentifier,
-        deviceId,
-        changeSet: { equals: JSON.stringify(changeSet) },
-        receivedAt: {
-          gte: new Date(Date.now() - 100000),
-        },
-      },
-    });
-
-    if (existingChangeLog) {
-      return existingChangeLog;
-    }
-
-    // Create a new change log with the first global ID
     const firstGlobalId = Array.from(globalIds)[0];
     this.logger.debug(`Creating new change log with global ID: ${firstGlobalId}`);
 
@@ -128,10 +77,58 @@ export class ChangeLogsService {
       data: {
         userIdentifier,
         deviceId,
-        originalId: firstGlobalId,  // Store the global_id in originalId for backwards compatibility
-        changeSet: JSON.stringify(changeSet),
+        originalId: firstGlobalId,
+        changeSet: JSON.stringify(mergedChangeSet),
         receivedAt: new Date(),
+        processedAt: new Date(),
       },
     });
+  }
+
+  private mergeChangeSets(changeSets: ChangeSetDto[]): ChangeSetDto {
+    const mergedChangeSet: ChangeSetDto = {
+      insertions: {},
+      updates: {},
+      deletions: {},
+      timestamp: Math.max(...changeSets.map(cs => cs.timestamp)),
+      version: Math.max(...changeSets.map(cs => cs.version)),
+    };
+
+    for (const changeSet of changeSets) {
+      for (const changeType of ['insertions', 'updates', 'deletions'] as const) {
+        for (const [tableName, tableChanges] of Object.entries(changeSet[changeType])) {
+          if (!mergedChangeSet[changeType][tableName]) {
+            mergedChangeSet[changeType][tableName] = { rows: [] };
+          }
+          mergedChangeSet[changeType][tableName].rows.push(...tableChanges.rows);
+        }
+      }
+    }
+
+    return mergedChangeSet;
+  }
+
+  private extractGlobalIds(changeSet: ChangeSetDto): Set<string> {
+    const globalIds = new Set<string>();
+
+    for (const changeType of ['insertions', 'updates', 'deletions'] as const) {
+      const tables = changeSet[changeType] as Record<string, { rows?: Array<any> }>;
+      if (tables) {
+        for (const table of Object.values(tables)) {
+          if (table?.rows?.length) {
+            for (const row of table.rows) {
+              const globalId = row.global_id;
+              if (!globalId) {
+                this.logger.error('Row missing global_id', { row: JSON.stringify(row) });
+                throw new Error('Row missing global_id');
+              }
+              globalIds.add(globalId);
+            }
+          }
+        }
+      }
+    }
+
+    return globalIds;
   }
 }
