@@ -5,9 +5,6 @@ class RowChange {
     @IsString()
     row_id: string;
 
-    @IsString()
-    originalId: string;
-
     [key: string]: any;
 }
 
