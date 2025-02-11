@@ -301,11 +301,6 @@ class ChangeTracker {
         'SELECT last_processed_change_id FROM __deltasync_device_state WHERE device_id = ?',
         [deviceId]);
 
-    // Debug: Check device state
-    final allDeviceStates = db.select('SELECT * FROM __deltasync_device_state');
-    log('All device states: $allDeviceStates');
-    log('Current device ID: $deviceId');
-
     if (result.isEmpty) {
       // Initialize device state if it doesn't exist
       db.execute(
@@ -371,11 +366,6 @@ class ChangeTracker {
     var currentBatch = 0;
     final millisTimestamp = _convertToMillis(lastSyncTimestamp);
     final lastProcessedId = await getLastProcessedChangeId();
-
-    // Debug: Check what's in the changes table
-    final allChanges = db.select('SELECT * FROM __deltasync_changes');
-    log('All changes in table: $allChanges');
-    
     // Debug: Check our query parameters
     log('Query params: lastSyncTimestamp=$millisTimestamp, lastProcessedId=$lastProcessedId');
 
@@ -601,24 +591,15 @@ class ChangeTracker {
               List.filled(cleanData.length + 2, '?').join(', ');
 
           try {
+            final newId = db.select('SELECT MAX(rowid) + 1 AS new_id FROM $tableName').first['new_id'] as int;
             db.execute(
               'INSERT INTO $tableName (rowid, $columns, last_modified) VALUES ($placeholders)',
-              [remoteId, ...cleanData.values, changeSet.timestamp],
+              [newId, ...cleanData.values, changeSet.timestamp],
             );
-            log('Inserted new row with ID $remoteId in $tableName');
+            log('Inserted new row with ID $newId in $tableName (original remote ID: $remoteId)');
           } catch (e) {
-            if (e.toString().contains('UNIQUE constraint failed')) {
-              // Row already exists, update it instead
-              final setClause =
-                  cleanData.keys.map((key) => '$key = ?').join(', ');
-              db.execute(
-                'UPDATE $tableName SET $setClause, last_modified = ? WHERE rowid = ?',
-                [...cleanData.values, changeSet.timestamp, remoteId],
-              );
-              log('Updated existing remote row with ID $remoteId in $tableName');
-            } else {
-              rethrow;
-            }
+            log('Error inserting row: $e');
+            rethrow;
           }
         }
       }
