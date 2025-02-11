@@ -52,16 +52,14 @@ class ChangeTracker {
   }
 
   Future<int> _updateTableVersion(String tableName) async {
-    final columns =
-        db.select("SELECT * FROM pragma_table_info(?)", [tableName]);
+    final columns = db.select("SELECT * FROM pragma_table_info(?)", [tableName]);
     if (columns.isEmpty) throw SyncError('Table $tableName does not exist');
 
     final schemaHash = _generateSchemaHash(columns);
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
-    final existing = db.select(
-        'SELECT schema_hash, schema_version FROM __deltasync_versions WHERE table_name = ?',
-        [tableName]);
+    final existing =
+        db.select('SELECT schema_hash, schema_version FROM __deltasync_versions WHERE table_name = ?', [tableName]);
 
     if (existing.isEmpty) {
       db.execute('''
@@ -86,19 +84,15 @@ class ChangeTracker {
   }
 
   String _generateSchemaHash(List<Map<String, dynamic>> columns) {
-    final schemaString =
-        (columns.map((col) => '${col['name']}:${col['type']}').toList()..sort())
-            .join(',');
+    final schemaString = (columns.map((col) => '${col['name']}:${col['type']}').toList()..sort()).join(',');
 
     return sha256.convert(utf8.encode(schemaString)).toString();
   }
 
   Future<void> setupTableTracking(String tableName) async {
     final schemaVersion = await _updateTableVersion(tableName);
-    final columns = db
-        .select("SELECT name FROM pragma_table_info(?)", [tableName])
-        .map((row) => row['name'] as String)
-        .toList();
+    final columns =
+        db.select("SELECT name FROM pragma_table_info(?)", [tableName]).map((row) => row['name'] as String).toList();
 
     // Add last_modified column with a default value, then update it
     if (!columns.contains('last_modified')) {
@@ -112,8 +106,7 @@ class ChangeTracker {
         final now = DateTime.now().millisecondsSinceEpoch;
 
         // Get table info to find the primary key column
-        final tableInfo =
-            db.select("SELECT * FROM pragma_table_info(?)", [tableName]);
+        final tableInfo = db.select("SELECT * FROM pragma_table_info(?)", [tableName]);
         final pkColumn = tableInfo.firstWhere((col) => col['pk'] == 1,
             orElse: () => throw StateError('Table $tableName has no primary key'));
         final pkColumnName = pkColumn['name'] as String;
@@ -240,8 +233,7 @@ class ChangeTracker {
   }
 
   String _generateUpdateCondition(List<String> columns) {
-    final conditions =
-        columns.where((col) => col != 'last_modified').map((col) => '''(
+    final conditions = columns.where((col) => col != 'last_modified').map((col) => '''(
           OLD.$col IS NOT NEW.$col OR 
           (OLD.$col IS NULL AND NEW.$col IS NOT NULL) OR 
           (OLD.$col IS NOT NULL AND NEW.$col IS NULL) OR
@@ -254,16 +246,14 @@ class ChangeTracker {
   String _generateModifiedColumnsOld(List<String> columns) {
     return columns
         .where((col) => col != 'last_modified')
-        .map((col) =>
-            "'$col', CASE WHEN OLD.$col IS NOT NEW.$col THEN OLD.$col ELSE NULL END")
+        .map((col) => "'$col', CASE WHEN OLD.$col IS NOT NEW.$col THEN OLD.$col ELSE NULL END")
         .join(', ');
   }
 
   String _generateModifiedColumnsNew(List<String> columns) {
     return columns
         .where((col) => col != 'last_modified')
-        .map((col) =>
-            "'$col', CASE WHEN OLD.$col IS NOT NEW.$col THEN NEW.$col ELSE NULL END")
+        .map((col) => "'$col', CASE WHEN OLD.$col IS NOT NEW.$col THEN NEW.$col ELSE NULL END")
         .join(', ');
   }
 
@@ -292,9 +282,7 @@ class ChangeTracker {
   }
 
   Future<DateTime> getLastFetchedAt() async {
-    final result = db.select(
-        'SELECT last_fetched_at FROM __deltasync_device_state WHERE device_id = ?',
-        [deviceId]);
+    final result = db.select('SELECT last_fetched_at FROM __deltasync_device_state WHERE device_id = ?', [deviceId]);
 
     if (result.isEmpty) {
       db.execute(
@@ -304,9 +292,7 @@ class ChangeTracker {
       return DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
     }
 
-    return DateTime.fromMillisecondsSinceEpoch(
-        result.first['last_fetched_at'] as int,
-        isUtc: true);
+    return DateTime.fromMillisecondsSinceEpoch(result.first['last_fetched_at'] as int, isUtc: true);
   }
 
   Future<void> updateLastFetchedAt(DateTime timestamp) async {
@@ -381,8 +367,7 @@ class ChangeTracker {
     }
   }
 
-  Future<ChangeSet> _processChangeBatch(
-      List<Map<String, dynamic>> changes) async {
+  Future<ChangeSet> _processChangeBatch(List<Map<String, dynamic>> changes) async {
     final insertionMap = <String, List<Map<String, dynamic>>>{};
     final updateMap = <String, List<Map<String, dynamic>>>{};
     final deletionMap = <String, List<Map<String, dynamic>>>{};
@@ -401,22 +386,13 @@ class ChangeTracker {
         switch (operation) {
           case 'INSERT':
             final insertData = changeData['new'] as Map<String, dynamic>;
-            final cleanData = <String, dynamic>{
-              'row_id': rowId,
-              'last_modified': timestamp,
-              ...insertData
-            };
+            final cleanData = <String, dynamic>{'row_id': rowId, 'last_modified': timestamp, ...insertData};
             insertionMap.putIfAbsent(tableName, () => []).add(cleanData);
             break;
           case 'UPDATE':
-            final modifiedColumns =
-                changeData['modified_columns'] as Map<String, dynamic>;
+            final modifiedColumns = changeData['modified_columns'] as Map<String, dynamic>;
             if (modifiedColumns.isNotEmpty) {
-              final cleanData = <String, dynamic>{
-                'row_id': rowId,
-                'last_modified': timestamp,
-                ...modifiedColumns
-              };
+              final cleanData = <String, dynamic>{'row_id': rowId, 'last_modified': timestamp, ...modifiedColumns};
               updateMap.putIfAbsent(tableName, () => []).add(cleanData);
             }
             break;
@@ -455,9 +431,8 @@ class ChangeTracker {
       for (final tableName in changeSet.deletions.changes.keys) {
         final rows = changeSet.deletions.changes[tableName]!.rows;
         for (final rowData in rows) {
-          final rowId = rowData['rowid'] as int;
-          final exists = db.select(
-              'SELECT * FROM $tableName WHERE rowid = ?', [rowId]).isNotEmpty;
+          final rowId = rowData['row_id'] as int;
+          final exists = db.select('SELECT * FROM $tableName WHERE rowid = ?', [rowId]).isNotEmpty;
           if (exists) {
             db.execute('DELETE FROM $tableName WHERE rowid = ?', [rowId]);
             log('Deleted row with ID $rowId in $tableName');
@@ -518,8 +493,8 @@ class ChangeTracker {
     db.execute(sql, values);
 
     // show proof in console
-final allRows = db.select('SELECT * FROM $tableName');
-log('All rows in $tableName: $allRows');
+    final allRows = db.select('SELECT * FROM $tableName');
+    log('All rows in $tableName: $allRows');
 
     log('Inserted new row in $tableName: $cleanData');
   }
@@ -528,11 +503,9 @@ log('All rows in $tableName: $allRows');
     final rowId = rowData['row_id'] as int;
     final lastModified = rowData['last_modified'] as int;
 
-    final existingRow = db.select(
-        'SELECT last_modified FROM $tableName WHERE rowid = ?', [rowId]);
+    final existingRow = db.select('SELECT last_modified FROM $tableName WHERE rowid = ?', [rowId]);
 
-    if (existingRow.isNotEmpty &&
-        existingRow.first['last_modified'] >= lastModified) {
+    if (existingRow.isNotEmpty && existingRow.first['last_modified'] >= lastModified) {
       log('Skipped update for rowid $rowId because incoming data is stale.');
       return;
     }
@@ -566,10 +539,8 @@ log('All rows in $tableName: $allRows');
   }
 
   String _generateColumnList(String tableName, {String prefix = 'NEW'}) {
-    final columns = db
-        .select("SELECT name FROM pragma_table_info('$tableName')")
-        .map((row) => row['name'] as String)
-        .toList();
+    final columns =
+        db.select("SELECT name FROM pragma_table_info('$tableName')").map((row) => row['name'] as String).toList();
 
     return columns.map((col) => "'$col', $prefix.$col").join(', ');
   }

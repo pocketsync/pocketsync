@@ -10,7 +10,7 @@ class TodoListView extends StatefulWidget {
 }
 
 class _TodoListViewState extends State<TodoListView> {
-  final TodoController _todoController = TodoController();
+  late final TodoController _todoController = TodoController();
   final TextEditingController _textController = TextEditingController();
 
   @override
@@ -128,9 +128,7 @@ class _TodoListViewState extends State<TodoListView> {
                       title: Text(
                         todo.title,
                         style: TextStyle(
-                          decoration: todo.isCompleted
-                              ? TextDecoration.lineThrough
-                              : null,
+                          decoration: todo.isCompleted ? TextDecoration.lineThrough : null,
                         ),
                       ),
                       trailing: IconButton(
