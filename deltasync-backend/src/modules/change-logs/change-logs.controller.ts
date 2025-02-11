@@ -1,14 +1,15 @@
-import { Controller, Post, Body, UseGuards, Headers, UnauthorizedException, Get } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Headers, UnauthorizedException, Get, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { ChangeLogsService } from './change-logs.service';
 import { DevicesService } from '../devices/devices.service';
 import { ApiKeyAuthGuard } from '../../common/guards/api-key-auth.guard';
 import { ChangeSubmissionDto } from './dto/change-submission.dto';
 import { AppUsersService } from '../app-users/app-users.service';
-import { ChangeSetDto } from './dto/change-set.dto';
 
 @Controller('sdk/changes')
 @UseGuards(ApiKeyAuthGuard)
 export class ChangeLogsController {
+  private readonly logger = new Logger(ChangeLogsController.name);
+  
   constructor(
     private readonly changesService: ChangeLogsService,
     private readonly devicesService: DevicesService,
@@ -53,11 +54,33 @@ export class ChangeLogsController {
     const appUser = await this.getOrCreateUserFromId(userIdentifier, projectId)
     const device = await this.getOrCreateDeviceFromId(submission.deviceId, userIdentifier, projectId)
 
-    return this.changesService.processChange(
-      appUser.userIdentifier,
-      device.deviceId,
-      submission.changeSet,
-    );
+    try {
+      await this.changesService.processChange(
+        appUser.userIdentifier,
+        device.deviceId,
+        submission.changeSet,
+      );
+      return {
+        status: 'success',
+        processed: true,
+        message: 'Changes processed successfully'
+      };
+    } catch (error) {
+      this.logger.error('Error processing change', {
+        error: error.message,
+        userIdentifier,
+        deviceId: device.deviceId,
+        stack: error.stack,
+      });
+      throw new HttpException(
+        {
+          status: 'error',
+          processed: false,
+          error: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Get()
@@ -73,7 +96,7 @@ export class ChangeLogsController {
 
     await this.getOrCreateUserFromId(userIdentifier, projectId)
     const device = await this.getOrCreateDeviceFromId(deviceIdentifier, userIdentifier, projectId)
-    
+
     const changes = await this.changesService.fetchMissingChanges(device, data)
 
     return changes

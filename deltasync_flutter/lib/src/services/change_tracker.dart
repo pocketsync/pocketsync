@@ -300,7 +300,21 @@ class ChangeTracker {
     final result = db.select(
         'SELECT last_processed_change_id FROM __deltasync_device_state WHERE device_id = ?',
         [deviceId]);
-    return result.isEmpty ? 0 : result.first['last_processed_change_id'] as int;
+
+    // Debug: Check device state
+    final allDeviceStates = db.select('SELECT * FROM __deltasync_device_state');
+    log('All device states: $allDeviceStates');
+    log('Current device ID: $deviceId');
+
+    if (result.isEmpty) {
+      // Initialize device state if it doesn't exist
+      db.execute(
+          'INSERT INTO __deltasync_device_state (device_id, last_processed_change_id) VALUES (?, 0)',
+          [deviceId]);
+      return 0;
+    }
+
+    return result.first['last_processed_change_id'] as int;
   }
 
   Future<void> updateLastProcessedChangeId(int changeId) async {
@@ -356,6 +370,14 @@ class ChangeTracker {
     final changeSets = <ChangeSet>[];
     var currentBatch = 0;
     final millisTimestamp = _convertToMillis(lastSyncTimestamp);
+    final lastProcessedId = await getLastProcessedChangeId();
+
+    // Debug: Check what's in the changes table
+    final allChanges = db.select('SELECT * FROM __deltasync_changes');
+    log('All changes in table: $allChanges');
+
+    // Debug: Check our query parameters
+    log('Query params: lastSyncTimestamp=$millisTimestamp, lastProcessedId=$lastProcessedId');
 
     while (true) {
       final changes = db.select('''
@@ -368,10 +390,16 @@ class ChangeTracker {
         LIMIT ? OFFSET ?
       ''', [
         millisTimestamp,
-        await getLastProcessedChangeId(),
+        lastProcessedId,
         _batchSize,
         currentBatch * _batchSize
       ]);
+
+      // Debug: Check if we got any changes
+      log('Changes found for batch $currentBatch: ${changes.length}');
+      if (changes.isNotEmpty) {
+        log('First change: ${changes.first}');
+      }
 
       if (changes.isEmpty) break;
 

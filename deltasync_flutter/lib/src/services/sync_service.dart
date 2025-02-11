@@ -91,8 +91,21 @@ class SyncService {
         throw SyncError('Invalid response from server: empty response');
       }
 
+      // Parse the response to check if changes were processed
+      final responseData = response.data as Map<String, dynamic>;
+      if (responseData['status'] != 'success') {
+        throw SyncError('Server failed to process changes: ${responseData['error']}');
+      }
+
       log('Changes uploaded successfully: ${response.data}');
-      await changeTracker.markChangesAsSynced(changeSet.timestamp);
+      
+      // Only mark changes as synced if server confirms success
+      if (responseData['processed'] == true) {
+        await changeTracker.markChangesAsSynced(changeSet.timestamp);
+      } else {
+        log('Warning: Server did not confirm changes were processed');
+        throw SyncError('Server did not confirm changes were processed');
+      }
     } on DioException catch (e) {
       log('Error uploading changes: ${e.message}\nResponse: ${e.response?.data}');
       
