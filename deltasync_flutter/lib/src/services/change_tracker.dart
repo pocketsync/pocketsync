@@ -36,7 +36,7 @@ class ChangeTracker {
       CREATE TABLE IF NOT EXISTS __deltasync_changes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         table_name TEXT NOT NULL,
-        row_id TEXT NOT NULL,
+        global_id TEXT NOT NULL,
         operation TEXT NOT NULL,
         timestamp INTEGER NOT NULL,
         sync_status TEXT DEFAULT 'pending',
@@ -389,7 +389,7 @@ class ChangeTracker {
         SELECT * FROM __deltasync_changes 
         WHERE sync_status = 'pending'
         AND retry_count < 3
-        ORDER BY timestamp ASC
+        ORDER BY id ASC
         LIMIT ? OFFSET ?
       ''', [batchSize, offset]);
 
@@ -434,12 +434,7 @@ class ChangeTracker {
         final changeData = jsonDecode(change['change_data'] as String);
         final operation = change['operation'] as String;
         final timestamp = change['timestamp'] as int;
-        final globalId = changeData['row_id'] as String?;
-
-        if (globalId == null) {
-          log('Warning: Row missing global_id in change: $changeData');
-          continue;
-        }
+        final globalId = change['global_id'] as String;
 
         maxTimestamp = timestamp > maxTimestamp ? timestamp : maxTimestamp;
 
@@ -467,7 +462,7 @@ class ChangeTracker {
           case 'DELETE':
             final cleanData = {
               'global_id': globalId
-            }; // Use global_id as expected by backend
+            };
             deletionMap.putIfAbsent(tableName, () => []).add(cleanData);
             break;
         }
