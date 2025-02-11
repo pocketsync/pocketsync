@@ -66,13 +66,11 @@ export class ChangeLogsService {
     const changes = await this.prisma.changeLog.findMany({
       where: {
         userIdentifier: device.userIdentifier,
+        deviceId: { not: device.deviceId }, // Exclude changes from this device
         id: { gt: data.lastProcessedChangeId },
-        processedAt: { not: null },
-        deviceId: { not: device.deviceId },
       },
-      orderBy: {
-        id: 'asc'
-      }
+      orderBy: { id: 'asc' },
+      take: 1000,
     });
     this.logger.debug(`Found ${changes.length} changes for ${device.deviceId}`);
     return changes;
