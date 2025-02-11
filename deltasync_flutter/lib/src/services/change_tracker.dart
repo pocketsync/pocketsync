@@ -375,22 +375,18 @@ class ChangeTracker {
     // Debug: Check what's in the changes table
     final allChanges = db.select('SELECT * FROM __deltasync_changes');
     log('All changes in table: $allChanges');
-
+    
     // Debug: Check our query parameters
     log('Query params: lastSyncTimestamp=$millisTimestamp, lastProcessedId=$lastProcessedId');
 
     while (true) {
       final changes = db.select('''
         SELECT * FROM __deltasync_changes 
-        WHERE timestamp > ? 
-        AND sync_status = 'pending'
+        WHERE sync_status = 'pending'
         AND retry_count < 3
-        AND id > ?
         ORDER BY timestamp ASC
         LIMIT ? OFFSET ?
       ''', [
-        millisTimestamp,
-        lastProcessedId,
         _batchSize,
         currentBatch * _batchSize
       ]);
@@ -404,7 +400,13 @@ class ChangeTracker {
       if (changes.isEmpty) break;
 
       final changeSet = await _processChangeBatch(changes);
-      changeSets.add(changeSet);
+      
+      // Only add non-empty change sets
+      if (changeSet.insertions.changes.isNotEmpty ||
+          changeSet.updates.changes.isNotEmpty ||
+          changeSet.deletions.changes.isNotEmpty) {
+        changeSets.add(changeSet);
+      }
 
       currentBatch++;
     }

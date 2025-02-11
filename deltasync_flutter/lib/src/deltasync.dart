@@ -143,7 +143,6 @@ class DeltaSync {
             try {
               log('Uploading change set: ${changeSet.toJson()}');
               await _syncService!.uploadChanges(changeSet);
-              await _changeTracker!.markChangesAsSynced(changeSet.timestamp);
 
               if (_isInitialized) {
                 _syncController.add(changeSet);
