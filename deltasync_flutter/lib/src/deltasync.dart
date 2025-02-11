@@ -227,6 +227,7 @@ class DeltaSync {
       AND name NOT LIKE 'sqlite_%'
       AND name NOT LIKE '__deltasync_%'
       AND name NOT LIKE 'android_%'
+      AND name NOT IN ('android_metadata', '_sync_metadata')
     ''').map((row) => row['name'] as String).toList();
 
     for (final table in tables) {
@@ -236,6 +237,8 @@ class DeltaSync {
         log('Failed to set up tracking for table $table: $e');
       }
     }
+
+    _setupSchemaChangeListener();
   }
 
   void _startPeriodicSync(Duration? interval) {
