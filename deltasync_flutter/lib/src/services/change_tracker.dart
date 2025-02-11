@@ -406,8 +406,7 @@ class ChangeTracker {
     ''', [millisTimestamp]);
   }
 
-  Future<ChangeSet> _processChangeBatch(
-      List<Map<String, dynamic>> changes) async {
+  Future<ChangeSet> _processChangeBatch(List<Map<String, dynamic>> changes) async {
     final insertionMap = <String, List<Map<String, dynamic>>>{};
     final updateMap = <String, List<Map<String, dynamic>>>{};
     final deletionMap = <String, List<Map<String, dynamic>>>{};
@@ -541,6 +540,22 @@ class ChangeTracker {
   }
 
   void _insertRow(String tableName, Map<String, dynamic> rowData) {
+    final lastModified = rowData['last_modified'];
+    final existingRow = db.query('SELECT rowid, last_modified FROM $tableName WHERE id = ?', [rowData['id']]);
+
+    if (existingRow.isNotEmpty) {
+      final existingLastModified = existingRow.first['last_modified'];
+      if (existingLastModified >= lastModified) {
+        log('Skipped insert for id ${rowData['id']} because incoming data is stale.');
+        return;
+      }
+
+      // Existing row has older data, so we update instead
+      _updateRow(tableName, rowData, existingRow.first['rowid']);
+      return;
+    }
+
+    // No conflict, proceed with the insert
     final columns = rowData.keys.join(', ');
     final placeholders = rowData.keys.map((_) => '?').join(', ');
     final values = rowData.values.toList();
@@ -548,10 +563,18 @@ class ChangeTracker {
     final sql = 'INSERT INTO $tableName ($columns) VALUES ($placeholders)';
     db.execute(sql, values);
 
-    log('Inserted row into $tableName: $rowData');
+    log('Inserted new row in $tableName: $rowData');
   }
 
   void _updateRow(String tableName, Map<String, dynamic> rowData, int localId) {
+    final lastModified = rowData['last_modified'];
+    final existingRow = db.query('SELECT last_modified FROM $tableName WHERE rowid = ?', [localId]);
+
+    if (existingRow.isNotEmpty && existingRow.first['last_modified'] >= lastModified) {
+      log('Skipped update for rowid $localId because incoming data is stale.');
+      return;
+    }
+
     final columns = rowData.keys.where((key) => key != 'rowid').toList();
     final setClause = columns.map((col) => '$col = ?').join(', ');
     final values = columns.map((col) => rowData[col]).toList();

@@ -126,6 +126,7 @@ class DeltaSync {
 
     // Use a lock to prevent concurrent sync operations
     await _syncLock.synchronized(() async {
+      if (_isSyncing) return;
       _isSyncing = true;
       _lastSyncAttempt = DateTime.now();
 
@@ -194,17 +195,15 @@ class DeltaSync {
   }
 
   Future<void> dispose() async {
-    _syncTimer?.cancel();
-    _syncTimer = null;
-    await _schemaChangeSubscription?.cancel();
-    await _syncController.close();
-    _syncService?.dispose();
-    _db?.dispose();
-    _db = null;
-    _changeTracker = null;
-    _syncService = null;
-    _userId = null;
-    _isInitialized = false;
+    await _syncLock.synchronized(() async {
+      _syncTimer?.cancel();
+      await _schemaChangeSubscription?.cancel();
+      await _syncController.close();
+      _syncService?.dispose();
+      _db?.dispose();
+      _db = null;
+      _isInitialized = false;
+    });
   }
 
   void _setupSchemaChangeListener() {
@@ -231,7 +230,11 @@ class DeltaSync {
     ''').map((row) => row['name'] as String).toList();
 
     for (final table in tables) {
-      await _changeTracker!.setupTableTracking(table);
+      try {
+        await _changeTracker!.setupTableTracking(table);
+      } catch (e) {
+        log('Failed to set up tracking for table $table: $e');
+      }
     }
   }
 
@@ -248,12 +251,11 @@ class DeltaSync {
 
   Future<void> markChangesSynced(int changeId) async {
     if (!_isInitialized) throw StateError('DeltaSync not initialized');
-    await _changeTracker!.updateLastProcessedChangeId(changeId);
-    _lastProcessedChangeId = changeId;
-    if (!_isInitialized) throw StateError('DeltaSync not initialized');
     try {
       await _changeTracker!.markChangesAsSynced(changeId);
-      _lastProcessedChangeId = changeId;
+      if (_lastProcessedChangeId != changeId) {
+        _lastProcessedChangeId = changeId;
+      }
     } catch (e) {
       throw SyncError('Failed to mark changes as synced: $e');
     }
