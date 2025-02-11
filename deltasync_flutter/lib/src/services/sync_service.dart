@@ -115,7 +115,7 @@ class SyncService {
     }
   }
 
-  Future<List<ChangeLog>> fetchChanges(int lastProcessedChangeId) async {
+  Future<List<ChangeLog>> fetchChanges(DateTime lastFetchedAt) async {
     if (_isDisposed) {
       throw StateError('SyncService has been disposed');
     }
@@ -123,7 +123,7 @@ class SyncService {
     try {
       final response = await _dio.get(
         '/sdk/changes',
-        data: {'lastProcessedChangeId': lastProcessedChangeId},
+        data: {'lastFetchedAt': lastFetchedAt.toIso8601String()},
       );
 
       if (response.data == null) {

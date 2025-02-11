@@ -9,7 +9,7 @@ import { AppUsersService } from '../app-users/app-users.service';
 @UseGuards(ApiKeyAuthGuard)
 export class ChangeLogsController {
   private readonly logger = new Logger(ChangeLogsController.name);
-  
+
   constructor(
     private readonly changesService: ChangeLogsService,
     private readonly devicesService: DevicesService,
@@ -89,7 +89,7 @@ export class ChangeLogsController {
     @Headers('x-user-identifier') userIdentifier: string,
     @Headers('x-device-id') deviceIdentifier: string,
     @Headers('x-project-id') projectId: string,
-    @Body() data: { lastProcessedChangeId: number }
+    @Body() data: { lastFetchedAt: Date }
   ) {
     if (!userIdentifier || !deviceIdentifier) {
       throw new UnauthorizedException('Both user identifier and device identifier are required');

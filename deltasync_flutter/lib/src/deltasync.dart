@@ -21,7 +21,7 @@ class DeltaSync {
   SyncService? _syncService;
   DeviceManager? _deviceManager;
   bool _isInitialized = false;
-  int _lastProcessedChangeId = 0;
+  DateTime? _lastFetchedAt;
   Timer? _syncTimer;
   String? _userId;
   final _syncController = StreamController<ChangeSet>.broadcast();
@@ -52,7 +52,7 @@ class DeltaSync {
       _changeTracker = ChangeTracker(_db!, _deviceManager!.getDeviceId());
 
       await _changeTracker!.setupTracking();
-      _lastProcessedChangeId = await _changeTracker!.getLastProcessedChangeId();
+      _lastFetchedAt = await _changeTracker!.getLastFetchedAt();
 
       _syncService = SyncService(
         serverUrl: options.serverUrl,
@@ -115,8 +115,7 @@ class DeltaSync {
     // Check if we're already syncing or if we've synced too recently
     if (_isSyncing) {
       // Check for stuck sync state
-      if (_lastSyncAttempt != null &&
-          DateTime.now().difference(_lastSyncAttempt!) > _syncTimeout) {
+      if (_lastSyncAttempt != null && DateTime.now().difference(_lastSyncAttempt!) > _syncTimeout) {
         log('Sync appears stuck, resetting sync state');
         _isSyncing = false;
       } else {
@@ -132,9 +131,7 @@ class DeltaSync {
 
       try {
         // First process and upload local changes
-        final localChangeSets =
-            await _changeTracker!.generateChangeSets(_lastProcessedChangeId);
-        log('Found ${localChangeSets.length} local changes to sync');
+        final localChangeSets = await _changeTracker!.generateChangeSets(_lastFetchedAt ?? DateTime.now());
 
         if (localChangeSets.isNotEmpty) {
           try {
@@ -153,31 +150,19 @@ class DeltaSync {
         }
 
         // Then fetch and apply remote changes
-        final remoteChanges =
-            await _syncService!.fetchChanges(_lastProcessedChangeId);
+        _lastFetchedAt ??= await _changeTracker!.getLastFetchedAt();
+        final remoteChanges = await _syncService!.fetchChanges(_lastFetchedAt!);
 
         if (remoteChanges.isNotEmpty) {
-          log('Applying ${remoteChanges.length} remote changes');
-
-          for (final changeLog in remoteChanges) {
-            if (!_isInitialized) break;
-
-            _db!.execute('BEGIN TRANSACTION');
-            try {
-              await _changeTracker!.applyChangeSet(changeLog.changeSet);
-              await _changeTracker!.updateLastProcessedChangeId(changeLog.id);
-              _lastProcessedChangeId = changeLog.id;
-
-              if (_isInitialized) {
-                _syncController.add(changeLog.changeSet);
-              }
-              _db!.execute('COMMIT');
-            } catch (e, stack) {
-              log('Error applying remote changes: $e\n$stack');
-              _db!.execute('ROLLBACK');
-              // Don't rethrow - we want to continue processing other changes
-            }
+          for (final change in remoteChanges) {
+            final changeSet = change.changeSet;
+            await _changeTracker!.applyChangeSet(changeSet);
           }
+
+          // Update last fetched timestamp after successfully applying changes
+          final now = DateTime.now().toUtc();
+          await _changeTracker!.updateLastFetchedAt(now);
+          _lastFetchedAt = now;
         }
       } catch (e, stack) {
         if (_isInitialized) {
@@ -204,16 +189,14 @@ class DeltaSync {
   }
 
   void _setupSchemaChangeListener() {
-    _schemaChangeSubscription =
-        _changeTracker!.schemaChanges.listen((schemaChange) {
+    _schemaChangeSubscription = _changeTracker!.schemaChanges.listen((schemaChange) {
       _syncController.addError(SyncError(
         'Schema changed for table ${schemaChange.tableName} '
         'to version ${schemaChange.version}',
       ));
       pauseSync();
     }, onError: (error) {
-      _syncController
-          .addError(SyncError('Failed to monitor schema changes: $error'));
+      _syncController.addError(SyncError('Failed to monitor schema changes: $error'));
     });
   }
 
@@ -240,13 +223,12 @@ class DeltaSync {
 
   void _startPeriodicSync(Duration? interval) {
     _syncTimer?.cancel();
-    _syncTimer = Timer.periodic(
-        interval ?? kDefaultSyncInternal, (_) => _checkForChanges());
+    _syncTimer = Timer.periodic(interval ?? kDefaultSyncInternal, (_) => _checkForChanges());
   }
 
   Future<List<ChangeSet>> getChanges() async {
     if (!_isInitialized) throw StateError('DeltaSync not initialized');
-    return await _changeTracker!.generateChangeSets(_lastProcessedChangeId);
+    return await _changeTracker!.generateChangeSets(_lastFetchedAt ?? DateTime.now());
   }
 
   Future<void> pauseSync() async {
