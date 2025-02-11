@@ -302,10 +302,10 @@ class ChangeTracker {
         [deviceId]);
 
     if (result.isEmpty) {
-      // Initialize device state if it doesn't exist
       db.execute(
-          'INSERT INTO __deltasync_device_state (device_id, last_processed_change_id) VALUES (?, 0)',
-          [deviceId]);
+        'INSERT INTO __deltasync_device_state (device_id, last_processed_change_id) VALUES (?, 0)',
+        [deviceId],
+      );
       return 0;
     }
 
@@ -366,8 +366,6 @@ class ChangeTracker {
     var currentBatch = 0;
     final millisTimestamp = _convertToMillis(lastSyncTimestamp);
     final lastProcessedId = await getLastProcessedChangeId();
-    // Debug: Check our query parameters
-    log('Query params: lastSyncTimestamp=$millisTimestamp, lastProcessedId=$lastProcessedId');
 
     while (true) {
       final changes = db.select('''
@@ -380,12 +378,6 @@ class ChangeTracker {
         _batchSize,
         currentBatch * _batchSize
       ]);
-
-      // Debug: Check if we got any changes
-      log('Changes found for batch $currentBatch: ${changes.length}');
-      if (changes.isNotEmpty) {
-        log('First change: ${changes.first}');
-      }
 
       if (changes.isEmpty) break;
 
@@ -491,119 +483,84 @@ class ChangeTracker {
     for (final tableName in changeSet.deletions.changes.keys) {
       final rows = changeSet.deletions.changes[tableName]!.rows;
       for (final rowData in rows) {
-        try {
-          final rawId = rowData['global_id']?.toString() ?? // Prefer global_id
-              rowData['id']?.toString();
-          if (rawId == null) {
-            log('Warning: Row missing ID: $rowData');
-            continue;
-          }
+        final globalId = rowData['global_id']?.toString();
+        final localId = _extractSourceLocalId(globalId ?? '');
 
-          String globalId;
-          int? localId;
-
-          // Check if this is already a global ID (contains device prefix)
-          if (rawId.contains(':')) {
-            globalId = rawId;
-            localId = _extractSourceLocalId(globalId);
-          } else {
-            // This is a plain ID from the server
-            localId = int.tryParse(rawId);
-            globalId = '$deviceId:$rawId';
-          }
-
-          if (localId != null) {
-            final exists = db.select('SELECT 1 FROM $tableName WHERE rowid = ?',
-                [localId]).isNotEmpty;
-            if (exists) {
-              db.execute('DELETE FROM $tableName WHERE rowid = ?', [localId]);
-              log('Deleted row with ID $localId in $tableName');
-            }
-          }
-        } catch (e, stack) {
-          log('Error processing deletion: $e\n$stack');
-        }
-      }
-    }
-
-    // Apply updates and insertions
-    for (final tableName in {
-      ...changeSet.updates.changes.keys,
-      ...changeSet.insertions.changes.keys
-    }) {
-      final updates = changeSet.updates.changes[tableName]?.rows ?? [];
-      final insertions = changeSet.insertions.changes[tableName]?.rows ?? [];
-
-      for (final rowData in [...updates, ...insertions]) {
-        final rawId = rowData['global_id']?.toString() ?? // Prefer global_id
-            rowData['id']?.toString();
-        if (rawId == null) {
-          log('Warning: Row missing ID: $rowData');
-          continue;
-        }
-
-        String deviceId;
-        int? remoteId;
-
-        // Check if this is already a global ID (contains device prefix)
-        if (rawId.contains(':')) {
-          final parts = rawId.split(':');
-          if (parts.length != 2) {
-            log('Warning: Invalid global_id format: $rawId');
-            continue;
-          }
-          deviceId = parts[0];
-          remoteId = int.tryParse(parts[1]);
-        } else {
-          // This is a plain ID from the server
-          remoteId = int.tryParse(rawId);
-          deviceId = this.deviceId; // Assume it's from our device
-        }
-
-        if (remoteId == null) {
-          log('Warning: Invalid ID format: $rawId');
-          continue;
-        }
-
-        // Create a copy of rowData to avoid modifying the original
-        final cleanData = Map<String, dynamic>.from(rowData)
-          ..remove('global_id') // Remove ID fields from database operations
-          ..remove('id');
-
-        if (deviceId == this.deviceId) {
-          // This is our own change coming back from the server
-          final exists = db.select('SELECT 1 FROM $tableName WHERE rowid = ?',
-              [remoteId]).isNotEmpty;
+        if (localId != null) {
+          final exists = db.select('SELECT 1 FROM $tableName WHERE rowid = ?', [localId]).isNotEmpty;
           if (exists) {
-            // Update existing row
-            final setClause =
-                cleanData.keys.map((key) => '$key = ?').join(', ');
-            db.execute(
-              'UPDATE $tableName SET $setClause, last_modified = ? WHERE rowid = ?',
-              [...cleanData.values, changeSet.timestamp, remoteId],
-            );
-            log('Updated existing row with ID $remoteId in $tableName');
-          }
-        } else {
-          // This is a change from another device
-          final columns = cleanData.keys.join(', ');
-          final placeholders =
-              List.filled(cleanData.length + 2, '?').join(', ');
-
-          try {
-            final newId = db.select('SELECT MAX(rowid) + 1 AS new_id FROM $tableName').first['new_id'] as int;
-            db.execute(
-              'INSERT INTO $tableName (rowid, $columns, last_modified) VALUES ($placeholders)',
-              [newId, ...cleanData.values, changeSet.timestamp],
-            );
-            log('Inserted new row with ID $newId in $tableName (original remote ID: $remoteId)');
-          } catch (e) {
-            log('Error inserting row: $e');
-            rethrow;
+            db.execute('DELETE FROM $tableName WHERE rowid = ?', [localId]);
+            log('Deleted row with ID $localId in $tableName');
           }
         }
       }
     }
+
+    // Process insertions and updates
+    for (final tableName in changeSet.insertions.changes.keys) {
+      final rows = changeSet.insertions.changes[tableName]!.rows;
+      for (final rowData in rows) {
+        _applyInsertOrUpdate(tableName, rowData);
+      }
+    }
+
+    for (final tableName in changeSet.updates.changes.keys) {
+      final rows = changeSet.updates.changes[tableName]!.rows;
+      for (final rowData in rows) {
+        _applyInsertOrUpdate(tableName, rowData);
+      }
+    }
+  }
+
+  void _applyInsertOrUpdate(String tableName, Map<String, dynamic> rowData) {
+    final globalId = rowData['global_id']?.toString();
+    final localId = _extractSourceLocalId(globalId ?? '');
+
+    if (localId != null) {
+      final existingRow = db.select(
+        'SELECT *, last_modified AS localLastModified FROM $tableName WHERE rowid = ?',
+        [localId]
+      ).firstOrNull;
+
+      final incomingLastModified = rowData['last_modified'] as int;
+
+      if (existingRow != null) {
+        final localLastModified = existingRow['localLastModified'] as int;
+
+        // Apply Last Write Wins: update only if incoming row is newer
+        if (incomingLastModified > localLastModified) {
+          _updateRow(tableName, rowData, localId);
+          log('Updated row with ID $localId in $tableName (Last Write Wins)');
+        }
+      } else {
+        // Insert new row if it doesn't exist
+        _insertRow(tableName, rowData);
+        log('Inserted new row with global ID $globalId in $tableName');
+      }
+    }
+  }
+
+  void _insertRow(String tableName, Map<String, dynamic> rowData) {
+    final columns = rowData.keys.join(', ');
+    final placeholders = rowData.keys.map((_) => '?').join(', ');
+    final values = rowData.values.toList();
+
+    final sql = 'INSERT INTO $tableName ($columns) VALUES ($placeholders)';
+    db.execute(sql, values);
+
+    log('Inserted row into $tableName: $rowData');
+  }
+
+  void _updateRow(String tableName, Map<String, dynamic> rowData, int localId) {
+    final columns = rowData.keys.where((key) => key != 'rowid').toList();
+    final setClause = columns.map((col) => '$col = ?').join(', ');
+    final values = columns.map((col) => rowData[col]).toList();
+    values.add(localId);
+
+    final sql = 'UPDATE $tableName SET $setClause WHERE rowid = ?';
+    db.execute(sql, values);
+
+    log('Updated row in $tableName with rowid $localId: $rowData');
   }
 
   Future<void> _markChangeAsError(int changeId) async {

@@ -64,7 +64,6 @@ class DeltaSync {
       );
 
       await _initializeWatcher();
-      _setupSchemaChangeListener();
 
       _isInitialized = true;
     } catch (e, stackTrace) {
@@ -204,7 +203,6 @@ class DeltaSync {
     _db = null;
     _changeTracker = null;
     _syncService = null;
-
     _userId = null;
     _isInitialized = false;
   }
