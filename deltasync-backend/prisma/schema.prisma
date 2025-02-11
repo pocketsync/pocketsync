@@ -25,7 +25,6 @@ model AppUser {
   createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamp()
   project        Project     @relation(fields: [projectId], references: [id])
   devices        Device[]
-  userDatabase   UserDatabase?
   changeLogs     ChangeLog[]
 
   @@map("app_users")
@@ -39,17 +38,6 @@ model Device {
   appUser       AppUser     @relation(fields: [userIdentifier], references: [userIdentifier])
   changeLogs    ChangeLog[]
   @@map("devices")
-}
-
-model UserDatabase {
-  userIdentifier String   @id @map("user_identifier") @db.VarChar(255)
-  data          Bytes     @db.ByteA
-  lastSyncedAt  DateTime  @default(now()) @map("last_synced_at") @db.Timestamp()
-  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamp()
-  updatedAt     DateTime  @default(now()) @map("updated_at") @db.Timestamp()
-  appUser       AppUser   @relation(fields: [userIdentifier], references: [userIdentifier])
-
-  @@map("user_databases")
 }
 
 model ChangeLog {

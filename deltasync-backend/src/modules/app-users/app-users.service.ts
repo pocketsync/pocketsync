@@ -32,11 +32,6 @@ export class AppUsersService {
           _count: {
             select: { devices: true },
           },
-          userDatabase: {
-            select: {
-              lastSyncedAt: true,
-            },
-          },
         },
         skip,
         take: limit,
@@ -65,7 +60,6 @@ export class AppUsersService {
       where: { userIdentifier },
       include: {
         devices: true,
-        userDatabase: true,
         project: true,
       },
     });

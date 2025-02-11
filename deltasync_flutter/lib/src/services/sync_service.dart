@@ -36,7 +36,6 @@ class SyncService {
       baseUrl: serverUrl,
       headers: {
         'Content-Type': 'application/json',
-        'x-device-id': deviceManager.getDeviceId(),
         'x-project-id': projectId,
         'x-api-key': apiKey,
         'x-user-identifier': userIdentifier,

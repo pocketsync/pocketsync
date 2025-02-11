@@ -378,6 +378,7 @@ class ChangeTracker {
     ''').isNotEmpty;
 
     if (!hasPendingChanges) {
+      log('No pending changes found');
       return changeSets;
     }
 
