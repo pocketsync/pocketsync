@@ -12,6 +12,7 @@ class ChangeTracker {
   static const int _batchSize = 1000;
   static const int currentVersion = 1;
   final String deviceId;
+  bool _isApplyingRemoteChanges = false;
 
   String _generateGlobalId(int localId) {
     return "$deviceId:$localId";
@@ -130,13 +131,13 @@ class ChangeTracker {
           // Check if there's already a pending insert for this row
           final existingChange = db.select('''
             SELECT id FROM __deltasync_changes 
-            WHERE table_name = ? AND row_id = ? AND operation = 'INSERT' AND sync_status = 'pending'
+            WHERE table_name = ? AND global_id = ? AND operation = 'INSERT' AND sync_status = 'pending'
           ''', [tableName, globalId]);
 
           if (existingChange.isEmpty) {
             db.execute('''
               INSERT INTO __deltasync_changes (
-                table_name, row_id, operation, timestamp, change_data, sync_status
+                table_name, global_id, operation, timestamp, change_data, sync_status
               ) VALUES (?, ?, ?, ?, ?, ?)
             ''', [
               tableName,
@@ -146,7 +147,7 @@ class ChangeTracker {
               jsonEncode({
                 'new': rowData,
                 'schema_version': schemaVersion,
-                'row_id': globalId
+                'global_id': globalId
               }),
               'pending'
             ]);
@@ -178,10 +179,10 @@ class ChangeTracker {
       AFTER UPDATE ON $tableName
       WHEN ${_generateUpdateCondition(db.select("SELECT name FROM pragma_table_info(?)", [
                   tableName
-                ]).map((row) => row['name'] as String).toList())} AND NOT (NEW.last_modified != OLD.last_modified AND NEW.last_modified = (strftime('%s', 'now') * 1000))
+                ]).map((row) => row['name'] as String).toList())} AND NOT EXISTS (SELECT 1 FROM __deltasync_device_state WHERE device_id = '$deviceId' AND last_sync_timestamp = (strftime('%s', 'now') * 1000))
       BEGIN
         INSERT INTO __deltasync_changes (
-          table_name, row_id, operation, timestamp, change_data
+          table_name, global_id, operation, timestamp, change_data
         ) VALUES (
           '$tableName',
           $globalIdExpr,
@@ -210,7 +211,7 @@ class ChangeTracker {
       AFTER INSERT ON $tableName
       BEGIN
         INSERT INTO __deltasync_changes (
-          table_name, row_id, operation, timestamp, change_data
+          table_name, global_id, operation, timestamp, change_data
         ) VALUES (
           '$tableName',
           $globalIdExpr,
@@ -232,7 +233,7 @@ class ChangeTracker {
       AFTER DELETE ON $tableName
       BEGIN
         INSERT INTO __deltasync_changes (
-          table_name, row_id, operation, timestamp, change_data
+          table_name, global_id, operation, timestamp, change_data
         ) VALUES (
           '$tableName',
           '$deviceId:' || OLD.rowid,
@@ -371,7 +372,7 @@ class ChangeTracker {
 
     // First check if we have any pending changes at all
     final hasPendingChanges = db.select('''
-      SELECT 1 FROM __deltasync_changes 
+      SELECT * FROM __deltasync_changes 
       WHERE sync_status = 'pending' AND retry_count < 3
       LIMIT 1
     ''').isNotEmpty;
@@ -460,9 +461,7 @@ class ChangeTracker {
             }
             break;
           case 'DELETE':
-            final cleanData = {
-              'global_id': globalId
-            };
+            final cleanData = {'global_id': globalId};
             deletionMap.putIfAbsent(tableName, () => []).add(cleanData);
             break;
         }
@@ -489,37 +488,45 @@ class ChangeTracker {
   }
 
   Future<void> applyChangeSet(ChangeSet changeSet) async {
-    // Process deletions first
-    for (final tableName in changeSet.deletions.changes.keys) {
-      final rows = changeSet.deletions.changes[tableName]!.rows;
-      for (final rowData in rows) {
-        final globalId = rowData['global_id']?.toString();
-        final localId = _extractSourceLocalId(globalId ?? '');
+    log('Applying change set: ${changeSet.toJson()}');
+    if (_isApplyingRemoteChanges) return;
+    _isApplyingRemoteChanges = true;
+    try {
+      for (final tableName in changeSet.deletions.changes.keys) {
+        final rows = changeSet.deletions.changes[tableName]!.rows;
+        for (final rowData in rows) {
+          final globalId = rowData['global_id']?.toString();
+          final localId = _extractSourceLocalId(globalId ?? '');
 
-        if (localId != null) {
-          final exists = db.select(
-              'SELECT 1 FROM $tableName WHERE rowid = ?', [localId]).isNotEmpty;
-          if (exists) {
-            db.execute('DELETE FROM $tableName WHERE rowid = ?', [localId]);
-            log('Deleted row with ID $localId in $tableName');
+          if (localId != null) {
+            final exists = db.select('SELECT * FROM $tableName WHERE rowid = ?',
+                [localId]).isNotEmpty;
+            if (exists) {
+              db.execute('DELETE FROM $tableName WHERE rowid = ?', [localId]);
+              log('Deleted row with ID $localId in $tableName');
+            }
           }
         }
       }
-    }
 
-    // Process insertions and updates
-    for (final tableName in changeSet.insertions.changes.keys) {
-      final rows = changeSet.insertions.changes[tableName]!.rows;
-      for (final rowData in rows) {
-        _applyInsertOrUpdate(tableName, rowData);
+      // Process insertions and updates
+      for (final tableName in changeSet.insertions.changes.keys) {
+        final rows = changeSet.insertions.changes[tableName]!.rows;
+        for (final rowData in rows) {
+          _applyInsertOrUpdate(tableName, rowData);
+        }
       }
-    }
 
-    for (final tableName in changeSet.updates.changes.keys) {
-      final rows = changeSet.updates.changes[tableName]!.rows;
-      for (final rowData in rows) {
-        _applyInsertOrUpdate(tableName, rowData);
+      for (final tableName in changeSet.updates.changes.keys) {
+        final rows = changeSet.updates.changes[tableName]!.rows;
+        for (final rowData in rows) {
+          _applyInsertOrUpdate(tableName, rowData);
+        }
       }
+    } catch (e, stack) {
+      log('Error applying change set: $e\n$stack');
+    } finally {
+      _isApplyingRemoteChanges = false;
     }
   }
 
@@ -529,21 +536,20 @@ class ChangeTracker {
 
     if (localId != null) {
       final existingRow = db.select(
-          'SELECT *, last_modified AS localLastModified FROM $tableName WHERE rowid = ?',
-          [localId]).firstOrNull;
+        'SELECT *, last_modified AS localLastModified FROM $tableName WHERE rowid = ?',
+        [localId],
+      ).firstOrNull;
 
       final incomingLastModified = rowData['last_modified'] as int;
 
       if (existingRow != null) {
         final localLastModified = existingRow['localLastModified'] as int;
 
-        // Apply Last Write Wins: update only if incoming row is newer
         if (incomingLastModified > localLastModified) {
           _updateRow(tableName, rowData, localId);
           log('Updated row with ID $localId in $tableName (Last Write Wins)');
         }
       } else {
-        // Insert new row if it doesn't exist
         _insertRow(tableName, rowData);
         log('Inserted new row with global ID $globalId in $tableName');
       }
@@ -552,24 +558,34 @@ class ChangeTracker {
 
   void _insertRow(String tableName, Map<String, dynamic> rowData) {
     final lastModified = rowData['last_modified'];
-    final existingRow = db.select(
-        'SELECT rowid, last_modified FROM $tableName WHERE id = ?',
-        [rowData['id']]);
+    final globalId = rowData['global_id']?.toString();
+    final localId = _extractSourceLocalId(globalId ?? '');
 
-    if (existingRow.isNotEmpty) {
-      final existingLastModified = existingRow.first['last_modified'];
-      if (existingLastModified >= lastModified) {
-        log('Skipped insert for id ${rowData['id']} because incoming data is stale.');
+    if (localId != null) {
+      final existingRow = db.select(
+        'SELECT rowid, last_modified FROM $tableName WHERE rowid = ?',
+        [localId],
+      );
+
+      if (existingRow.isNotEmpty) {
+        final existingLastModified = existingRow.first['last_modified'];
+        if (existingLastModified >= lastModified) {
+          log('Skipped insert for id $localId because incoming data is stale.');
+          return;
+        }
+
+        _updateRow(tableName, rowData, localId);
         return;
       }
-
-      _updateRow(tableName, rowData, existingRow.first['rowid']);
-      return;
     }
 
     final cleanData = Map<String, dynamic>.from(rowData)
       ..remove('global_id')
       ..remove('rowid');
+
+    if (localId != null) {
+      cleanData['id'] = localId;
+    }
 
     final columns = cleanData.keys.join(', ');
     final placeholders = cleanData.keys.map((_) => '?').join(', ');

@@ -63,17 +63,19 @@ export class ChangeLogsService {
   async fetchMissingChanges(device: Device, data: { lastProcessedChangeId: number }): Promise<ChangeLog[]> {
     this.logger.debug(`Fetching changes after ID ${data.lastProcessedChangeId} for device ${device.deviceId}`);
 
-    return this.prisma.changeLog.findMany({
+    const changes = await this.prisma.changeLog.findMany({
       where: {
         userIdentifier: device.userIdentifier,
         id: { gt: data.lastProcessedChangeId },
         processedAt: { not: null },
-        NOT: { deviceId: device.deviceId }
+        deviceId: { not: device.deviceId },
       },
       orderBy: {
         id: 'asc'
       }
     });
+    this.logger.debug(`Found ${changes.length} changes for ${device.deviceId}`);
+    return changes;
   }
 
   private async createOrFindChangeLog(userIdentifier: string, deviceId: string, changeSet: ChangeSetDto) {

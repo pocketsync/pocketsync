@@ -45,20 +45,14 @@ class SyncService {
       sendTimeout: const Duration(seconds: 30),
     ));
 
-    _dio.interceptors
-      ..add(
-        RetryInterceptor(
-          dio: _dio,
-          logPrint: log,
-          retries: _maxRetries,
-          retryDelays: _retryDelays,
-        ),
-      )
-      ..add(LogInterceptor(
-        logPrint: (message) => log(message.toString()),
-        requestBody: true,
-        responseBody: true,
-      ));
+    _dio.interceptors.add(
+      RetryInterceptor(
+        dio: _dio,
+        logPrint: log,
+        retries: _maxRetries,
+        retryDelays: _retryDelays,
+      ),
+    );
   }
 
   Future<void> uploadChanges(ChangeSet changeSet) async {
@@ -77,14 +71,14 @@ class SyncService {
           'changeSet': changeSet.toJson(),
         },
         options: Options(
-          validateStatus: (status) => status != null && status >= 200 && status < 300,
-          headers: {
-            'Content-Type': 'application/json',
-            'x-project-id': projectId,
-            'x-api-key': apiKey,
-            'x-user-identifier': userIdentifier,
-          }
-        ),
+            validateStatus: (status) =>
+                status != null && status >= 200 && status < 300,
+            headers: {
+              'Content-Type': 'application/json',
+              'x-project-id': projectId,
+              'x-api-key': apiKey,
+              'x-user-identifier': userIdentifier,
+            }),
       );
 
       if (response.data == null) {
@@ -94,11 +88,12 @@ class SyncService {
       // Parse the response to check if changes were processed
       final responseData = response.data as Map<String, dynamic>;
       if (responseData['status'] != 'success') {
-        throw SyncError('Server failed to process changes: ${responseData['error']}');
+        throw SyncError(
+            'Server failed to process changes: ${responseData['error']}');
       }
 
       log('Changes uploaded successfully: ${response.data}');
-      
+
       // Only mark changes as synced if server confirms success
       if (responseData['processed'] == true) {
         await changeTracker.markChangesAsSynced(changeSet.timestamp);
@@ -108,7 +103,7 @@ class SyncService {
       }
     } on DioException catch (e) {
       log('Error uploading changes: ${e.message}\nResponse: ${e.response?.data}');
-      
+
       if (e.type == DioExceptionType.connectionError ||
           e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.sendTimeout ||
@@ -120,9 +115,11 @@ class SyncService {
       }
       if (e.response?.statusCode == 500) {
         log('Server error details: ${e.response?.data}');
-        throw SyncError('Server error: ${e.response?.data ?? e.message}', innerError: e);
+        throw SyncError('Server error: ${e.response?.data ?? e.message}',
+            innerError: e);
       }
-      throw SyncError('Failed to communicate with sync server: ${e.message}', innerError: e);
+      throw SyncError('Failed to communicate with sync server: ${e.message}',
+          innerError: e);
     } catch (e) {
       log('Unexpected error during sync: $e');
       throw SyncError('Unexpected error during sync: $e');
@@ -140,15 +137,15 @@ class SyncService {
         '/sdk/changes',
         data: {'lastProcessedChangeId': lastProcessedChangeId},
         options: Options(
-          validateStatus: (status) => status != null && status >= 200 && status < 300,
-          headers: {
-            'Content-Type': 'application/json',
-            'x-project-id': projectId,
-            'x-api-key': apiKey,
-            'x-user-identifier': userIdentifier,
-            'x-device-id': deviceId,
-          }
-        ),
+            validateStatus: (status) =>
+                status != null && status >= 200 && status < 300,
+            headers: {
+              'Content-Type': 'application/json',
+              'x-project-id': projectId,
+              'x-api-key': apiKey,
+              'x-user-identifier': userIdentifier,
+              'x-device-id': deviceId,
+            }),
       );
 
       if (response.data == null) {
@@ -160,7 +157,7 @@ class SyncService {
           .toList();
     } on DioException catch (e) {
       log('Error fetching changes: ${e.message}\nResponse: ${e.response?.data}');
-      
+
       if (e.type == DioExceptionType.connectionError ||
           e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.sendTimeout ||
