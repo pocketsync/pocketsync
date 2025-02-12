@@ -14,7 +14,7 @@ class DeltaSyncNetworkService {
 
   final String _serverUrl;
   final String _projectId;
-  final String _projectApiKey;
+  final String _authToken;
   String? _userId;
   String? _deviceId;
 
@@ -24,12 +24,12 @@ class DeltaSyncNetworkService {
   DeltaSyncNetworkService({
     required String serverUrl,
     required String projectId,
-    required String projectApiKey,
+    required String authToken,
     String? deviceId,
   })  : _dio = Dio(),
         _serverUrl = serverUrl,
         _projectId = projectId,
-        _projectApiKey = projectApiKey,
+        _authToken = authToken,
         _deviceId = deviceId;
 
   void setUserId(String userId) {
@@ -67,7 +67,7 @@ class DeltaSyncNetworkService {
     return Options(
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': _projectApiKey,
+        'Authorization': 'Bearer $_authToken',
         'x-project-id': _projectId,
         'x-user-id': _userId!,
         'x-device-id': _deviceId,
@@ -112,7 +112,7 @@ class DeltaSyncNetworkService {
           'device_id': _deviceId,
         },
         'extraHeaders': {
-          'x-api-key': _projectApiKey,
+          'Authorization': 'Bearer $_authToken',
         }
       });
 

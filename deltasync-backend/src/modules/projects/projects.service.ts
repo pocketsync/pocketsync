@@ -7,16 +7,32 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 @Injectable()
 export class ProjectsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async create(userId: string, createProjectDto: CreateProjectDto) {
-    return this.prisma.project.create({
-      data: {
-        ...createProjectDto,
-        userId,
-        apiKey: uuidv4(),
-      },
+    const [project, defaultToken] = await this.prisma.$transaction(async (prisma) => {
+      const project = await prisma.project.create({
+        data: {
+          ...createProjectDto,
+          userId,
+        },
+      });
+
+      const defaultToken = await prisma.projectAuthTokens.create({
+        data: {
+          projectId: project.id,
+          token: `ds_${Buffer.from(uuidv4().replace(/-/g, '')).toString('base64').replace(/[+/]/g, '').slice(0, 60)}`,
+          userId,
+        }
+      });
+
+      return [project, defaultToken];
     });
+
+    return {
+      project,
+      defaultToken,
+    }
   }
 
   async findAll(userId: string, { page = 1, limit = 10 }: PaginationQueryDto) {
@@ -87,15 +103,6 @@ export class ProjectsService {
 
     return this.prisma.project.delete({
       where: { id },
-    });
-  }
-
-  async regenerateApiKey(userId: string, id: string) {
-    await this.findOne(userId, id); // Check ownership
-
-    return this.prisma.project.update({
-      where: { id },
-      data: { apiKey: uuidv4() },
     });
   }
 }

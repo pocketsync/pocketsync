@@ -49,9 +49,4 @@ export class ProjectsController {
   remove(@Request() req, @Param('id') id: string) {
     return this.projectsService.remove(req.user.id, id);
   }
-
-  @Post(':id/regenerate-api-key')
-  regenerateApiKey(@Request() req, @Param('id') id: string) {
-    return this.projectsService.regenerateApiKey(req.user.id, id);
-  }
 }

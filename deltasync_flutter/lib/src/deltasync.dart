@@ -46,7 +46,7 @@ class DeltaSync {
     _networkService = DeltaSyncNetworkService(
       serverUrl: options.serverUrl,
       projectId: options.projectId,
-      projectApiKey: options.projectApiKey,
+      authToken: options.authToken,
     );
 
     _database = DeltaSyncDatabase();

@@ -13,8 +13,8 @@ void main() async {
   await DeltaSync.instance.initialize(
     dbPath: path,
     options: DeltaSyncOptions(
-      projectId: '2526af00-ecaa-45c1-a7aa-e1fc1ab1c278',
-      projectApiKey: '70700ed8-9c4b-4cb9-beab-50b2e796db1d',
+      projectId: 'ecd550f6-4ee3-4027-92db-63e218bb75f8',
+      authToken: 'ds_YzcwMmFlMzQ5N2RmNDdiNjk4OTFlNGI4MWI1MTYwMTE=',
       serverUrl: defaultTargetPlatform == TargetPlatform.android
           ? 'http://10.0.2.2:3000'
           : 'http://127.0.0.1:3000',

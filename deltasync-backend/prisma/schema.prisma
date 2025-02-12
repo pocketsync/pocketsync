@@ -8,13 +8,13 @@ datasource db {
 }
 
 model Project {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  apiKey    String      @map("api_key") @db.VarChar(64)
-  name      String      @db.VarChar(255)
-  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamp()
-  appUsers  AppUser[]
-  user      User?       @relation(fields: [userId], references: [id])
-  userId    String?     @map("user_id") @db.Uuid
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String              @db.VarChar(255)
+  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamp()
+  appUsers          AppUser[]
+  user              User?               @relation(fields: [userId], references: [id])
+  userId            String?             @map("user_id") @db.Uuid
+  projectAuthTokens ProjectAuthTokens[]
 
   @@map("projects")
 }
@@ -31,72 +31,74 @@ model AppUser {
 }
 
 model Device {
-  deviceId      String      @id @map("device_id") @db.VarChar(255)
-  userIdentifier String     @map("user_identifier") @db.VarChar(255)
-  lastSeenAt    DateTime?   @map("last_seen_at") @db.Timestamp()
-  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamp()
-  appUser       AppUser     @relation(fields: [userIdentifier], references: [userIdentifier])
-  changeLogs    ChangeLog[]
+  deviceId       String      @id @map("device_id") @db.VarChar(255)
+  userIdentifier String      @map("user_identifier") @db.VarChar(255)
+  lastSeenAt     DateTime?   @map("last_seen_at") @db.Timestamp()
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamp()
+  appUser        AppUser     @relation(fields: [userIdentifier], references: [userIdentifier])
+  changeLogs     ChangeLog[]
+
   @@map("devices")
 }
 
 model ChangeLog {
-  id           Int        @id @default(autoincrement())
-  userIdentifier String   @map("user_identifier") @db.VarChar(255)
-  deviceId     String     @map("device_id") @db.VarChar(255)
-  changeSet    Json       @map("change_set") @db.JsonB
-  receivedAt   DateTime   @default(now()) @map("received_at") @db.Timestamp()
-  processedAt  DateTime?  @map("processed_at") @db.Timestamp()
-  appUser      AppUser    @relation(fields: [userIdentifier], references: [userIdentifier])
-  device       Device     @relation(fields: [deviceId], references: [deviceId])
+  id             Int       @id @default(autoincrement())
+  userIdentifier String    @map("user_identifier") @db.VarChar(255)
+  deviceId       String    @map("device_id") @db.VarChar(255)
+  changeSet      Json      @map("change_set") @db.JsonB
+  receivedAt     DateTime  @default(now()) @map("received_at") @db.Timestamp()
+  processedAt    DateTime? @map("processed_at") @db.Timestamp()
+  appUser        AppUser   @relation(fields: [userIdentifier], references: [userIdentifier])
+  device         Device    @relation(fields: [deviceId], references: [deviceId])
+
   @@map("change_logs")
 }
 
-
 model User {
-  id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email                 String?                 @unique @db.VarChar(255)
-  passwordHash          String?                 @map("password_hash") @db.VarChar(255)
-  firstName            String?                 @map("first_name") @db.VarChar(255)
-  lastName             String?                 @map("last_name") @db.VarChar(255)
-  avatarUrl            String?                 @map("avatar_url") @db.Text
-  isEmailVerified      Boolean                 @default(false) @map("is_email_verified")
-  createdAt            DateTime                @default(now()) @map("created_at") @db.Timestamp()
-  updatedAt            DateTime                @default(now()) @map("updated_at") @db.Timestamp()
-  projects             Project[]
-  socialConnections    UserSocialConnection[]
-  refreshTokens        RefreshToken[]
+  id                String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email             String?                @unique @db.VarChar(255)
+  passwordHash      String?                @map("password_hash") @db.VarChar(255)
+  firstName         String?                @map("first_name") @db.VarChar(255)
+  lastName          String?                @map("last_name") @db.VarChar(255)
+  avatarUrl         String?                @map("avatar_url") @db.Text
+  isEmailVerified   Boolean                @default(false) @map("is_email_verified")
+  createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt         DateTime               @default(now()) @map("updated_at") @db.Timestamp()
+  projects          Project[]
+  socialConnections UserSocialConnection[]
+  refreshTokens     RefreshToken[]
+  projectAuthTokens ProjectAuthTokens[]
+
   @@map("users")
 }
 
 model OAuthProvider {
-  id            String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name          String                  @unique @db.VarChar(50)
-  clientId      String                  @map("client_id") @db.VarChar(255)
-  clientSecret  String                  @map("client_secret") @db.VarChar(255)
-  createdAt     DateTime                @default(now()) @map("created_at") @db.Timestamp()
-  updatedAt     DateTime                @default(now()) @map("updated_at") @db.Timestamp()
-  connections   UserSocialConnection[]
+  id           String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String                 @unique @db.VarChar(50)
+  clientId     String                 @map("client_id") @db.VarChar(255)
+  clientSecret String                 @map("client_secret") @db.VarChar(255)
+  createdAt    DateTime               @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt    DateTime               @default(now()) @map("updated_at") @db.Timestamp()
+  connections  UserSocialConnection[]
 
   @@map("oauth_providers")
 }
 
 model UserSocialConnection {
-  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId          String        @map("user_id") @db.Uuid
-  providerId      String        @map("provider_id") @db.Uuid
-  providerUserId  String        @map("provider_user_id") @db.VarChar(255)
-  accessToken     String        @map("access_token") @db.Text
-  refreshToken    String?       @map("refresh_token") @db.Text
-  tokenExpiresAt  DateTime?     @map("token_expires_at") @db.Timestamp()
-  providerData    Json?         @map("provider_data") @db.JsonB
-  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamp()
-  updatedAt       DateTime      @default(now()) @map("updated_at") @db.Timestamp()
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  provider        OAuthProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String        @map("user_id") @db.Uuid
+  providerId     String        @map("provider_id") @db.Uuid
+  providerUserId String        @map("provider_user_id") @db.VarChar(255)
+  accessToken    String        @map("access_token") @db.Text
+  refreshToken   String?       @map("refresh_token") @db.Text
+  tokenExpiresAt DateTime?     @map("token_expires_at") @db.Timestamp()
+  providerData   Json?         @map("provider_data") @db.JsonB
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt      DateTime      @default(now()) @map("updated_at") @db.Timestamp()
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider       OAuthProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
 
   @@unique([providerId, providerUserId])
-
   @@map("user_social_connections")
 }
 
@@ -109,5 +111,19 @@ model RefreshToken {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
   updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamp()
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("refresh_tokens")
+}
+
+model ProjectAuthTokens {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  token     String   @unique @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamp()
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("auth_tokens")
 }

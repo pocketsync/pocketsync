@@ -77,7 +77,7 @@ export class AuthService {
 
     await this.createOrUpdateSocialConnection(user.id, providerId, profile);
     const tokens = await this.generateTokens(user.id, user.email!);
-    
+
     return {
       user,
       ...tokens,
@@ -121,57 +121,57 @@ export class AuthService {
   }
 
   private async createOrUpdateSocialConnection(userId: string, providerId: string, profile: any) {
-      if (!profile.accessToken) {
-        throw new UnauthorizedException('No access token provided by OAuth provider');
-      }
-  
-      if (!profile.id) {
-        throw new UnauthorizedException('No provider user ID in OAuth profile');
-      }
-  
-      try {
-        const existingConnection = await this.prisma.userSocialConnection.findFirst({
-          where: {
-            AND: [
-              { providerId },
-              { providerUserId: profile.id }
-            ]
-          }
-        });
-  
-        const connectionData = {
-          accessToken: profile.accessToken,
-          refreshToken: profile.refreshToken || null,
-          tokenExpiresAt: profile.expiresAt ? new Date(profile.expiresAt) : null,
-          providerData: this.sanitizeProviderData(profile),
-        };
-  
-        if (existingConnection) {
-          return this.prisma.userSocialConnection.update({
-            where: { id: existingConnection.id },
-            data: connectionData,
-          });
+    if (!profile.accessToken) {
+      throw new UnauthorizedException('No access token provided by OAuth provider');
+    }
+
+    if (!profile.id) {
+      throw new UnauthorizedException('No provider user ID in OAuth profile');
+    }
+
+    try {
+      const existingConnection = await this.prisma.userSocialConnection.findFirst({
+        where: {
+          AND: [
+            { providerId },
+            { providerUserId: profile.id }
+          ]
         }
-  
-        return this.prisma.userSocialConnection.create({
-          data: {
-            ...connectionData,
-            userId,
-            providerId,
-            providerUserId: profile.id.toString(),
-          },
+      });
+
+      const connectionData = {
+        accessToken: profile.accessToken,
+        refreshToken: profile.refreshToken || null,
+        tokenExpiresAt: profile.expiresAt ? new Date(profile.expiresAt) : null,
+        providerData: this.sanitizeProviderData(profile),
+      };
+
+      if (existingConnection) {
+        return this.prisma.userSocialConnection.update({
+          where: { id: existingConnection.id },
+          data: connectionData,
         });
-      } catch (error) {
-        console.error('Social connection error:', error);
-        throw new UnauthorizedException('Failed to process OAuth authentication');
       }
+
+      return this.prisma.userSocialConnection.create({
+        data: {
+          ...connectionData,
+          userId,
+          providerId,
+          providerUserId: profile.id.toString(),
+        },
+      });
+    } catch (error) {
+      console.error('Social connection error:', error);
+      throw new UnauthorizedException('Failed to process OAuth authentication');
     }
-  
-    private sanitizeProviderData(profile: any) {
-      // Remove sensitive data and ensure the object is JSON-serializable
-      const { accessToken, refreshToken, ...safeProfile } = profile;
-      return safeProfile;
-    }
+  }
+
+  private sanitizeProviderData(profile: any) {
+    // Remove sensitive data and ensure the object is JSON-serializable
+    const { accessToken, refreshToken, ...safeProfile } = profile;
+    return safeProfile;
+  }
 
   async validateUser(payload: any) {
     const user = await this.prisma.user.findUnique({

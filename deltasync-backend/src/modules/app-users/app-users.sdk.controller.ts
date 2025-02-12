@@ -1,10 +1,10 @@
 import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 import { AppUsersService } from './app-users.service';
-import { ApiKeyAuthGuard } from '../../common/guards/api-key-auth.guard';
+import { SdkAuthGuard } from '../../common/guards/sdk-auth.guard';
 import { CreateAppUserDto } from './dto/create-app-user.dto';
 
 @Controller('sdk/app-users')
-@UseGuards(ApiKeyAuthGuard)
+@UseGuards(SdkAuthGuard)
 export class AppUsersSdkController {
   constructor(private readonly appUsersService: AppUsersService) {}
 

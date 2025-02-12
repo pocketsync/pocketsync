@@ -1,12 +1,12 @@
 import { Controller, Post, Body, UseGuards, Headers, UnauthorizedException, Get, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { ChangeLogsService } from './change-logs.service';
 import { DevicesService } from '../devices/devices.service';
-import { ApiKeyAuthGuard } from '../../common/guards/api-key-auth.guard';
+import { SdkAuthGuard } from '../../common/guards/sdk-auth.guard';
 import { ChangeSubmissionDto } from './dto/change-submission.dto';
 import { AppUsersService } from '../app-users/app-users.service';
 
 @Controller('sdk/changes')
-@UseGuards(ApiKeyAuthGuard)
+@UseGuards(SdkAuthGuard)
 export class ChangeLogsController {
   private readonly logger = new Logger(ChangeLogsController.name);
 

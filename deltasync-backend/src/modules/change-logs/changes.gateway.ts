@@ -36,10 +36,7 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
         }
 
         const project = await this.prisma.project.findFirst({
-            where: {
-                id: project_id,
-                apiKey: apiKey,
-            }
+            where: { id: project_id }
         });
 
         if (!project) {
