@@ -1,4 +1,5 @@
 import 'package:sqflite/sqflite.dart';
+import 'package:uuid/uuid.dart';
 
 class DeltaSyncDatabase {
   Database? _db;
@@ -19,7 +20,7 @@ class DeltaSyncDatabase {
         // Then set up DeltaSync system tables
         await _initializeDeltaSyncTables(db);
         // Finally set up change tracking triggers
-        await _setupChangeTracking(db);
+        await _setupChangeTracking(db, version);
       },
     );
     return _db!;
@@ -58,10 +59,23 @@ class DeltaSyncDatabase {
         updated_at INTEGER NOT NULL
       )
     ''');
+
+    // Generate and store device ID if it doesn't exist
+    final deviceState = await db.query('__deltasync_device_state');
+    if (deviceState.isEmpty) {
+      final deviceId = const Uuid().v4();
+      final now = DateTime.now().millisecondsSinceEpoch;
+      await db.insert('__deltasync_device_state', {
+        'device_id': deviceId,
+        'last_sync_timestamp': now,
+        'created_at': now,
+        'updated_at': now,
+      });
+    }
   }
 
   /// Sets up change tracking triggers for all user tables
-  Future<void> _setupChangeTracking(Database db) async {
+  Future<void> _setupChangeTracking(Database db, int version) async {
     // Get list of user tables (excluding all system tables)
     final tables = await db.query('sqlite_master',
         where:
@@ -69,92 +83,161 @@ class DeltaSyncDatabase {
 
     for (final table in tables) {
       final tableName = table['name'] as String;
-      await _createTableTriggers(db, tableName);
+      await _createTableTriggers(db, version, tableName);
     }
   }
 
   /// Creates triggers for a specific table
-  Future<void> _createTableTriggers(Database db, String tableName) async {
-    // Insert trigger
+  Future<void> _createTableTriggers(
+      Database db, int schemaVersion, String tableName) async {
+    // Get columns for the table
+    final columns = (await db
+            .rawQuery("SELECT name FROM pragma_table_info(?)", [tableName]))
+        .map((row) => row['name'] as String)
+        .toList();
+
     await db.execute('''
-      CREATE TRIGGER IF NOT EXISTS ${tableName}_insert_trigger
+      CREATE TRIGGER IF NOT EXISTS after_update_$tableName
+      AFTER UPDATE ON $tableName
+      WHEN ${_generateUpdateCondition(columns)}
+      BEGIN
+        INSERT INTO __deltasync_changes (
+          table_name, record_id, operation, timestamp, data, version
+        ) VALUES (
+          '$tableName',
+          NEW.rowid,
+          'UPDATE',
+          (strftime('%s', 'now') * 1000),
+          json_object(
+            'old', json_object(${columns.where((col) => col != 'last_modified').map((col) => "'$col', OLD.$col").join(', ')}),
+            'new', json_object(${columns.where((col) => col != 'last_modified').map((col) => "'$col', NEW.$col").join(', ')})
+          ),
+          (SELECT COALESCE(MAX(version), 0) + 1 FROM __deltasync_version WHERE table_name = '$tableName')
+        );
+        
+        UPDATE __deltasync_version 
+        SET version = version + 1
+        WHERE table_name = '$tableName';
+        
+        UPDATE $tableName 
+        SET last_modified = (strftime('%s', 'now') * 1000)
+        WHERE rowid = NEW.rowid;
+      END;
+    ''');
+
+    await db.execute('''
+      CREATE TRIGGER IF NOT EXISTS after_insert_$tableName
       AFTER INSERT ON $tableName
       BEGIN
         INSERT INTO __deltasync_changes (
           table_name, record_id, operation, timestamp, data, version
-        )
-        SELECT
+        ) VALUES (
           '$tableName',
-          NEW.id,
+          NEW.rowid,
           'INSERT',
-          strftime('%s', 'now'),
+          (strftime('%s', 'now') * 1000),
           json_object(
-            'new', json_object((SELECT group_concat(quote(name) || ', ' || quote(CASE 
-              WHEN typeof(NEW.[' || name || ']) = 'text' THEN NEW.[' || name || ']
-              WHEN typeof(NEW.[' || name || ']) = 'integer' THEN CAST(NEW.[' || name || '] AS TEXT)
-              ELSE NULL
-            END)) FROM pragma_table_info('$tableName')))
+            'new', json_object(${columns.where((col) => col != 'last_modified').map((col) => "'$col', NEW.$col").join(', ')})
           ),
-          COALESCE(MAX(version), 0) + 1
-        FROM __deltasync_changes;
+          (SELECT COALESCE(MAX(version), 0) + 1 FROM __deltasync_version WHERE table_name = '$tableName')
+        );
+        
+        UPDATE __deltasync_version 
+        SET version = version + 1
+        WHERE table_name = '$tableName';
+        
+        UPDATE $tableName 
+        SET last_modified = (strftime('%s', 'now') * 1000)
+        WHERE rowid = NEW.rowid;
       END;
     ''');
 
-    // Update trigger with modified columns tracking
     await db.execute('''
-      CREATE TRIGGER IF NOT EXISTS ${tableName}_update_trigger
-      AFTER UPDATE ON $tableName
-      WHEN EXISTS (SELECT 1 FROM pragma_table_info('$tableName') AS cols
-        WHERE (OLD.[' || cols.name || '] IS NOT NEW.[' || cols.name || '] OR 
-               OLD.[' || cols.name || '] != NEW.[' || cols.name || '])
-      )
-      BEGIN
-        INSERT INTO __deltasync_changes (
-          table_name, record_id, operation, timestamp, data, version
-        )
-        SELECT
-          '$tableName',
-          NEW.id,
-          'UPDATE',
-          strftime('%s', 'now'),
-          json_object(
-            'modified', json_object((SELECT group_concat(quote(name) || ', ' || quote(CASE
-              WHEN typeof(NEW.[' || name || ']) = 'text' AND (OLD.[' || name || '] IS NOT NEW.[' || name || '] OR OLD.[' || name || '] != NEW.[' || name || '])
-                THEN NEW.[' || name || ']
-              WHEN typeof(NEW.[' || name || ']) = 'integer' AND (OLD.[' || name || '] IS NOT NEW.[' || name || '] OR OLD.[' || name || '] != NEW.[' || name || '])
-                THEN CAST(NEW.[' || name || '] AS TEXT)
-              ELSE NULL
-            END)) FROM pragma_table_info('$tableName')))
-          ),
-          COALESCE(MAX(version), 0) + 1
-        FROM __deltasync_changes;
-      END;
-    ''');
-
-    // Delete trigger with old data capture
-    await db.execute('''
-      CREATE TRIGGER IF NOT EXISTS ${tableName}_delete_trigger
+      CREATE TRIGGER IF NOT EXISTS after_delete_$tableName
       AFTER DELETE ON $tableName
       BEGIN
         INSERT INTO __deltasync_changes (
           table_name, record_id, operation, timestamp, data, version
-        )
-        SELECT
+        ) VALUES (
           '$tableName',
-          OLD.id,
+          OLD.rowid,
           'DELETE',
-          strftime('%s', 'now'),
+          (strftime('%s', 'now') * 1000),
           json_object(
-            'old', json_object((SELECT group_concat(quote(name) || ', ' || quote(CASE 
-              WHEN typeof(OLD.[' || name || ']) = 'text' THEN OLD.[' || name || ']
-              WHEN typeof(OLD.[' || name || ']) = 'integer' THEN CAST(OLD.[' || name || '] AS TEXT)
-              ELSE NULL
-            END)) FROM pragma_table_info('$tableName')))
+            'old', json_object(${columns.where((col) => col != 'last_modified').map((col) => "'$col', OLD.$col").join(', ')})
           ),
-          COALESCE(MAX(version), 0) + 1
-        FROM __deltasync_changes;
+          (SELECT COALESCE(MAX(version), 0) + 1 FROM __deltasync_version WHERE table_name = '$tableName')
+        );
+        
+        UPDATE __deltasync_version 
+        SET version = version + 1
+        WHERE table_name = '$tableName';
       END;
     ''');
+
+    await db.execute('''
+      CREATE TRIGGER IF NOT EXISTS after_insert_$tableName
+      AFTER INSERT ON $tableName
+      BEGIN
+        INSERT INTO __deltasync_changes (
+          table_name, row_id, operation, timestamp, change_data
+        ) VALUES (
+          '$tableName',
+          NEW.rowid,
+          'INSERT',
+          (strftime('%s', 'now') * 1000),
+          json_object(
+            'new', json_object(${await _generateColumnList(tableName, db: db)}),
+            'schema_version', $schemaVersion
+          )
+        );
+        UPDATE $tableName SET last_modified = (strftime('%s', 'now') * 1000) 
+        WHERE rowid = NEW.rowid;
+      END;
+    ''');
+
+    await db.execute('''
+      CREATE TRIGGER IF NOT EXISTS after_delete_$tableName
+      AFTER DELETE ON $tableName
+      BEGIN
+        INSERT INTO __deltasync_changes (
+          table_name, row_id, operation, timestamp, change_data
+        ) VALUES (
+          '$tableName',
+          OLD.rowid,
+          'DELETE',
+          (strftime('%s', 'now') * 1000),
+          json_object(
+            'old', json_object(${await _generateColumnList(tableName, prefix: 'OLD', db: db)}),
+            'schema_version', $schemaVersion
+          )
+        );
+      END;
+    ''');
+  }
+
+  Future<String> _generateColumnList(
+    String tableName, {
+    String prefix = 'NEW',
+    required Database db,
+  }) async {
+    final result = await db
+        .rawQuery("SELECT name FROM pragma_table_info(?)", [tableName]);
+    final columns = result.map((row) => row['name'] as String).toList();
+
+    return columns.map((col) => "'$col', $prefix.$col").join(', ');
+  }
+
+  String _generateUpdateCondition(List<String> columns) {
+    final conditions =
+        columns.where((col) => col != 'last_modified').map((col) => '''(
+          OLD.$col IS NOT NEW.$col OR 
+          (OLD.$col IS NULL AND NEW.$col IS NOT NULL) OR 
+          (OLD.$col IS NOT NULL AND NEW.$col IS NULL) OR
+          (OLD.$col != NEW.$col)
+        )''').join(' OR ');
+
+    return "($conditions) AND NOT (NEW.last_modified != OLD.last_modified AND NEW.last_modified = (strftime('%s', 'now') * 1000))";
   }
 
   /// Closes the database

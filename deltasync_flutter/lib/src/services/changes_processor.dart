@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:developer';
+import 'package:deltasync_flutter/src/models/change_log.dart';
 import 'package:sqflite/sqflite.dart';
 import '../models/change_set.dart';
 
@@ -10,7 +12,7 @@ class ChangesProcessor {
   /// Gets the last fetch date from the system device state database
   Future<DateTime?> getLastFetchDate() async {
     final result = await _db.query(
-      '__deltasync_state',
+      '__deltasync_device_state',
       columns: ['last_sync_timestamp'],
       limit: 1,
     );
@@ -29,11 +31,20 @@ class ChangesProcessor {
 
   /// Sets the last fetch date in the system device state database
   Future<void> setLastFetchDate(DateTime date) async {
-    await _db.insert(
-      '__deltasync_state',
-      {'last_sync_timestamp': date.millisecondsSinceEpoch},
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final existingState = await _db.query('__deltasync_device_state', limit: 1);
+
+    if (existingState.isNotEmpty) {
+      await _db.update(
+        '__deltasync_device_state',
+        {
+          'last_sync_timestamp': date.millisecondsSinceEpoch,
+          'updated_at': now,
+        },
+      );
+    } else {
+      log('Setting last fetch date failed because state isn\'t created yet.');
+    }
   }
 
   /// Gets local changes formatted as a ChangeSet
@@ -110,9 +121,63 @@ class ChangesProcessor {
     await batch.commit();
   }
 
+  ChangeSet _computeChangeSetFromChangeLogs(List<ChangeLog> changeLogs) {
+    final insertions = <String, List<Map<String, dynamic>>>{};
+    final updates = <String, List<Map<String, dynamic>>>{};
+    final deletions = <String, List<Map<String, dynamic>>>{};
+
+    // Process each changelog to merge changes
+    for (final log in changeLogs) {
+      // Merge insertions
+      log.changeSet.insertions.changes.forEach((tableName, tableRows) {
+        insertions.putIfAbsent(tableName, () => []).addAll(tableRows.rows);
+      });
+
+      // Merge updates
+      log.changeSet.updates.changes.forEach((tableName, tableRows) {
+        updates.putIfAbsent(tableName, () => []).addAll(tableRows.rows);
+      });
+
+      // Merge deletions
+      log.changeSet.deletions.changes.forEach((tableName, tableRows) {
+        deletions.putIfAbsent(tableName, () => []).addAll(tableRows.rows);
+      });
+    }
+
+    // Create merged ChangeSet from all changelogs
+    return ChangeSet(
+      timestamp: DateTime.now().millisecondsSinceEpoch,
+      version: changeLogs.isEmpty ? 0 : changeLogs.last.changeSet.version,
+      changeIds: changeLogs.map((log) => log.id).toList(),
+      insertions: TableChanges(
+        Map.fromEntries(
+          insertions.entries.map(
+            (e) => MapEntry(e.key, TableRows(e.value)),
+          ),
+        ),
+      ),
+      updates: TableChanges(
+        Map.fromEntries(
+          updates.entries.map(
+            (e) => MapEntry(e.key, TableRows(e.value)),
+          ),
+        ),
+      ),
+      deletions: TableChanges(
+        Map.fromEntries(
+          deletions.entries.map(
+            (e) => MapEntry(e.key, TableRows(e.value)),
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Applies remote changes to local database
-  Future<void> applyRemoteChanges(ChangeSet changeSet) async {
+  Future<void> applyRemoteChanges(List<ChangeLog> changeLogs) async {
     final batch = _db.batch();
+
+    final changeSet = _computeChangeSetFromChangeLogs(changeLogs);
 
     void applyTableChanges(TableChanges changes, String operation) {
       changes.changes.forEach((tableName, tableRows) {

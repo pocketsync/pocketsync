@@ -53,6 +53,13 @@ class DeltaSync {
       onCreate: onCreate,
     );
 
+    // Set device ID in network service
+    final deviceState = await db.query('__deltasync_device_state', limit: 1);
+    if (deviceState.isNotEmpty) {
+      final deviceId = deviceState.first['device_id'] as String;
+      _networkService.setDeviceId(deviceId);
+    }
+
     _changesProcessor = ChangesProcessor(db);
     _isInitialized = true;
   }

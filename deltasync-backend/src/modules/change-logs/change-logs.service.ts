@@ -30,11 +30,13 @@ export class ChangeLogsService {
   }
 
   async fetchMissingChanges(device: Device, data: { lastFetchedAt?: Date }): Promise<ChangeLog[]> {
-    console.log(`Fetching changes from anything but ${device.deviceId}`);
+    this.logger.log(`Fetching changes from anything but ${device.deviceId}`);
     const changes = await this.prisma.changeLog.findMany({
       where: {
         userIdentifier: device.userIdentifier,
-        processedAt: { gte: data.lastFetchedAt },
+        ...(data.lastFetchedAt ? {
+          processedAt: { gte: new Date(data.lastFetchedAt) }
+        } : {}),
         deviceId: { not: device.deviceId },
       },
       orderBy: {

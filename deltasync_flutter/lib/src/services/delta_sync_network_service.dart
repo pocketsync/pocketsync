@@ -1,4 +1,5 @@
 import 'package:deltasync_flutter/src/errors/sync_error.dart';
+import 'package:deltasync_flutter/src/models/change_log.dart';
 import 'package:deltasync_flutter/src/models/change_processing_response.dart';
 import 'package:deltasync_flutter/src/models/change_set.dart';
 import 'package:dio/dio.dart';
@@ -57,15 +58,17 @@ class DeltaSyncNetworkService {
     return ChangeProcessingResponse.fromJson(response.data);
   }
 
-  Future<ChangeSet> fetchRemoteChanges({
+  Future<List<ChangeLog>> fetchRemoteChanges({
     required DateTime? lastFetchedAt,
   }) async {
     final url = '$_serverUrl/sdk/changes';
-    final response = await _dio.get(url, options: _getRequestOptions(), data: {
-      'lastFetchedAt': lastFetchedAt,
-    });
+    final response = await _dio.get(
+      url,
+      options: _getRequestOptions(),
+      data: {'lastFetchedAt': lastFetchedAt?.toIso8601String()},
+    );
 
-    return ChangeSet.fromJson(response.data);
+    return ChangeLog.fromJsonList(response.data as List);
   }
 
   void dispose() {
