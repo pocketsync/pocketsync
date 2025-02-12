@@ -1,7 +1,8 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
-typedef UpgradeCallback = Future<void> Function(Database db, int oldVersion, int newVersion);
+typedef UpgradeCallback = Future<void> Function(
+    Database db, int oldVersion, int newVersion);
 
 class DeltaSyncDatabase {
   Database? _db;
@@ -100,8 +101,10 @@ class DeltaSyncDatabase {
   }
 
   /// Creates triggers for a specific table
-  Future<void> _createTableTriggers(Database db, int schemaVersion, String tableName) async {
-    final columns = (await db.rawQuery("SELECT name FROM pragma_table_info(?)", [tableName]))
+  Future<void> _createTableTriggers(
+      Database db, int schemaVersion, String tableName) async {
+    final columns = (await db
+            .rawQuery("SELECT name FROM pragma_table_info(?)", [tableName]))
         .map((row) => row['name'] as String)
         .toList();
 
@@ -199,7 +202,12 @@ class DeltaSyncDatabase {
     final triggers = await _db!.query(
       'sqlite_master',
       where: "type = 'trigger' AND tbl_name = ? AND name IN (?, ?, ?)",
-      whereArgs: [tableName, 'after_insert_$tableName', 'after_update_$tableName', 'after_delete_$tableName'],
+      whereArgs: [
+        tableName,
+        'after_insert_$tableName',
+        'after_update_$tableName',
+        'after_delete_$tableName'
+      ],
     );
 
     // Drop existing triggers
