@@ -22,13 +22,16 @@ class DeltaSync {
 
   /// Returns the database instance
   /// Throws [StateError] if DeltaSync is not initialized
-  DeltaSyncDatabase get database {
+  DeltaSyncDatabase get database => _runGuarded(() => _database);
+
+  T _runGuarded<T>(T Function() callaback) {
     if (!_isInitialized) {
       throw StateError(
-        'DeltaSync must be initialized before accessing the database',
+        'You should call DeltaSync.instance.initialize before any other call.',
       );
     }
-    return _database;
+
+    return callaback();
   }
 
   /// Initializes DeltaSync with the given configuration
@@ -69,8 +72,10 @@ class DeltaSync {
 
   /// Sets the user ID for synchronization
   Future<void> setUserId({required String userId}) async {
-    _userId = userId;
-    _networkService.setUserId(userId);
+    _runGuarded(() {
+      _userId = userId;
+      _networkService.setUserId(userId);
+    });
   }
 
   /// Starts the synchronization process
@@ -106,14 +111,12 @@ class DeltaSync {
   }
 
   /// Sends changes to the server
-  Future<ChangeProcessingResponse> _sendChanges(ChangeSet changes) async {
-    return await _networkService.sendChanges(changes);
-  }
+  Future<ChangeProcessingResponse> _sendChanges(ChangeSet changes) async =>
+      await _networkService.sendChanges(changes);
 
   /// Marks changes as synced
-  Future<void> _markChangesSynced(List<int> changeIds) async {
-    await _changesProcessor.markChangesSynced(changeIds);
-  }
+  Future<void> _markChangesSynced(List<int> changeIds) async =>
+      await _changesProcessor.markChangesSynced(changeIds);
 
   /// Cleans up resources
   Future<void> dispose() async {
