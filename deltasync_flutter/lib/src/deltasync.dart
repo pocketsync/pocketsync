@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:deltasync_flutter/src/errors/sync_error.dart';
 import 'package:deltasync_flutter/src/models/change_set.dart';
 import 'models/delta_sync_options.dart';
@@ -20,6 +21,8 @@ class DeltaSync {
   bool _isSyncing = false;
   bool _isInitialized = false;
   bool _isPaused = false;
+  bool _isManuallyPaused = false;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   /// Returns the database instance
   /// Throws [StateError] if DeltaSync is not initialized
@@ -71,7 +74,30 @@ class DeltaSync {
 
     // Set up real-time change notification
     _database.onChangesAdded = (_) => _sync();
+
+    // Initialize connectivity monitoring
+    _setupConnectivityMonitoring();
     _isInitialized = true;
+  }
+
+  /// Sets up connectivity monitoring
+  void _setupConnectivityMonitoring() {
+    _connectivitySubscription =
+        Connectivity().onConnectivityChanged.listen(_handleConnectivityChange);
+  }
+
+  /// Handles connectivity changes
+  Future<void> _handleConnectivityChange(
+    List<ConnectivityResult> result,
+  ) async {
+    if (result.contains(ConnectivityResult.none) || result.isEmpty) {
+      _isPaused = true;
+      _networkService.disconnect();
+    } else if (!_isManuallyPaused) {
+      _isPaused = false;
+      _networkService.reconnect();
+      await _sync();
+    }
   }
 
   /// Sets the user ID for synchronization
@@ -86,6 +112,7 @@ class DeltaSync {
   Future<void> startSync() async {
     if (_userId == null) throw Exception('User ID not set');
     _isPaused = false;
+    _isManuallyPaused = false;
     // Perform initial sync
     await _sync();
   }
@@ -94,6 +121,7 @@ class DeltaSync {
   Future<void> pauseSync() async {
     _runGuarded(() {
       _isPaused = true;
+      _isManuallyPaused = true;
       _networkService.disconnect();
     });
   }
@@ -102,6 +130,7 @@ class DeltaSync {
   Future<void> resumeSync() async {
     _runGuarded(() async {
       _isPaused = false;
+      _isManuallyPaused = false;
       _networkService.reconnect();
       await _sync();
     });
@@ -144,6 +173,7 @@ class DeltaSync {
 
   /// Cleans up resources
   Future<void> dispose() async {
+    await _connectivitySubscription?.cancel();
     await _database.close();
     _networkService.dispose();
   }
