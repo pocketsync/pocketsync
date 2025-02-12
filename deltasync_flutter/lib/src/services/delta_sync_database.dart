@@ -6,6 +6,7 @@ typedef UpgradeCallback = Future<void> Function(
 
 class DeltaSyncDatabase {
   Database? _db;
+  Function(List<Map<String, dynamic>>)? onChangesAdded;
 
   /// Opens and initializes the database
   Future<Database> initialize({
@@ -131,6 +132,13 @@ class DeltaSyncDatabase {
         UPDATE __deltasync_version 
         SET version = version + 1
         WHERE table_name = '$tableName';
+        
+        SELECT changes.*
+        FROM __deltasync_changes changes
+        WHERE changes.id = last_insert_rowid()
+        AND EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = '__deltasync_changes')
+        AND (SELECT RAISE(ROLLBACK, 'Trigger callback failed')
+             WHERE NOT EXISTS (SELECT 1 FROM __deltasync_changes WHERE id = last_insert_rowid()));
       END;
     ''');
 
@@ -155,6 +163,13 @@ class DeltaSyncDatabase {
         UPDATE __deltasync_version 
         SET version = version + 1
         WHERE table_name = '$tableName';
+        
+        SELECT changes.*
+        FROM __deltasync_changes changes
+        WHERE changes.id = last_insert_rowid()
+        AND EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = '__deltasync_changes')
+        AND (SELECT RAISE(ROLLBACK, 'Trigger callback failed')
+             WHERE NOT EXISTS (SELECT 1 FROM __deltasync_changes WHERE id = last_insert_rowid()));
       END;
     ''');
 
@@ -179,6 +194,13 @@ class DeltaSyncDatabase {
         UPDATE __deltasync_version 
         SET version = version + 1
         WHERE table_name = '$tableName';
+        
+        SELECT changes.*
+        FROM __deltasync_changes changes
+        WHERE changes.id = last_insert_rowid()
+        AND EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = '__deltasync_changes')
+        AND (SELECT RAISE(ROLLBACK, 'Trigger callback failed')
+             WHERE NOT EXISTS (SELECT 1 FROM __deltasync_changes WHERE id = last_insert_rowid()));
       END;
     ''');
   }
@@ -297,6 +319,19 @@ class DeltaSyncDatabase {
     );
   }
 
+  /// Private method to handle change notifications
+  Future<void> _notifyChanges() async {
+    if (onChangesAdded != null) {
+      final changes = await _db!.query(
+        '__deltasync_changes',
+        where: 'id = last_insert_rowid()',
+      );
+      if (changes.isNotEmpty) {
+        onChangesAdded!(changes);
+      }
+    }
+  }
+
   /// Inserts a row into the specified table
   Future<int> insert(
     String table,
@@ -304,12 +339,16 @@ class DeltaSyncDatabase {
     String? nullColumnHack,
     ConflictAlgorithm? conflictAlgorithm,
   }) async {
-    return await _db!.insert(
+    final result = await _db!.insert(
       table,
       values,
       nullColumnHack: nullColumnHack,
       conflictAlgorithm: conflictAlgorithm,
     );
+
+    await _notifyChanges();
+
+    return result;
   }
 
   /// Updates rows in the specified table
@@ -320,13 +359,17 @@ class DeltaSyncDatabase {
     List<Object?>? whereArgs,
     ConflictAlgorithm? conflictAlgorithm,
   }) async {
-    return await _db!.update(
+    final result = await _db!.update(
       table,
       values,
       where: where,
       whereArgs: whereArgs,
       conflictAlgorithm: conflictAlgorithm,
     );
+
+    await _notifyChanges();
+
+    return result;
   }
 
   /// Deletes rows from the specified table
@@ -335,11 +378,15 @@ class DeltaSyncDatabase {
     String? where,
     List<Object?>? whereArgs,
   }) async {
-    return await _db!.delete(
+    final result = await _db!.delete(
       table,
       where: where,
       whereArgs: whereArgs,
     );
+
+    await _notifyChanges();
+
+    return result;
   }
 
   /// Executes a raw SQL query with optional arguments
@@ -347,7 +394,17 @@ class DeltaSyncDatabase {
     String sql, [
     List<Object?>? arguments,
   ]) async {
-    return await _db!.rawQuery(sql, arguments);
+    final result = await _db!.rawQuery(sql, arguments);
+
+    // Check if the query modifies data (INSERT, UPDATE, DELETE)
+    final normalizedSql = sql.trim().toUpperCase();
+    if (normalizedSql.startsWith('INSERT') ||
+        normalizedSql.startsWith('UPDATE') ||
+        normalizedSql.startsWith('DELETE')) {
+      await _notifyChanges();
+    }
+
+    return result;
   }
 
   /// Starts a batch operation
@@ -355,18 +412,31 @@ class DeltaSyncDatabase {
     return _db!.batch();
   }
 
-  /// Commits a batch operation
+  /// Commits a batch operation and notifies changes
   Future<List<Object?>> commitBatch(Batch batch) async {
-    return await batch.commit();
+    final result = await batch.commit();
+    await _notifyChanges();
+    return result;
   }
 
-  /// Applies a batch operation without reading the results
+  /// Applies a batch operation without reading the results and notifies changes
   Future<void> applyBatch(Batch batch) async {
     await batch.apply();
+    await _notifyChanges();
   }
 
   /// Executes a transaction
   Future<T> transaction<T>(Future<T> Function(Transaction txn) action) async {
-    return await _db!.transaction(action);
+    final result = await _db!.transaction((txn) async {
+      try {
+        return await action(txn);
+      } catch (e) {
+        rethrow;
+      }
+    });
+
+    await _notifyChanges();
+
+    return result;
   }
 }
