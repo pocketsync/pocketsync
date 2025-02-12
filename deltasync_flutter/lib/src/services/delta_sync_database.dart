@@ -41,7 +41,6 @@ class DeltaSyncDatabase {
         data TEXT NOT NULL,
         version INTEGER NOT NULL,
         synced INTEGER DEFAULT 0,
-        source TEXT DEFAULT 'local'
       )
     ''');
 
@@ -55,9 +54,14 @@ class DeltaSyncDatabase {
     await db.execute('''
       CREATE TABLE __deltasync_device_state (
         device_id TEXT PRIMARY KEY,
-        last_sync_timestamp INTEGER NOT NULL,
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL
+        last_sync_timestamp INTEGER NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE __deltasync_processed_changes (
+        change_log_id INTEGER PRIMARY KEY,
+        processed_at INTEGER NOT NULL
       )
     ''');
 
@@ -68,8 +72,6 @@ class DeltaSyncDatabase {
       await db.insert('__deltasync_device_state', {
         'device_id': deviceId,
         'last_sync_timestamp': now,
-        'created_at': now,
-        'updated_at': now,
       });
     }
   }

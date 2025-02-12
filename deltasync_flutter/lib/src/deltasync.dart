@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer';
+import 'package:deltasync_flutter/src/errors/sync_error.dart';
 import 'package:deltasync_flutter/src/models/change_set.dart';
 import 'package:sqflite/sqflite.dart';
 import 'models/delta_sync_options.dart';
@@ -112,8 +113,8 @@ class DeltaSync {
           await _markChangesSynced(changeSet.changeIds);
         }
       }
-    } catch (e) {
-      print('Sync error: $e');
+    } on Exception catch (e) {
+      throw SyncError('Sync failed: $e', innerError: e);
     } finally {
       _isSyncing = false;
     }
@@ -132,19 +133,13 @@ class DeltaSync {
   /// Fetches and applies remote changes
   Future<void> _fetchAndApplyRemoteChanges() async {
     try {
-      final lastFetchedAt = await _changesProcessor.getLastFetchDate();
-
-      // Get list of already processed changes
       final processedChanges = await _database.query(
         '__deltasync_processed_changes',
         columns: ['change_log_id'],
       );
       final processedIds = processedChanges.map((row) => row['change_log_id'] as int).toList();
 
-      final remoteChanges = await _networkService.fetchRemoteChanges(
-        lastFetchedAt: lastFetchedAt,
-        excludeChangeIds: processedIds,
-      );
+      final remoteChanges = await _networkService.fetchRemoteChanges(excludeChangeIds: processedIds);
 
       if (remoteChanges.isNotEmpty) {
         await _changesProcessor.applyRemoteChanges(remoteChanges);

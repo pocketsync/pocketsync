@@ -71,17 +71,13 @@ class DeltaSyncNetworkService {
   }
 
   Future<List<ChangeLog>> fetchRemoteChanges({
-    required DateTime? lastFetchedAt,
     required List<int> excludeChangeIds,
   }) async {
     final url = '$_serverUrl/sdk/changes';
     final response = await _dio.get(
       url,
       options: _getRequestOptions(),
-      queryParameters: {
-        'lastFetchedAt': lastFetchedAt?.toIso8601String(),
-        'excludeIds': excludeChangeIds,
-      },
+      queryParameters: {'excludeIds': excludeChangeIds},
     );
 
     final changes = ChangeLog.fromJsonList(response.data as List);

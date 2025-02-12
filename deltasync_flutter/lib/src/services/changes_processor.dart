@@ -1,51 +1,13 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'package:deltasync_flutter/deltasync_flutter.dart';
 import 'package:deltasync_flutter/src/models/change_log.dart';
-import 'package:sqflite/sqflite.dart';
 import '../models/change_set.dart';
 
 class ChangesProcessor {
-  final Database _db;
+  final DeltaSyncDatabase _db;
 
   ChangesProcessor(this._db);
-
-  /// Gets the last fetch date from the system device state database
-  Future<DateTime?> getLastFetchDate() async {
-    final result = await _db.query(
-      '__deltasync_device_state',
-      columns: ['last_sync_timestamp'],
-      limit: 1,
-    );
-
-    if (result.isEmpty) {
-      return null;
-    }
-
-    final timestamp = result.first['last_sync_timestamp'] as int?;
-    if (timestamp == null) {
-      return null;
-    }
-
-    return DateTime.fromMillisecondsSinceEpoch(timestamp);
-  }
-
-  /// Sets the last fetch date in the system device state database
-  Future<void> setLastFetchDate(DateTime date) async {
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final existingState = await _db.query('__deltasync_device_state', limit: 1);
-
-    if (existingState.isNotEmpty) {
-      await _db.update(
-        '__deltasync_device_state',
-        {
-          'last_sync_timestamp': date.millisecondsSinceEpoch,
-          'updated_at': now,
-        },
-      );
-    } else {
-      log('Setting last fetch date failed because state isn\'t created yet.');
-    }
-  }
 
   /// Gets local changes formatted as a ChangeSet
   Future<ChangeSet> getUnSyncedChanges() async {
@@ -181,18 +143,18 @@ class ChangesProcessor {
 
     final batch = _db.batch();
     final changeSet = _computeChangeSetFromChangeLogs(changeLogs);
-    
+
     // Track which changes we're about to process
     final now = DateTime.now().millisecondsSinceEpoch;
-    
+
     void applyTableChanges(TableChanges changes, String operation) async {
       for (final entry in changes.changes.entries) {
         final tableName = entry.key;
         final tableRows = entry.value;
-        
+
         // Disable triggers before applying changes
-        await (_db as DeltaSyncDatabase).disableTriggers(_db, tableName);
-        
+        await _db.disableTriggers(tableName);
+
         try {
           for (final row in tableRows.rows) {
             switch (operation) {
@@ -217,20 +179,19 @@ class ChangesProcessor {
             }
           }
         } finally {
-          // Always re-enable triggers after operation
-          await (_db as DeltaSyncDatabase).enableTriggers(_db, tableName);
+          await _db.enableTriggers(tableName);
         }
       }
     }
 
     // Apply all changes
-    await applyTableChanges(changeSet.insertions, 'INSERT');
-    await applyTableChanges(changeSet.updates, 'UPDATE');
-    await applyTableChanges(changeSet.deletions, 'DELETE');
+    applyTableChanges(changeSet.insertions, 'INSERT');
+    applyTableChanges(changeSet.updates, 'UPDATE');
+    applyTableChanges(changeSet.deletions, 'DELETE');
 
     // Mark these changes as processed
     for (final log in changeLogs) {
-      batch.insert('__deltasync_device_state', {
+      batch.insert('__deltasync_processed_changes', {
         'change_log_id': log.id,
         'processed_at': now,
       });
