@@ -42,6 +42,19 @@ class DeltaSyncNetworkService {
     _connectWebSocket();
   }
 
+  /// Disconnects from the WebSocket server
+  void disconnect() {
+    _socket?.disconnect();
+    _socket = null;
+  }
+
+  /// Reconnects to the WebSocket server
+  void reconnect() {
+    if (_socket == null) {
+      _connectWebSocket();
+    }
+  }
+
   Options _getRequestOptions() {
     if (_userId == null) {
       throw SyncError('User ID not set');
@@ -133,6 +146,7 @@ class DeltaSyncNetworkService {
   }
 
   void dispose() {
+    disconnect();
     _socket?.dispose();
     _socket = null;
     _dio.close();

@@ -14,12 +14,24 @@ class _TodoListViewState extends State<TodoListView> {
   late final TodoController _todoController =
       TodoController(DeltaSync.instance.database);
   final TextEditingController _textController = TextEditingController();
+  bool _isSyncPaused = false;
 
   @override
   void dispose() {
     _textController.dispose();
 
     super.dispose();
+  }
+
+  void _toggleSync() async {
+    setState(() {
+      _isSyncPaused = !_isSyncPaused;
+    });
+    if (_isSyncPaused) {
+      await DeltaSync.instance.pauseSync();
+    } else {
+      await DeltaSync.instance.resumeSync();
+    }
   }
 
   Future<void> _handleTodoOperation(Future<void> Function() operation) async {
@@ -41,6 +53,11 @@ class _TodoListViewState extends State<TodoListView> {
       appBar: AppBar(
         title: const Text('Todo List'),
         actions: [
+          IconButton(
+            icon: Icon(_isSyncPaused ? Icons.play_arrow : Icons.pause),
+            onPressed: _toggleSync,
+            tooltip: _isSyncPaused ? 'Resume sync' : 'Pause sync',
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {

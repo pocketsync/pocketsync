@@ -20,6 +20,7 @@ class DeltaSync {
   late ChangesProcessor _changesProcessor;
   bool _isSyncing = false;
   bool _isInitialized = false;
+  bool _isPaused = false;
 
   /// Returns the database instance
   /// Throws [StateError] if DeltaSync is not initialized
@@ -85,15 +86,32 @@ class DeltaSync {
   /// Starts the synchronization process
   Future<void> startSync() async {
     if (_userId == null) throw Exception('User ID not set');
-
+    _isPaused = false;
     // Perform initial sync
     await _sync();
   }
 
+  /// Pauses synchronization
+  Future<void> pauseSync() async {
+    _runGuarded(() {
+      _isPaused = true;
+      _networkService.disconnect();
+    });
+  }
+
+  /// Resumes synchronization
+  Future<void> resumeSync() async {
+    _runGuarded(() async {
+      _isPaused = false;
+      _networkService.reconnect();
+      await _sync();
+    });
+  }
+
   /// Internal sync method
   Future<void> _sync() async {
-    if (_isSyncing || _userId == null) {
-      log('Sync already in progress or user ID not set');
+    if (_isSyncing || _userId == null || _isPaused) {
+      log('Sync already in progress, user ID not set, or sync is paused');
       return;
     }
     _isSyncing = true;
