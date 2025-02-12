@@ -2,7 +2,7 @@ import 'package:sqflite/sqflite.dart';
 
 class DeltaSyncDatabase {
   Database? _db;
-  
+
   /// Opens and initializes the database
   Future<Database> initialize({
     required String dbPath,
@@ -154,11 +154,83 @@ class DeltaSyncDatabase {
     _db = null;
   }
 
-  /// Gets the database instance
-  Database get database {
-    if (_db == null) {
-      throw Exception('Database not initialized');
-    }
-    return _db!;
+  /// Executes a raw SQL query
+  Future<List<Map<String, dynamic>>> query(
+    String table, {
+    bool? distinct,
+    List<String>? columns,
+    String? where,
+    List<Object?>? whereArgs,
+    String? groupBy,
+    String? having,
+    String? orderBy,
+    int? limit,
+    int? offset,
+  }) async {
+    return await _db!.query(
+      table,
+      distinct: distinct,
+      columns: columns,
+      where: where,
+      whereArgs: whereArgs,
+      groupBy: groupBy,
+      having: having,
+      orderBy: orderBy,
+      limit: limit,
+      offset: offset,
+    );
+  }
+
+  /// Inserts a row into the specified table
+  Future<int> insert(
+    String table,
+    Map<String, Object?> values, {
+    String? nullColumnHack,
+    ConflictAlgorithm? conflictAlgorithm,
+  }) async {
+    return await _db!.insert(
+      table,
+      values,
+      nullColumnHack: nullColumnHack,
+      conflictAlgorithm: conflictAlgorithm,
+    );
+  }
+
+  /// Updates rows in the specified table
+  Future<int> update(
+    String table,
+    Map<String, Object?> values, {
+    String? where,
+    List<Object?>? whereArgs,
+    ConflictAlgorithm? conflictAlgorithm,
+  }) async {
+    return await _db!.update(
+      table,
+      values,
+      where: where,
+      whereArgs: whereArgs,
+      conflictAlgorithm: conflictAlgorithm,
+    );
+  }
+
+  /// Deletes rows from the specified table
+  Future<int> delete(
+    String table, {
+    String? where,
+    List<Object?>? whereArgs,
+  }) async {
+    return await _db!.delete(
+      table,
+      where: where,
+      whereArgs: whereArgs,
+    );
+  }
+
+  /// Executes a raw SQL query with optional arguments
+  Future<List<Map<String, dynamic>>> rawQuery(
+    String sql, [
+    List<Object?>? arguments,
+  ]) async {
+    return await _db!.rawQuery(sql, arguments);
   }
 }

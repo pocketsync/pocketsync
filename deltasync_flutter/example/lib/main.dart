@@ -16,8 +16,15 @@ void main() async {
     options: DeltaSyncOptions(
       projectId: '2526af00-ecaa-45c1-a7aa-e1fc1ab1c278',
       projectApiKey: '70700ed8-9c4b-4cb9-beab-50b2e796db1d',
-      serverUrl: defaultTargetPlatform == TargetPlatform.android ? 'http://10.0.2.2:3000' : 'http://127.0.0.1:3000',
+      serverUrl: defaultTargetPlatform == TargetPlatform.android
+          ? 'http://10.0.2.2:3000'
+          : 'http://127.0.0.1:3000',
     ),
+    onCreate: (db) async {
+      await db.execute(
+        'CREATE TABLE todos(id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, isCompleted INTEGER)',
+      );
+    },
   );
 
   // Set user ID - In a real app, this would come from your auth system

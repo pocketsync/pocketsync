@@ -18,7 +18,19 @@ class DeltaSync {
   late DeltaSyncNetworkService _networkService;
   late ChangesProcessor _changesProcessor;
   bool _isSyncing = false;
+  bool _isInitialized = false;
   Duration? _syncInterval;
+
+  /// Returns the database instance
+  /// Throws [StateError] if DeltaSync is not initialized
+  DeltaSyncDatabase get database {
+    if (!_isInitialized) {
+      throw StateError(
+        'DeltaSync must be initialized before accessing the database',
+      );
+    }
+    return _database;
+  }
 
   /// Initializes DeltaSync with the given configuration
   Future<void> initialize({
@@ -41,6 +53,7 @@ class DeltaSync {
     );
 
     _changesProcessor = ChangesProcessor(db);
+    _isInitialized = true;
   }
 
   /// Sets the user ID for synchronization

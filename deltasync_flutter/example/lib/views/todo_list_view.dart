@@ -1,3 +1,4 @@
+import 'package:deltasync_flutter/deltasync_flutter.dart';
 import 'package:flutter/material.dart';
 import '../controllers/todo_controller.dart';
 import '../models/todo.dart';
@@ -10,13 +11,14 @@ class TodoListView extends StatefulWidget {
 }
 
 class _TodoListViewState extends State<TodoListView> {
-  late final TodoController _todoController = TodoController();
+  late final TodoController _todoController =
+      TodoController(DeltaSync.instance.database);
   final TextEditingController _textController = TextEditingController();
 
   @override
   void dispose() {
     _textController.dispose();
-    _todoController.dispose();
+
     super.dispose();
   }
 
@@ -93,7 +95,8 @@ class _TodoListViewState extends State<TodoListView> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                        const Icon(Icons.error_outline,
+                            size: 48, color: Colors.red),
                         const SizedBox(height: 16),
                         Text('Error: ${snapshot.error}'),
                         const SizedBox(height: 16),
@@ -128,7 +131,9 @@ class _TodoListViewState extends State<TodoListView> {
                       title: Text(
                         todo.title,
                         style: TextStyle(
-                          decoration: todo.isCompleted ? TextDecoration.lineThrough : null,
+                          decoration: todo.isCompleted
+                              ? TextDecoration.lineThrough
+                              : null,
                         ),
                       ),
                       trailing: IconButton(
