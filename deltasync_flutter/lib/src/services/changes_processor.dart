@@ -141,62 +141,69 @@ class ChangesProcessor {
   Future<void> applyRemoteChanges(List<ChangeLog> changeLogs) async {
     if (changeLogs.isEmpty) return;
 
-    final batch = _db.batch();
     final changeSet = _computeChangeSetFromChangeLogs(changeLogs);
-
-    // Track which changes we're about to process
     final now = DateTime.now().millisecondsSinceEpoch;
-
-    void applyTableChanges(TableChanges changes, String operation) async {
-      for (final entry in changes.changes.entries) {
-        final tableName = entry.key;
-        final tableRows = entry.value;
-
-        // Disable triggers before applying changes
-        await _db.disableTriggers(tableName);
-
+    
+    await _db.transaction((txn) async {
+      final batch = txn.batch();
+      
+      Future<void> applyTableOperation(String tableName, Map<String, dynamic> row, String operation) async {
         try {
-          for (final row in tableRows.rows) {
-            switch (operation) {
-              case 'INSERT':
-                batch.insert(tableName, row);
-                break;
-              case 'UPDATE':
-                batch.update(
-                  tableName,
-                  row,
-                  where: 'id = ?',
-                  whereArgs: [row['id']],
-                );
-                break;
-              case 'DELETE':
-                batch.delete(
-                  tableName,
-                  where: 'id = ?',
-                  whereArgs: [row['id']],
-                );
-                break;
-            }
+          await _db.disableTriggers(tableName);
+          switch (operation) {
+            case 'INSERT':
+              batch.insert(tableName, row);
+              break;
+            case 'UPDATE':
+              batch.update(
+                tableName,
+                row,
+                where: 'id = ?',
+                whereArgs: [row['id']],
+              );
+              break;
+            case 'DELETE':
+              batch.delete(
+                tableName,
+                where: 'id = ?',
+                whereArgs: [row['id']],
+              );
+              break;
           }
         } finally {
           await _db.enableTriggers(tableName);
         }
       }
-    }
 
-    // Apply all changes
-    applyTableChanges(changeSet.insertions, 'INSERT');
-    applyTableChanges(changeSet.updates, 'UPDATE');
-    applyTableChanges(changeSet.deletions, 'DELETE');
+      // Apply all changes
+      for (final entry in changeSet.insertions.changes.entries) {
+        for (final row in entry.value.rows) {
+          await applyTableOperation(entry.key, row, 'INSERT');
+        }
+      }
 
-    // Mark these changes as processed
-    for (final log in changeLogs) {
-      batch.insert('__deltasync_processed_changes', {
-        'change_log_id': log.id,
-        'processed_at': now,
-      });
-    }
+      for (final entry in changeSet.updates.changes.entries) {
+        for (final row in entry.value.rows) {
+          await applyTableOperation(entry.key, row, 'UPDATE');
+        }
+      }
 
-    await batch.commit();
+      for (final entry in changeSet.deletions.changes.entries) {
+        for (final row in entry.value.rows) {
+          await applyTableOperation(entry.key, row, 'DELETE');
+        }
+      }
+
+      // Mark these changes as processed only if all operations succeed
+      for (final log in changeLogs) {
+        batch.insert('__deltasync_processed_changes', {
+          'change_log_id': log.id,
+          'processed_at': now,
+        });
+      }
+
+      // This will only commit if no errors occurred
+      await batch.commit();
+    });
   }
 }

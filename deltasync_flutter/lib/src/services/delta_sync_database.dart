@@ -199,12 +199,7 @@ class DeltaSyncDatabase {
     final triggers = await _db!.query(
       'sqlite_master',
       where: "type = 'trigger' AND tbl_name = ? AND name IN (?, ?, ?)",
-      whereArgs: [
-        tableName,
-        'after_insert_$tableName',
-        'after_update_$tableName',
-        'after_delete_$tableName'
-      ],
+      whereArgs: [tableName, 'after_insert_$tableName', 'after_update_$tableName', 'after_delete_$tableName'],
     );
 
     // Drop existing triggers
@@ -225,11 +220,14 @@ class DeltaSyncDatabase {
 
     final batch = _db!.batch();
     for (final trigger in triggers) {
-      batch.insert('__deltasync_trigger_backup', {
-        'table_name': tableName,
-        'trigger_name': trigger['name'],
-        'trigger_sql': trigger['sql'],
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
+      batch.insert(
+          '__deltasync_trigger_backup',
+          {
+            'table_name': tableName,
+            'trigger_name': trigger['name'],
+            'trigger_sql': trigger['sql'],
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace);
     }
     await batch.commit();
   }
@@ -357,5 +355,10 @@ class DeltaSyncDatabase {
   /// Applies a batch operation without reading the results
   Future<void> applyBatch(Batch batch) async {
     await batch.apply();
+  }
+
+  /// Executes a transaction
+  Future<T> transaction<T>(Future<T> Function(Transaction txn) action) async {
+    return await _db!.transaction(action);
   }
 }
