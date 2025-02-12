@@ -3,12 +3,15 @@ import 'dart:convert';
 import 'package:deltasync_flutter/deltasync_flutter.dart';
 import 'package:deltasync_flutter/src/models/change_log.dart';
 import 'package:deltasync_flutter/src/models/change_set.dart';
+import 'package:deltasync_flutter/src/services/conflict_resolver.dart';
 import 'package:sqflite/sqflite.dart';
 
 class ChangesProcessor {
   final DeltaSyncDatabase _db;
+  final ConflictResolver _conflictResolver;
 
-  ChangesProcessor(this._db);
+  ChangesProcessor(this._db, {ConflictResolver? conflictResolver})
+      : _conflictResolver = conflictResolver ?? const ConflictResolver();
 
   /// Gets local changes formatted as a ChangeSet
   Future<ChangeSet> getUnSyncedChanges() async {
@@ -25,9 +28,11 @@ class ChangesProcessor {
     for (final change in changes) {
       final tableName = change['table_name'] as String;
       final operation = change['operation'] as String;
-      final rawData = jsonDecode(change['data'] as String) as Map<String, dynamic>;
-      final data =
-          operation == 'DELETE' ? rawData['old'] as Map<String, dynamic> : rawData['new'] as Map<String, dynamic>;
+      final rawData =
+          jsonDecode(change['data'] as String) as Map<String, dynamic>;
+      final data = operation == 'DELETE'
+          ? rawData['old'] as Map<String, dynamic>
+          : rawData['new'] as Map<String, dynamic>;
 
       switch (operation) {
         case 'INSERT':
@@ -146,13 +151,19 @@ class ChangesProcessor {
     final now = DateTime.now().millisecondsSinceEpoch;
 
     await _db.transaction((txn) async {
-      Future<void> applyTableOperation(String tableName, Map<String, dynamic> row, String operation) async {
+      Future<void> applyTableOperation(
+          String tableName, Map<String, dynamic> row, String operation) async {
         try {
           // Store original trigger definitions before dropping
           final triggers = await txn.query(
             'sqlite_master',
             where: "type = 'trigger' AND tbl_name = ? AND name IN (?, ?, ?)",
-            whereArgs: [tableName, 'after_insert_$tableName', 'after_update_$tableName', 'after_delete_$tableName'],
+            whereArgs: [
+              tableName,
+              'after_insert_$tableName',
+              'after_update_$tableName',
+              'after_delete_$tableName'
+            ],
           );
 
           // Drop existing triggers
@@ -179,17 +190,58 @@ class ChangesProcessor {
           // Apply the change operation
           switch (operation) {
             case 'INSERT':
-              await txn.insert(tableName, row);
+              try {
+                await txn.insert(tableName, row);
+              } catch (e) {
+                // Handle insert conflict by attempting to update instead
+                final existingRow = await txn.query(
+                  tableName,
+                  where: 'id = ?',
+                  whereArgs: [row['id']],
+                );
+                if (existingRow.isNotEmpty) {
+                  final resolvedRow = await _conflictResolver.resolveConflict(
+                    tableName,
+                    existingRow.first,
+                    row,
+                  );
+                  await txn.update(
+                    tableName,
+                    resolvedRow,
+                    where: 'id = ?',
+                    whereArgs: [row['id']],
+                  );
+                } else {
+                  rethrow;
+                }
+              }
               break;
             case 'UPDATE':
-              await txn.update(
+              final existingRow = await txn.query(
                 tableName,
-                row,
                 where: 'id = ?',
                 whereArgs: [row['id']],
               );
+              if (existingRow.isNotEmpty) {
+                final resolvedRow = await _conflictResolver.resolveConflict(
+                  tableName,
+                  existingRow.first,
+                  row,
+                );
+                await txn.update(
+                  tableName,
+                  resolvedRow,
+                  where: 'id = ?',
+                  whereArgs: [row['id']],
+                );
+              } else {
+                // If row doesn't exist, insert it instead
+                await txn.insert(tableName, row);
+              }
               break;
             case 'DELETE':
+              // For deletes, we just attempt the operation
+              // If the row doesn't exist, that's fine
               await txn.delete(
                 tableName,
                 where: 'id = ?',

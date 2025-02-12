@@ -62,7 +62,7 @@ class DeltaSync {
       _networkService.setDeviceId(deviceId);
     }
 
-    _changesProcessor = ChangesProcessor(_database);
+    _changesProcessor = ChangesProcessor(_database, conflictResolver: options.conflictResolver);
     _isInitialized = true;
   }
 
@@ -109,7 +109,8 @@ class DeltaSync {
           changeSet.deletions.changes.isNotEmpty) {
         final processedResponse = await _sendChanges(changeSet);
 
-        if (processedResponse.status == 'success' && processedResponse.processed) {
+        if (processedResponse.status == 'success' &&
+            processedResponse.processed) {
           await _markChangesSynced(changeSet.changeIds);
         }
       }
@@ -137,9 +138,12 @@ class DeltaSync {
         '__deltasync_processed_changes',
         columns: ['change_log_id'],
       );
-      final processedIds = processedChanges.map((row) => row['change_log_id'] as int).toList();
+      final processedIds =
+          processedChanges.map((row) => row['change_log_id'] as int).toList();
 
-      final remoteChanges = await _networkService.fetchRemoteChanges(excludeChangeIds: processedIds);
+      final remoteChanges = await _networkService.fetchRemoteChanges(
+        excludeChangeIds: processedIds,
+      );
 
       if (remoteChanges.isNotEmpty) {
         await _changesProcessor.applyRemoteChanges(remoteChanges);
