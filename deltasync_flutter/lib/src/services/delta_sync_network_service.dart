@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:deltasync_flutter/src/errors/sync_error.dart';
 import 'package:deltasync_flutter/src/models/change_log.dart';
 import 'package:deltasync_flutter/src/models/change_processing_response.dart';
@@ -48,14 +50,24 @@ class DeltaSyncNetworkService {
   }
 
   Future<ChangeProcessingResponse> sendChanges(ChangeSet changes) async {
-    final url = '$_serverUrl/sync/$_projectId/changes';
-    final response = await _dio.post(
-      url,
-      options: _getRequestOptions(),
-      data: changes.toJson(),
-    );
+    final url = '$_serverUrl/sdk/changes';
+    try {
+      final response = await _dio.post(
+        url,
+        options: _getRequestOptions(),
+        data: {
+          'changeSets': [changes.toJson()],
+        },
+      );
 
-    return ChangeProcessingResponse.fromJson(response.data);
+      return ChangeProcessingResponse.fromJson(response.data);
+    } on DioException catch (e) {
+      log('Request failed', error: e.response);
+      rethrow;
+    } catch (e) {
+      log('Request failed', error: e);
+      rethrow;
+    }
   }
 
   Future<List<ChangeLog>> fetchRemoteChanges({

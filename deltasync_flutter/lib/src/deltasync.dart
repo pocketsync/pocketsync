@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 import 'package:deltasync_flutter/src/models/change_set.dart';
 import 'package:sqflite/sqflite.dart';
 import 'models/delta_sync_options.dart';
@@ -107,8 +108,7 @@ class DeltaSync {
           changeSet.deletions.changes.isNotEmpty) {
         final processedResponse = await _sendChanges(changeSet);
 
-        if (processedResponse.status == 'success' &&
-            processedResponse.processed) {
+        if (processedResponse.status == 'success' && processedResponse.processed) {
           await _markChangesSynced(changeSet.changeIds);
         }
       }
@@ -136,9 +136,14 @@ class DeltaSync {
       final remoteChanges = await _networkService.fetchRemoteChanges(
         lastFetchedAt: lastFetchedAt,
       );
-      await _changesProcessor.applyRemoteChanges(remoteChanges);
+      if (remoteChanges.isNotEmpty) {
+        await _changesProcessor.applyRemoteChanges(remoteChanges);
+        log('Fetched and applied ${remoteChanges.length} changes');
+      } else {
+        log('No remote changes to apply');
+      }
     } catch (e) {
-      // TODO: handle error
+      log('Fetch and apply remote changes failed', error: e);
     }
   }
 

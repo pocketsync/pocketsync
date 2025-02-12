@@ -65,7 +65,6 @@ class ChangeSet {
         'insertions': insertions.toJson(),
         'updates': updates.toJson(),
         'deletions': deletions.toJson(),
-        'changeIds': changeIds,
       };
 
   factory ChangeSet.fromJson(Map<String, dynamic> json) {

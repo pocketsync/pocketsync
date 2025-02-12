@@ -96,6 +96,7 @@ class DeltaSyncDatabase {
         .map((row) => row['name'] as String)
         .toList();
 
+    // UPDATE trigger
     await db.execute('''
       CREATE TRIGGER IF NOT EXISTS after_update_$tableName
       AFTER UPDATE ON $tableName
@@ -109,8 +110,8 @@ class DeltaSyncDatabase {
           'UPDATE',
           (strftime('%s', 'now') * 1000),
           json_object(
-            'old', json_object(${columns.where((col) => col != 'last_modified').map((col) => "'$col', OLD.$col").join(', ')}),
-            'new', json_object(${columns.where((col) => col != 'last_modified').map((col) => "'$col', NEW.$col").join(', ')})
+            'old', json_object(${columns.map((col) => "'$col', OLD.$col").join(', ')}),
+            'new', json_object(${columns.map((col) => "'$col', NEW.$col").join(', ')})
           ),
           (SELECT COALESCE(MAX(version), 0) + 1 FROM __deltasync_version WHERE table_name = '$tableName')
         );
@@ -118,13 +119,10 @@ class DeltaSyncDatabase {
         UPDATE __deltasync_version 
         SET version = version + 1
         WHERE table_name = '$tableName';
-        
-        UPDATE $tableName 
-        SET last_modified = (strftime('%s', 'now') * 1000)
-        WHERE rowid = NEW.rowid;
       END;
     ''');
 
+    // INSERT trigger 
     await db.execute('''
       CREATE TRIGGER IF NOT EXISTS after_insert_$tableName
       AFTER INSERT ON $tableName
@@ -137,7 +135,7 @@ class DeltaSyncDatabase {
           'INSERT',
           (strftime('%s', 'now') * 1000),
           json_object(
-            'new', json_object(${columns.where((col) => col != 'last_modified').map((col) => "'$col', NEW.$col").join(', ')})
+            'new', json_object(${columns.map((col) => "'$col', NEW.$col").join(', ')})
           ),
           (SELECT COALESCE(MAX(version), 0) + 1 FROM __deltasync_version WHERE table_name = '$tableName')
         );
@@ -145,13 +143,10 @@ class DeltaSyncDatabase {
         UPDATE __deltasync_version 
         SET version = version + 1
         WHERE table_name = '$tableName';
-        
-        UPDATE $tableName 
-        SET last_modified = (strftime('%s', 'now') * 1000)
-        WHERE rowid = NEW.rowid;
       END;
     ''');
 
+    // DELETE trigger
     await db.execute('''
       CREATE TRIGGER IF NOT EXISTS after_delete_$tableName
       AFTER DELETE ON $tableName
@@ -164,7 +159,7 @@ class DeltaSyncDatabase {
           'DELETE',
           (strftime('%s', 'now') * 1000),
           json_object(
-            'old', json_object(${columns.where((col) => col != 'last_modified').map((col) => "'$col', OLD.$col").join(', ')})
+            'old', json_object(${columns.map((col) => "'$col', OLD.$col").join(', ')})
           ),
           (SELECT COALESCE(MAX(version), 0) + 1 FROM __deltasync_version WHERE table_name = '$tableName')
         );
@@ -174,70 +169,17 @@ class DeltaSyncDatabase {
         WHERE table_name = '$tableName';
       END;
     ''');
-
-    await db.execute('''
-      CREATE TRIGGER IF NOT EXISTS after_insert_$tableName
-      AFTER INSERT ON $tableName
-      BEGIN
-        INSERT INTO __deltasync_changes (
-          table_name, row_id, operation, timestamp, change_data
-        ) VALUES (
-          '$tableName',
-          NEW.rowid,
-          'INSERT',
-          (strftime('%s', 'now') * 1000),
-          json_object(
-            'new', json_object(${await _generateColumnList(tableName, db: db)}),
-            'schema_version', $schemaVersion
-          )
-        );
-        UPDATE $tableName SET last_modified = (strftime('%s', 'now') * 1000) 
-        WHERE rowid = NEW.rowid;
-      END;
-    ''');
-
-    await db.execute('''
-      CREATE TRIGGER IF NOT EXISTS after_delete_$tableName
-      AFTER DELETE ON $tableName
-      BEGIN
-        INSERT INTO __deltasync_changes (
-          table_name, row_id, operation, timestamp, change_data
-        ) VALUES (
-          '$tableName',
-          OLD.rowid,
-          'DELETE',
-          (strftime('%s', 'now') * 1000),
-          json_object(
-            'old', json_object(${await _generateColumnList(tableName, prefix: 'OLD', db: db)}),
-            'schema_version', $schemaVersion
-          )
-        );
-      END;
-    ''');
-  }
-
-  Future<String> _generateColumnList(
-    String tableName, {
-    String prefix = 'NEW',
-    required Database db,
-  }) async {
-    final result = await db
-        .rawQuery("SELECT name FROM pragma_table_info(?)", [tableName]);
-    final columns = result.map((row) => row['name'] as String).toList();
-
-    return columns.map((col) => "'$col', $prefix.$col").join(', ');
   }
 
   String _generateUpdateCondition(List<String> columns) {
-    final conditions =
-        columns.where((col) => col != 'last_modified').map((col) => '''(
+    final conditions = columns.map((col) => '''(
           OLD.$col IS NOT NEW.$col OR 
           (OLD.$col IS NULL AND NEW.$col IS NOT NULL) OR 
           (OLD.$col IS NOT NULL AND NEW.$col IS NULL) OR
           (OLD.$col != NEW.$col)
         )''').join(' OR ');
 
-    return "($conditions) AND NOT (NEW.last_modified != OLD.last_modified AND NEW.last_modified = (strftime('%s', 'now') * 1000))";
+    return "($conditions)";
   }
 
   /// Closes the database

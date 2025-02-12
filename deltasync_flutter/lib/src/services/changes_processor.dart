@@ -62,7 +62,9 @@ class ChangesProcessor {
     for (final change in changes) {
       final tableName = change['table_name'] as String;
       final operation = change['operation'] as String;
-      final data = jsonDecode(change['data'] as String) as Map<String, dynamic>;
+      final rawData = jsonDecode(change['data'] as String) as Map<String, dynamic>;
+      final data =
+          operation == 'DELETE' ? rawData['old'] as Map<String, dynamic> : rawData['new'] as Map<String, dynamic>;
 
       switch (operation) {
         case 'INSERT':
@@ -184,9 +186,11 @@ class ChangesProcessor {
         for (final row in tableRows.rows) {
           switch (operation) {
             case 'INSERT':
+              log('Inserting row: $row');
               batch.insert(tableName, row);
               break;
             case 'UPDATE':
+              log('Updating row: $row');
               batch.update(
                 tableName,
                 row,
@@ -195,6 +199,7 @@ class ChangesProcessor {
               );
               break;
             case 'DELETE':
+              log('Deleting row: $row');
               batch.delete(
                 tableName,
                 where: 'id = ?',
