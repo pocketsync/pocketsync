@@ -1,16 +1,18 @@
 import { WebSocketGateway, WebSocketServer, OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage } from '@nestjs/websockets';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, UseGuards } from '@nestjs/common';
 import { Server } from 'socket.io';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChangeLog } from '@prisma/client';
 import { AppUsersService } from '../app-users/app-users.service';
 import { DevicesService } from '../devices/devices.service';
+import { SocketAuthGuard } from '../../common/guards/socket-auth.guard';
 
 @Injectable()
 @WebSocketGateway({
     cors: true,
     namespace: 'changes'
 })
+@UseGuards(SocketAuthGuard)
 export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly logger = new Logger(ChangesGateway.name);
 
@@ -27,9 +29,8 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
 
     async handleConnection(client: any) {
         const { device_id, user_id, project_id } = client.handshake.query;
-        const apiKey = client.handshake.headers['x-api-key'];
 
-        if (!device_id || !user_id || !project_id || !apiKey) {
+        if (!device_id || !user_id || !project_id) {
             this.logger.warn('Connection rejected: Missing required parameters');
             client.disconnect();
             return;

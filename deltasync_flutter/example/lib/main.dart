@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:deltasync_flutter/deltasync_flutter.dart';
 import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
 import 'views/todo_list_view.dart';
 
 void main() async {
@@ -15,9 +14,7 @@ void main() async {
     options: DeltaSyncOptions(
       projectId: 'ecd550f6-4ee3-4027-92db-63e218bb75f8',
       authToken: 'ds_YzcwMmFlMzQ5N2RmNDdiNjk4OTFlNGI4MWI1MTYwMTE=',
-      serverUrl: defaultTargetPlatform == TargetPlatform.android
-          ? 'http://10.0.2.2:3000'
-          : 'http://127.0.0.1:3000',
+      serverUrl: defaultTargetPlatform == TargetPlatform.android ? 'http://10.0.2.2:3000' : 'http://127.0.0.1:3000',
     ),
     databaseOptions: DatabaseOptions(
       onCreate: (db, version) async {
