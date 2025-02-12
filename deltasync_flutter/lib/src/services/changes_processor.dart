@@ -8,7 +8,7 @@ class ChangesProcessor {
   ChangesProcessor(this._db);
 
   /// Gets local changes formatted as a ChangeSet
-  Future<ChangeSet> getLocalChanges() async {
+  Future<ChangeSet> getUnSyncedChanges() async {
     final changes = await _db.query(
       '_deltasync_changes',
       where: 'synced = 0',
@@ -37,9 +37,12 @@ class ChangesProcessor {
       }
     }
 
+    final changeIds = changes.map((change) => change['id'] as int).toList();
+
     return ChangeSet(
       timestamp: DateTime.now().millisecondsSinceEpoch,
       version: changes.isEmpty ? 0 : changes.last['version'] as int,
+      changeIds: changeIds,
       insertions: TableChanges(
         Map.fromEntries(
           insertions.entries.map(
@@ -65,14 +68,14 @@ class ChangesProcessor {
   }
 
   /// Marks changes as synced
-  Future<void> markChangesSynced(List<Map<String, dynamic>> changes) async {
+  Future<void> markChangesSynced(List<int> changeIds) async {
     final batch = _db.batch();
-    for (final change in changes) {
+    for (final id in changeIds) {
       batch.update(
         '_deltasync_changes',
         {'synced': 1},
         where: 'id = ?',
-        whereArgs: [change['id']],
+        whereArgs: [id],
       );
     }
     await batch.commit();

@@ -48,6 +48,7 @@ class ChangeSet {
   final TableChanges insertions;
   final TableChanges updates;
   final TableChanges deletions;
+  final List<int> changeIds;
 
   ChangeSet({
     required this.timestamp,
@@ -55,6 +56,7 @@ class ChangeSet {
     required this.insertions,
     required this.updates,
     required this.deletions,
+    this.changeIds = const [],
   });
 
   Map<String, dynamic> toJson() => {
@@ -63,6 +65,7 @@ class ChangeSet {
         'insertions': insertions.toJson(),
         'updates': updates.toJson(),
         'deletions': deletions.toJson(),
+        'changeIds': changeIds,
       };
 
   factory ChangeSet.fromJson(Map<String, dynamic> json) {

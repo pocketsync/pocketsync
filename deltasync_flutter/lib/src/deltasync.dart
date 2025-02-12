@@ -5,12 +5,13 @@ import 'models/delta_sync_options.dart';
 import 'models/change_processing_response.dart';
 import 'services/delta_sync_network_service.dart';
 import 'services/changes_processor.dart';
+import 'services/delta_sync_database.dart';
 
 class DeltaSync {
   static final DeltaSync instance = DeltaSync._internal();
   DeltaSync._internal();
 
-  Database? _db;
+  late DeltaSyncDatabase _database;
   Timer? _syncTimer;
   String? _userId;
 
@@ -24,6 +25,7 @@ class DeltaSync {
     required String dbPath,
     required Duration syncInterval,
     required DeltaSyncOptions options,
+    Future<void> Function(Database db)? onCreate,
   }) async {
     _syncInterval = syncInterval;
     _networkService = DeltaSyncNetworkService(
@@ -31,137 +33,14 @@ class DeltaSync {
       projectId: options.projectId,
       projectApiKey: options.projectApiKey,
     );
-    _db = await openDatabase(
-      dbPath,
-      version: 1,
-      onCreate: _onCreate,
-      onOpen: _onOpen,
+
+    _database = DeltaSyncDatabase();
+    final db = await _database.initialize(
+      dbPath: dbPath,
+      onCreate: onCreate,
     );
-    _changesProcessor = ChangesProcessor(_db!);
-  }
 
-  /// Sets up the initial database schema
-  Future<void> _onCreate(Database db, int version) async {
-    // Create change tracking table
-    await db.execute('''
-      CREATE TABLE _deltasync_changes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        table_name TEXT NOT NULL,
-        record_id TEXT NOT NULL,
-        operation TEXT NOT NULL,
-        timestamp INTEGER NOT NULL,
-        data TEXT NOT NULL,
-        version INTEGER NOT NULL,
-        synced INTEGER DEFAULT 0
-      )
-    ''');
-
-    // Create version tracking table
-    await db.execute('''
-      CREATE TABLE _deltasync_version (
-        table_name TEXT PRIMARY KEY,
-        version INTEGER NOT NULL DEFAULT 0
-      )
-    ''');
-  }
-
-  /// Called when database is opened
-  Future<void> _onOpen(Database db) async {
-    // Set up triggers for change tracking on all user tables
-    await _setupChangeTracking(db);
-  }
-
-  /// Sets up change tracking triggers for all user tables
-  Future<void> _setupChangeTracking(Database db) async {
-    // Get list of user tables (excluding DeltaSync system tables)
-    final tables = await db.query('sqlite_master',
-        where: "type = 'table' AND name NOT LIKE '_deltasync_%'");
-
-    for (final table in tables) {
-      final tableName = table['name'] as String;
-      await _createTableTriggers(db, tableName);
-    }
-  }
-
-  /// Creates triggers for a specific table
-  Future<void> _createTableTriggers(Database db, String tableName) async {
-    // Insert trigger
-    await db.execute('''
-      CREATE TRIGGER IF NOT EXISTS ${tableName}_insert_trigger
-      AFTER INSERT ON $tableName
-      BEGIN
-        INSERT INTO _deltasync_changes (
-          table_name, record_id, operation, timestamp, data, version
-        )
-        SELECT
-          '$tableName',
-          NEW.id,
-          'INSERT',
-          strftime('%s', 'now'),
-          json_object((
-            SELECT group_concat(quote(name) || ', ' || quote(CASE 
-              WHEN typeof(NEW.[' || name || ']) = 'text' THEN NEW.[' || name || ']
-              WHEN typeof(NEW.[' || name || ']) = 'integer' THEN CAST(NEW.[' || name || '] AS TEXT)
-              ELSE NULL
-            END))
-            FROM pragma_table_info('$tableName')
-          )),
-          COALESCE(MAX(version), 0) + 1
-        FROM _deltasync_changes;
-      END;
-    ''');
-
-    // Update trigger
-    await db.execute('''
-      CREATE TRIGGER IF NOT EXISTS ${tableName}_update_trigger
-      AFTER UPDATE ON $tableName
-      BEGIN
-        INSERT INTO _deltasync_changes (
-          table_name, record_id, operation, timestamp, data, version
-        )
-        SELECT
-          '$tableName',
-          NEW.id,
-          'UPDATE',
-          strftime('%s', 'now'),
-          json_object((
-            SELECT group_concat(quote(name) || ', ' || quote(CASE 
-              WHEN typeof(NEW.[' || name || ']) = 'text' THEN NEW.[' || name || ']
-              WHEN typeof(NEW.[' || name || ']) = 'integer' THEN CAST(NEW.[' || name || '] AS TEXT)
-              ELSE NULL
-            END))
-            FROM pragma_table_info('$tableName')
-          )),
-          COALESCE(MAX(version), 0) + 1
-        FROM _deltasync_changes;
-      END;
-    ''');
-
-    // Delete trigger
-    await db.execute('''
-      CREATE TRIGGER IF NOT EXISTS ${tableName}_delete_trigger
-      AFTER DELETE ON $tableName
-      BEGIN
-        INSERT INTO _deltasync_changes (
-          table_name, record_id, operation, timestamp, data, version
-        )
-        SELECT
-          '$tableName',
-          OLD.id,
-          'DELETE',
-          strftime('%s', 'now'),
-          json_object((
-            SELECT group_concat(quote(name) || ', ' || quote(CASE 
-              WHEN typeof(OLD.[' || name || ']) = 'text' THEN OLD.[' || name || ']
-              WHEN typeof(OLD.[' || name || ']) = 'integer' THEN CAST(OLD.[' || name || '] AS TEXT)
-              ELSE NULL
-            END))
-            FROM pragma_table_info('$tableName')
-          )),
-          COALESCE(MAX(version), 0) + 1
-        FROM _deltasync_changes;
-      END;
-    ''');
+    _changesProcessor = ChangesProcessor(db);
   }
 
   /// Sets the user ID for synchronization
@@ -195,31 +74,21 @@ class DeltaSync {
 
   /// Internal sync method
   Future<void> _sync() async {
-    if (_isSyncing || _userId == null || _db == null) return;
+    if (_isSyncing || _userId == null) return;
     _isSyncing = true;
 
     try {
-      // Fetch and apply remote changes first
       await _fetchAndApplyRemoteChanges();
 
-      // Then process local changes
-      final changeSet = await _getLocalChanges();
+      final changeSet = await _changesProcessor.getUnSyncedChanges();
       if (changeSet.insertions.changes.isNotEmpty ||
           changeSet.updates.changes.isNotEmpty ||
           changeSet.deletions.changes.isNotEmpty) {
-        // Send changes to server
         final processedResponse = await _sendChanges(changeSet);
 
         if (processedResponse.status == 'success' &&
             processedResponse.processed) {
-          final changes = await _db!.query(
-            '_deltasync_changes',
-            where: 'synced = 0',
-            orderBy: 'version ASC',
-          );
-
-          // Mark changes as synced
-          await _markChangesSynced(changes);
+          await _markChangesSynced(changeSet.changeIds);
         }
       }
     } catch (e) {
@@ -229,19 +98,14 @@ class DeltaSync {
     }
   }
 
-  /// Gets local changes that haven't been synced
-  Future<ChangeSet> _getLocalChanges() async {
-    return await _changesProcessor.getLocalChanges();
-  }
-
   /// Sends changes to the server
   Future<ChangeProcessingResponse> _sendChanges(ChangeSet changes) async {
     return await _networkService.sendChanges(changes);
   }
 
   /// Marks changes as synced
-  Future<void> _markChangesSynced(List<Map<String, dynamic>> changes) async {
-    await _changesProcessor.markChangesSynced(changes);
+  Future<void> _markChangesSynced(List<int> changeIds) async {
+    await _changesProcessor.markChangesSynced(changeIds);
   }
 
   /// Fetches and applies remote changes
@@ -257,8 +121,7 @@ class DeltaSync {
   /// Cleans up resources
   Future<void> dispose() async {
     await pauseSync();
-    await _db?.close();
-    _db = null;
+    await _database.close();
     _networkService.dispose();
   }
 }
