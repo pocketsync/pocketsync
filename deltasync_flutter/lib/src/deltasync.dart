@@ -93,14 +93,21 @@ class DeltaSync {
         INSERT INTO _deltasync_changes (
           table_name, record_id, operation, timestamp, data, version
         )
-        VALUES (
+        SELECT
           '$tableName',
           NEW.id,
           'INSERT',
           strftime('%s', 'now'),
-          json_object('id', NEW.id),
-          (SELECT COALESCE(MAX(version), 0) + 1 FROM _deltasync_changes)
-        );
+          json_object((
+            SELECT group_concat(quote(name) || ', ' || quote(CASE 
+              WHEN typeof(NEW.[' || name || ']) = 'text' THEN NEW.[' || name || ']
+              WHEN typeof(NEW.[' || name || ']) = 'integer' THEN CAST(NEW.[' || name || '] AS TEXT)
+              ELSE NULL
+            END))
+            FROM pragma_table_info('$tableName')
+          )),
+          COALESCE(MAX(version), 0) + 1
+        FROM _deltasync_changes;
       END;
     ''');
 
@@ -112,14 +119,21 @@ class DeltaSync {
         INSERT INTO _deltasync_changes (
           table_name, record_id, operation, timestamp, data, version
         )
-        VALUES (
+        SELECT
           '$tableName',
           NEW.id,
           'UPDATE',
           strftime('%s', 'now'),
-          json_object('id', NEW.id),
-          (SELECT COALESCE(MAX(version), 0) + 1 FROM _deltasync_changes)
-        );
+          json_object((
+            SELECT group_concat(quote(name) || ', ' || quote(CASE 
+              WHEN typeof(NEW.[' || name || ']) = 'text' THEN NEW.[' || name || ']
+              WHEN typeof(NEW.[' || name || ']) = 'integer' THEN CAST(NEW.[' || name || '] AS TEXT)
+              ELSE NULL
+            END))
+            FROM pragma_table_info('$tableName')
+          )),
+          COALESCE(MAX(version), 0) + 1
+        FROM _deltasync_changes;
       END;
     ''');
 
@@ -131,14 +145,21 @@ class DeltaSync {
         INSERT INTO _deltasync_changes (
           table_name, record_id, operation, timestamp, data, version
         )
-        VALUES (
+        SELECT
           '$tableName',
           OLD.id,
           'DELETE',
           strftime('%s', 'now'),
-          json_object('id', OLD.id),
-          (SELECT COALESCE(MAX(version), 0) + 1 FROM _deltasync_changes)
-        );
+          json_object((
+            SELECT group_concat(quote(name) || ', ' || quote(CASE 
+              WHEN typeof(OLD.[' || name || ']) = 'text' THEN OLD.[' || name || ']
+              WHEN typeof(OLD.[' || name || ']) = 'integer' THEN CAST(OLD.[' || name || '] AS TEXT)
+              ELSE NULL
+            END))
+            FROM pragma_table_info('$tableName')
+          )),
+          COALESCE(MAX(version), 0) + 1
+        FROM _deltasync_changes;
       END;
     ''');
   }
@@ -178,30 +199,28 @@ class DeltaSync {
     _isSyncing = true;
 
     try {
-      // Get local changes
+      // Fetch and apply remote changes first
+      await _fetchAndApplyRemoteChanges();
+
+      // Then process local changes
       final changeSet = await _getLocalChanges();
-      if (changeSet.insertions.changes.isEmpty &&
-          changeSet.updates.changes.isEmpty &&
-          changeSet.deletions.changes.isEmpty) {
-        return;
-      }
+      if (changeSet.insertions.changes.isNotEmpty ||
+          changeSet.updates.changes.isNotEmpty ||
+          changeSet.deletions.changes.isNotEmpty) {
+        // Send changes to server
+        final processedResponse = await _sendChanges(changeSet);
 
-      // Send changes to server
-      final processedResponse = await _sendChanges(changeSet);
+        if (processedResponse.status == 'success' &&
+            processedResponse.processed) {
+          final changes = await _db!.query(
+            '_deltasync_changes',
+            where: 'synced = 0',
+            orderBy: 'version ASC',
+          );
 
-      if (processedResponse.status == 'success' &&
-          processedResponse.processed) {
-        final changes = await _db!.query(
-          '_deltasync_changes',
-          where: 'synced = 0',
-          orderBy: 'version ASC',
-        );
-
-        // Mark changes as synced
-        await _markChangesSynced(changes);
-
-        // Get and apply remote changes
-        await _fetchAndApplyRemoteChanges();
+          // Mark changes as synced
+          await _markChangesSynced(changes);
+        }
       }
     } catch (e) {
       print('Sync error: $e');
