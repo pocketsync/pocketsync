@@ -91,7 +91,7 @@ class ChangesProcessor {
     await batch.commit();
   }
 
-  ChangeSet _computeChangeSetFromChangeLogs(List<ChangeLog> changeLogs) {
+  ChangeSet _computeChangeSetFromChangeLogs(Iterable<ChangeLog> changeLogs) {
     final insertions = <String, List<Map<String, dynamic>>>{};
     final updates = <String, List<Map<String, dynamic>>>{};
     final deletions = <String, List<Map<String, dynamic>>>{};
@@ -144,7 +144,7 @@ class ChangesProcessor {
   }
 
   /// Applies remote changes to local database
-  Future<void> applyRemoteChanges(List<ChangeLog> changeLogs) async {
+  Future<void> applyRemoteChanges(Iterable<ChangeLog> changeLogs) async {
     if (changeLogs.isEmpty) return;
 
     final changeSet = _computeChangeSetFromChangeLogs(changeLogs);

@@ -4,6 +4,7 @@ import { ChangeLogsController } from './change-logs.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AppUsersService } from '../app-users/app-users.service';
 import { DevicesService } from '../devices/devices.service';
+import { ChangesGateway } from './changes.gateway';
 
 @Module({
   imports: [PrismaModule],
@@ -12,6 +13,7 @@ import { DevicesService } from '../devices/devices.service';
     ChangeLogsService,
     AppUsersService,
     DevicesService,
+    ChangesGateway,
   ],
 })
 export class ChangeLogsModule { }

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer';
 import 'package:deltasync_flutter/src/errors/sync_error.dart';
 import 'package:deltasync_flutter/src/models/change_set.dart';
 import 'package:sqflite/sqflite.dart';
@@ -14,14 +13,12 @@ class DeltaSync {
   DeltaSync._internal();
 
   late DeltaSyncDatabase _database;
-  Timer? _syncTimer;
   String? _userId;
 
   late DeltaSyncNetworkService _networkService;
   late ChangesProcessor _changesProcessor;
   bool _isSyncing = false;
   bool _isInitialized = false;
-  Duration? _syncInterval;
 
   /// Returns the database instance
   /// Throws [StateError] if DeltaSync is not initialized
@@ -37,11 +34,10 @@ class DeltaSync {
   /// Initializes DeltaSync with the given configuration
   Future<void> initialize({
     required String dbPath,
-    required Duration syncInterval,
     required DeltaSyncOptions options,
     Future<void> Function(Database db)? onCreate,
   }) async {
-    _syncInterval = syncInterval;
+    if (_isInitialized) return;
 
     _networkService = DeltaSyncNetworkService(
       serverUrl: options.serverUrl,
@@ -62,7 +58,12 @@ class DeltaSync {
       _networkService.setDeviceId(deviceId);
     }
 
-    _changesProcessor = ChangesProcessor(_database, conflictResolver: options.conflictResolver);
+    _changesProcessor = ChangesProcessor(
+      _database,
+      conflictResolver: options.conflictResolver,
+    );
+
+    _networkService.onChangesReceived = _changesProcessor.applyRemoteChanges;
     _isInitialized = true;
   }
 
@@ -74,25 +75,10 @@ class DeltaSync {
 
   /// Starts the synchronization process
   Future<void> startSync() async {
-    if (_syncTimer != null) return;
-    if (_syncInterval == null) throw Exception('Sync interval not set');
     if (_userId == null) throw Exception('User ID not set');
 
-    // Start periodic sync
-    _syncTimer = Timer.periodic(_syncInterval!, (_) => _sync());
     // Perform initial sync
     await _sync();
-  }
-
-  /// Pauses the synchronization process
-  Future<void> pauseSync() async {
-    _syncTimer?.cancel();
-    _syncTimer = null;
-  }
-
-  /// Resumes the synchronization process
-  Future<void> resumeSync() async {
-    await startSync();
   }
 
   /// Internal sync method
@@ -101,8 +87,6 @@ class DeltaSync {
     _isSyncing = true;
 
     try {
-      await _fetchAndApplyRemoteChanges();
-
       final changeSet = await _changesProcessor.getUnSyncedChanges();
       if (changeSet.insertions.changes.isNotEmpty ||
           changeSet.updates.changes.isNotEmpty ||
@@ -131,34 +115,8 @@ class DeltaSync {
     await _changesProcessor.markChangesSynced(changeIds);
   }
 
-  /// Fetches and applies remote changes
-  Future<void> _fetchAndApplyRemoteChanges() async {
-    try {
-      final processedChanges = await _database.query(
-        '__deltasync_processed_changes',
-        columns: ['change_log_id'],
-      );
-      final processedIds =
-          processedChanges.map((row) => row['change_log_id'] as int).toList();
-
-      final remoteChanges = await _networkService.fetchRemoteChanges(
-        excludeChangeIds: processedIds,
-      );
-
-      if (remoteChanges.isNotEmpty) {
-        await _changesProcessor.applyRemoteChanges(remoteChanges);
-        log('Fetched and applied ${remoteChanges.length} changes');
-      } else {
-        log('No remote changes to apply');
-      }
-    } catch (e) {
-      log('Fetch and apply remote changes failed', error: e);
-    }
-  }
-
   /// Cleans up resources
   Future<void> dispose() async {
-    await pauseSync();
     await _database.close();
     _networkService.dispose();
   }

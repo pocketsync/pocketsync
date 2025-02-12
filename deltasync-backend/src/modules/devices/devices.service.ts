@@ -121,15 +121,6 @@ export class DevicesService {
     });
   }
 
-  async updateLastSeen(userId: string, deviceId: string) {
-    await this.findOne(userId, deviceId);
-
-    return this.prisma.device.update({
-      where: { deviceId },
-      data: { lastSeenAt: new Date() },
-    });
-  }
-
   private async validateAppUserAccess(userId: string, userIdentifier: string) {
     const appUser = await this.prisma.appUser.findUnique({
       where: { userIdentifier },

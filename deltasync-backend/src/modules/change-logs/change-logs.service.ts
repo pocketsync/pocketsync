@@ -2,6 +2,7 @@ import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common
 import { PrismaService } from '../prisma/prisma.service';
 import { ChangeSetDto } from './dto/change-set.dto';
 import { ChangeLog, Device } from '@prisma/client';
+import { ChangesGateway } from './changes.gateway';
 
 @Injectable()
 export class ChangeLogsService {
@@ -9,6 +10,7 @@ export class ChangeLogsService {
 
   constructor(
     private prisma: PrismaService,
+    private changesGateway: ChangesGateway,
   ) { }
 
   async processChange(userIdentifier: string, deviceId: string, changeSets: ChangeSetDto[]) {
@@ -16,6 +18,9 @@ export class ChangeLogsService {
     try {
       const changeLog = await this.createChangLog(userIdentifier, deviceId, changeSets);
       this.logger.log(`Change log ${changeLog.id} ${changeLog.processedAt ? 'already exists' : 'created'}`);
+
+      // Notify other devices through the gateway
+      this.changesGateway.notifyChanges(deviceId, changeLog);
 
       return changeLog;
     } catch (error) {
@@ -27,27 +32,6 @@ export class ChangeLogsService {
       });
       throw new InternalServerErrorException('Error processing change');
     }
-  }
-
-  async fetchMissingChanges(device: Device, data: { excludeIds: number[] }): Promise<ChangeLog[]> {
-    this.logger.log(`Fetching changes from anything but ${device.deviceId}. Exclude: ${data.excludeIds.join(',')}`);
-    const changes = await this.prisma.changeLog.findMany({
-      where: {
-        userIdentifier: device.userIdentifier,
-        id: { not: { in: data.excludeIds } },
-        deviceId: { not: device.deviceId },
-      },
-      orderBy: {
-        id: 'asc'
-      }
-    });
-    if (changes.length === 0) {
-      this.logger.log(`No changes found for ${device.deviceId}`);
-    } else {
-      this.logger.debug(`Found ${changes.length} changes for ${device.deviceId}`);
-    }
-
-    return changes;
   }
 
   private async createChangLog(userIdentifier: string, deviceId: string, changeSets: ChangeSetDto[]) {

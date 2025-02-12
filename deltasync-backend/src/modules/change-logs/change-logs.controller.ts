@@ -83,23 +83,4 @@ export class ChangeLogsController {
       );
     }
   }
-
-  @Get()
-  async fetchChanges(
-    @Headers('x-user-id') userIdentifier: string,
-    @Headers('x-device-id') deviceIdentifier: string,
-    @Headers('x-project-id') projectId: string,
-    @Body() data: { excludeIds: number[] }
-  ) {
-    if (!userIdentifier || !deviceIdentifier) {
-      throw new UnauthorizedException('Both user identifier and device identifier are required');
-    }
-
-    await this.getOrCreateUserFromId(userIdentifier, projectId)
-    const device = await this.getOrCreateDeviceFromId(deviceIdentifier, userIdentifier, projectId)
-
-    const changes = await this.changesService.fetchMissingChanges(device, data)
-
-    return changes
-  }
 }

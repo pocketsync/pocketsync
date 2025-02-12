@@ -43,9 +43,4 @@ export class DevicesController {
   remove(@Request() req, @Param('id') id: string) {
     return this.devicesService.remove(req.user.id, id);
   }
-
-  @Post(':id/last-seen')
-  updateLastSeen(@Request() req, @Param('id') id: string) {
-    return this.devicesService.updateLastSeen(req.user.id, id);
-  }
 }
