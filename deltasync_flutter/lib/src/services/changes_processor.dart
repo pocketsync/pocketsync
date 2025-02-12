@@ -27,6 +27,15 @@ class ChangesProcessor {
     return DateTime.fromMillisecondsSinceEpoch(timestamp);
   }
 
+  /// Sets the last fetch date in the system device state database
+  Future<void> setLastFetchDate(DateTime date) async {
+    await _db.insert(
+      '__deltasync_state',
+      {'last_sync_timestamp': date.millisecondsSinceEpoch},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
   /// Gets local changes formatted as a ChangeSet
   Future<ChangeSet> getUnSyncedChanges() async {
     final changes = await _db.query(
@@ -137,5 +146,7 @@ class ChangesProcessor {
     applyTableChanges(changeSet.deletions, 'DELETE');
 
     await batch.commit();
+
+    await setLastFetchDate(DateTime.now());
   }
 }
