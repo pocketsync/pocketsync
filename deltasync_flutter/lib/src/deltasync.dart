@@ -61,7 +61,7 @@ class DeltaSync {
       _networkService.setDeviceId(deviceId);
     }
 
-    _changesProcessor = ChangesProcessor(db);
+    _changesProcessor = ChangesProcessor(_database);
     _isInitialized = true;
   }
 
@@ -133,9 +133,19 @@ class DeltaSync {
   Future<void> _fetchAndApplyRemoteChanges() async {
     try {
       final lastFetchedAt = await _changesProcessor.getLastFetchDate();
+
+      // Get list of already processed changes
+      final processedChanges = await _database.query(
+        '__deltasync_processed_changes',
+        columns: ['change_log_id'],
+      );
+      final processedIds = processedChanges.map((row) => row['change_log_id'] as int).toList();
+
       final remoteChanges = await _networkService.fetchRemoteChanges(
         lastFetchedAt: lastFetchedAt,
+        excludeChangeIds: processedIds,
       );
+
       if (remoteChanges.isNotEmpty) {
         await _changesProcessor.applyRemoteChanges(remoteChanges);
         log('Fetched and applied ${remoteChanges.length} changes');

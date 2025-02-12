@@ -51,7 +51,7 @@ class ChangesProcessor {
   Future<ChangeSet> getUnSyncedChanges() async {
     final changes = await _db.query(
       '__deltasync_changes',
-      where: 'synced = 0',
+      where: 'synced = 0 AND source = "local"',
       orderBy: 'version ASC',
     );
 
@@ -177,46 +177,65 @@ class ChangesProcessor {
 
   /// Applies remote changes to local database
   Future<void> applyRemoteChanges(List<ChangeLog> changeLogs) async {
+    if (changeLogs.isEmpty) return;
+
     final batch = _db.batch();
-
     final changeSet = _computeChangeSetFromChangeLogs(changeLogs);
-
-    void applyTableChanges(TableChanges changes, String operation) {
-      changes.changes.forEach((tableName, tableRows) {
-        for (final row in tableRows.rows) {
-          switch (operation) {
-            case 'INSERT':
-              log('Inserting row: $row');
-              batch.insert(tableName, row);
-              break;
-            case 'UPDATE':
-              log('Updating row: $row');
-              batch.update(
-                tableName,
-                row,
-                where: 'id = ?',
-                whereArgs: [row['id']],
-              );
-              break;
-            case 'DELETE':
-              log('Deleting row: $row');
-              batch.delete(
-                tableName,
-                where: 'id = ?',
-                whereArgs: [row['id']],
-              );
-              break;
+    
+    // Track which changes we're about to process
+    final now = DateTime.now().millisecondsSinceEpoch;
+    
+    void applyTableChanges(TableChanges changes, String operation) async {
+      for (final entry in changes.changes.entries) {
+        final tableName = entry.key;
+        final tableRows = entry.value;
+        
+        // Disable triggers before applying changes
+        await (_db as DeltaSyncDatabase).disableTriggers(_db, tableName);
+        
+        try {
+          for (final row in tableRows.rows) {
+            switch (operation) {
+              case 'INSERT':
+                batch.insert(tableName, row);
+                break;
+              case 'UPDATE':
+                batch.update(
+                  tableName,
+                  row,
+                  where: 'id = ?',
+                  whereArgs: [row['id']],
+                );
+                break;
+              case 'DELETE':
+                batch.delete(
+                  tableName,
+                  where: 'id = ?',
+                  whereArgs: [row['id']],
+                );
+                break;
+            }
           }
+        } finally {
+          // Always re-enable triggers after operation
+          await (_db as DeltaSyncDatabase).enableTriggers(_db, tableName);
         }
+      }
+    }
+
+    // Apply all changes
+    await applyTableChanges(changeSet.insertions, 'INSERT');
+    await applyTableChanges(changeSet.updates, 'UPDATE');
+    await applyTableChanges(changeSet.deletions, 'DELETE');
+
+    // Mark these changes as processed
+    for (final log in changeLogs) {
+      batch.insert('__deltasync_device_state', {
+        'change_log_id': log.id,
+        'processed_at': now,
       });
     }
 
-    applyTableChanges(changeSet.insertions, 'INSERT');
-    applyTableChanges(changeSet.updates, 'UPDATE');
-    applyTableChanges(changeSet.deletions, 'DELETE');
-
     await batch.commit();
-
-    await setLastFetchDate(DateTime.now());
   }
 }

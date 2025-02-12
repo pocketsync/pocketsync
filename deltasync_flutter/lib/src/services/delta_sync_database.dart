@@ -40,7 +40,8 @@ class DeltaSyncDatabase {
         timestamp INTEGER NOT NULL,
         data TEXT NOT NULL,
         version INTEGER NOT NULL,
-        synced INTEGER DEFAULT 0
+        synced INTEGER DEFAULT 0,
+        source TEXT DEFAULT 'local'
       )
     ''');
 
@@ -179,6 +180,37 @@ class DeltaSyncDatabase {
     return "($conditions)";
   }
 
+  /// Disables triggers for a table
+  Future<void> disableTriggers(String tableName) async {
+    if (_db == null) return;
+
+    await _db!.execute('''
+      UPDATE sqlite_master 
+      SET sql = REPLACE(sql, 'TRIGGER', 'TRIGGER IF NULL')
+      WHERE type = 'trigger' 
+      AND name IN (
+        'after_insert_$tableName',
+        'after_update_$tableName',
+        'after_delete_$tableName'
+      );
+    ''');
+  }
+
+  /// Enables triggers for a table
+  Future<void> enableTriggers(String tableName) async {
+    if (_db == null) return;
+    await _db!.execute('''
+      UPDATE sqlite_master 
+      SET sql = REPLACE(sql, 'TRIGGER IF NULL', 'TRIGGER')
+      WHERE type = 'trigger' 
+      AND name IN (
+        'after_insert_$tableName',
+        'after_update_$tableName',
+        'after_delete_$tableName'
+      );
+    ''');
+  }
+
   /// Closes the database
   Future<void> close() async {
     await _db?.close();
@@ -263,5 +295,20 @@ class DeltaSyncDatabase {
     List<Object?>? arguments,
   ]) async {
     return await _db!.rawQuery(sql, arguments);
+  }
+
+  /// Starts a batch operation
+  Batch batch() {
+    return _db!.batch();
+  }
+
+  /// Commits a batch operation
+  Future<List<Object?>> commitBatch(Batch batch) async {
+    return await batch.commit();
+  }
+
+  /// Applies a batch operation without reading the results
+  Future<void> applyBatch(Batch batch) async {
+    await batch.apply();
   }
 }
