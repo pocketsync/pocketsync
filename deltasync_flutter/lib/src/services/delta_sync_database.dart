@@ -40,7 +40,7 @@ class DeltaSyncDatabase {
         timestamp INTEGER NOT NULL,
         data TEXT NOT NULL,
         version INTEGER NOT NULL,
-        synced INTEGER DEFAULT 0,
+        synced INTEGER DEFAULT 0
       )
     ''');
 
@@ -62,6 +62,15 @@ class DeltaSyncDatabase {
       CREATE TABLE __deltasync_processed_changes (
         change_log_id INTEGER PRIMARY KEY,
         processed_at INTEGER NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS __deltasync_trigger_backup (
+        table_name TEXT NOT NULL,
+        trigger_name TEXT NOT NULL,
+        trigger_sql TEXT NOT NULL,
+        PRIMARY KEY (table_name, trigger_name)
       )
     ''');
 
@@ -186,31 +195,67 @@ class DeltaSyncDatabase {
   Future<void> disableTriggers(String tableName) async {
     if (_db == null) return;
 
-    await _db!.execute('''
-      UPDATE sqlite_master 
-      SET sql = REPLACE(sql, 'TRIGGER', 'TRIGGER IF NULL')
-      WHERE type = 'trigger' 
-      AND name IN (
+    // Store original trigger definitions before dropping
+    final triggers = await _db!.query(
+      'sqlite_master',
+      where: "type = 'trigger' AND tbl_name = ? AND name IN (?, ?, ?)",
+      whereArgs: [
+        tableName,
         'after_insert_$tableName',
         'after_update_$tableName',
         'after_delete_$tableName'
-      );
+      ],
+    );
+
+    // Drop existing triggers
+    for (final trigger in triggers) {
+      final triggerName = trigger['name'] as String;
+      await _db!.execute('DROP TRIGGER IF EXISTS $triggerName');
+    }
+
+    // Store trigger definitions for later recreation
+    await _db!.execute('''
+      CREATE TABLE IF NOT EXISTS __deltasync_trigger_backup (
+        table_name TEXT NOT NULL,
+        trigger_name TEXT NOT NULL,
+        trigger_sql TEXT NOT NULL,
+        PRIMARY KEY (table_name, trigger_name)
+      )
     ''');
+
+    final batch = _db!.batch();
+    for (final trigger in triggers) {
+      batch.insert('__deltasync_trigger_backup', {
+        'table_name': tableName,
+        'trigger_name': trigger['name'],
+        'trigger_sql': trigger['sql'],
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit();
   }
 
   /// Enables triggers for a table
   Future<void> enableTriggers(String tableName) async {
     if (_db == null) return;
-    await _db!.execute('''
-      UPDATE sqlite_master 
-      SET sql = REPLACE(sql, 'TRIGGER IF NULL', 'TRIGGER')
-      WHERE type = 'trigger' 
-      AND name IN (
-        'after_insert_$tableName',
-        'after_update_$tableName',
-        'after_delete_$tableName'
-      );
-    ''');
+
+    // Get stored trigger definitions
+    final triggers = await _db!.query(
+      '__deltasync_trigger_backup',
+      where: 'table_name = ?',
+      whereArgs: [tableName],
+    );
+
+    // Recreate triggers
+    for (final trigger in triggers) {
+      await _db!.execute(trigger['trigger_sql'] as String);
+    }
+
+    // Clean up backup for this table
+    await _db!.delete(
+      '__deltasync_trigger_backup',
+      where: 'table_name = ?',
+      whereArgs: [tableName],
+    );
   }
 
   /// Closes the database

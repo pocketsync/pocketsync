@@ -77,7 +77,7 @@ class DeltaSyncNetworkService {
     final response = await _dio.get(
       url,
       options: _getRequestOptions(),
-      queryParameters: {'excludeIds': excludeChangeIds},
+      data: {'excludeIds': excludeChangeIds},
     );
 
     final changes = ChangeLog.fromJsonList(response.data as List);

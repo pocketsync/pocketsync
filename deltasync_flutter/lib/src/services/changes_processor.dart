@@ -13,7 +13,7 @@ class ChangesProcessor {
   Future<ChangeSet> getUnSyncedChanges() async {
     final changes = await _db.query(
       '__deltasync_changes',
-      where: 'synced = 0 AND source = "local"',
+      where: 'synced = 0',
       orderBy: 'version ASC',
     );
 
