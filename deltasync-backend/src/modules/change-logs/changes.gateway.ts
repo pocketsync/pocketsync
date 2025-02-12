@@ -1,4 +1,4 @@
-import { WebSocketGateway, WebSocketServer, OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websockets';
+import { WebSocketGateway, WebSocketServer, OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage } from '@nestjs/websockets';
 import { Injectable, Logger } from '@nestjs/common';
 import { Server } from 'socket.io';
 import { PrismaService } from '../prisma/prisma.service';
@@ -68,6 +68,24 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
         }
     }
 
+    @SubscribeMessage('acknowledge-changes')
+    async handleAcknowledgeChanges(client: any, payload: { changeIds: number[] }) {
+        const deviceId = Array.from(this.connectedDevices.entries())
+            .find(([_, socketId]) => socketId === client.id)?.[0];
+
+        if (!deviceId) {
+            this.logger.warn('Acknowledgment received from unknown device');
+            return;
+        }
+
+        await this.prisma.device.update({
+            where: { deviceId },
+            data: { lastSeenAt: new Date() }
+        });
+
+        this.logger.log(`Device ${deviceId} acknowledged ${payload.changeIds.length} changes`);
+    }
+
     private async sendMissedChanges(deviceId: string, userIdentifier: string) {
         const device = await this.prisma.device.findFirst({
             where: { deviceId, userIdentifier }
@@ -89,7 +107,10 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
         if (changes.length > 0) {
             const socketId = this.connectedDevices.get(deviceId);
             if (socketId) {
-                this.server.to(socketId).emit('changes', changes);
+                this.server.to(socketId).emit('changes', {
+                    changes,
+                    requiresAck: true
+                });
             }
         }
     }
@@ -104,7 +125,10 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
         this.logger.log(`Notifying ${connectedDeviceIds.length} devices of new change`);
 
         for (const [_, socketId] of connectedDeviceIds) {
-            this.server.to(socketId).emit('changes', [changeLog]);
+            this.server.to(socketId).emit('changes', {
+                changes: [changeLog],
+                requiresAck: true
+            });
         }
     }
 }

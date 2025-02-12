@@ -107,10 +107,18 @@ class DeltaSyncNetworkService {
 
       _socket!.onDisconnect((_) => log('Socket.IO disconnected'));
 
-      _socket!.on('changes', (data) {
+      _socket!.on('changes', (data) async {
         if (onChangesReceived != null) {
-          final changelogs = List.from(data).map((raw) => ChangeLog.fromJson(raw));
-          onChangesReceived!(changelogs);
+          final changesData = data as Map<String, dynamic>;
+          final changelogs = List.from(changesData['changes'])
+              .map((raw) => ChangeLog.fromJson(raw));
+          await onChangesReceived!(changelogs);
+          // Acknowledge receipt of changes
+          if (changesData['requiresAck'] == true) {
+            _socket!.emit('acknowledge-changes', {
+              'changeIds': changelogs.map((log) => log.id).toList(),
+            });
+          }
         }
       });
 
