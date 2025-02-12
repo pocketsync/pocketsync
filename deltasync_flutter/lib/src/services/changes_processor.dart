@@ -1,8 +1,9 @@
 import 'dart:convert';
-import 'dart:developer';
+
 import 'package:deltasync_flutter/deltasync_flutter.dart';
 import 'package:deltasync_flutter/src/models/change_log.dart';
-import '../models/change_set.dart';
+import 'package:deltasync_flutter/src/models/change_set.dart';
+import 'package:sqflite/sqflite.dart';
 
 class ChangesProcessor {
   final DeltaSyncDatabase _db;
@@ -143,19 +144,45 @@ class ChangesProcessor {
 
     final changeSet = _computeChangeSetFromChangeLogs(changeLogs);
     final now = DateTime.now().millisecondsSinceEpoch;
-    
+
     await _db.transaction((txn) async {
-      final batch = txn.batch();
-      
       Future<void> applyTableOperation(String tableName, Map<String, dynamic> row, String operation) async {
         try {
-          await _db.disableTriggers(tableName);
+          // Store original trigger definitions before dropping
+          final triggers = await txn.query(
+            'sqlite_master',
+            where: "type = 'trigger' AND tbl_name = ? AND name IN (?, ?, ?)",
+            whereArgs: [tableName, 'after_insert_$tableName', 'after_update_$tableName', 'after_delete_$tableName'],
+          );
+
+          // Drop existing triggers
+          for (final trigger in triggers) {
+            final triggerName = trigger['name'] as String;
+            await txn.execute('DROP TRIGGER IF EXISTS $triggerName');
+          }
+
+          // Store trigger definitions for later recreation
+          final backupBatch = txn.batch();
+          for (final trigger in triggers) {
+            backupBatch.insert(
+              '__deltasync_trigger_backup',
+              {
+                'table_name': tableName,
+                'trigger_name': trigger['name'],
+                'trigger_sql': trigger['sql'],
+              },
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          }
+          await backupBatch.commit();
+
+          // Apply the change operation
           switch (operation) {
             case 'INSERT':
-              batch.insert(tableName, row);
+              await txn.insert(tableName, row);
               break;
             case 'UPDATE':
-              batch.update(
+              await txn.update(
                 tableName,
                 row,
                 where: 'id = ?',
@@ -163,7 +190,7 @@ class ChangesProcessor {
               );
               break;
             case 'DELETE':
-              batch.delete(
+              await txn.delete(
                 tableName,
                 where: 'id = ?',
                 whereArgs: [row['id']],
@@ -171,7 +198,24 @@ class ChangesProcessor {
               break;
           }
         } finally {
-          await _db.enableTriggers(tableName);
+          // Get stored trigger definitions
+          final backupTriggers = await txn.query(
+            '__deltasync_trigger_backup',
+            where: 'table_name = ?',
+            whereArgs: [tableName],
+          );
+
+          // Recreate triggers
+          for (final trigger in backupTriggers) {
+            await txn.execute(trigger['trigger_sql'] as String);
+          }
+
+          // Clean up backup for this table
+          await txn.delete(
+            '__deltasync_trigger_backup',
+            where: 'table_name = ?',
+            whereArgs: [tableName],
+          );
         }
       }
 
@@ -196,14 +240,11 @@ class ChangesProcessor {
 
       // Mark these changes as processed only if all operations succeed
       for (final log in changeLogs) {
-        batch.insert('__deltasync_processed_changes', {
+        await txn.insert('__deltasync_processed_changes', {
           'change_log_id': log.id,
           'processed_at': now,
         });
       }
-
-      // This will only commit if no errors occurred
-      await batch.commit();
     });
   }
 }

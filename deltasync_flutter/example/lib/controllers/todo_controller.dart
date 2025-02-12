@@ -16,11 +16,7 @@ class TodoController {
   Future<List<Todo>> getTodos() async {
     final results = await db.rawQuery('SELECT * FROM todos');
     return results
-        .map((row) => Todo.fromMap({
-              'id': row['id'],
-              'title': row['title'],
-              'isCompleted': row['isCompleted']
-            }))
+        .map((row) => Todo.fromMap({'id': row['id'], 'title': row['title'], 'isCompleted': row['isCompleted']}))
         .toList();
   }
 
