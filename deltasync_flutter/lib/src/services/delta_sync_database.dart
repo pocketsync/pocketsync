@@ -29,7 +29,7 @@ class DeltaSyncDatabase {
   Future<void> _initializeDeltaSyncTables(Database db) async {
     // Create change tracking table
     await db.execute('''
-      CREATE TABLE _deltasync_changes (
+      CREATE TABLE __deltasync_changes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         table_name TEXT NOT NULL,
         record_id TEXT NOT NULL,
@@ -43,9 +43,19 @@ class DeltaSyncDatabase {
 
     // Create version tracking table
     await db.execute('''
-      CREATE TABLE _deltasync_version (
+      CREATE TABLE __deltasync_version (
         table_name TEXT PRIMARY KEY,
         version INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    // Create device state tracking table
+    await db.execute('''
+      CREATE TABLE __deltasync_device_state (
+        device_id TEXT PRIMARY KEY,
+        last_sync_timestamp INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
       )
     ''');
   }
@@ -55,7 +65,7 @@ class DeltaSyncDatabase {
     // Get list of user tables (excluding all system tables)
     final tables = await db.query('sqlite_master',
         where:
-            "type = 'table' AND name NOT LIKE '_deltasync_%' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'android_%' AND name NOT LIKE 'ios_%' AND name NOT LIKE '.%' AND name NOT LIKE 'system_%' AND name NOT LIKE 'sys_%'");
+            "type = 'table' AND name NOT LIKE '__deltasync_%' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'android_%' AND name NOT LIKE 'ios_%' AND name NOT LIKE '.%' AND name NOT LIKE 'system_%' AND name NOT LIKE 'sys_%'");
 
     for (final table in tables) {
       final tableName = table['name'] as String;
@@ -70,7 +80,7 @@ class DeltaSyncDatabase {
       CREATE TRIGGER IF NOT EXISTS ${tableName}_insert_trigger
       AFTER INSERT ON $tableName
       BEGIN
-        INSERT INTO _deltasync_changes (
+        INSERT INTO __deltasync_changes (
           table_name, record_id, operation, timestamp, data, version
         )
         SELECT
@@ -86,7 +96,7 @@ class DeltaSyncDatabase {
             END)) FROM pragma_table_info('$tableName')))
           ),
           COALESCE(MAX(version), 0) + 1
-        FROM _deltasync_changes;
+        FROM __deltasync_changes;
       END;
     ''');
 
@@ -99,7 +109,7 @@ class DeltaSyncDatabase {
                OLD.[' || cols.name || '] != NEW.[' || cols.name || '])
       )
       BEGIN
-        INSERT INTO _deltasync_changes (
+        INSERT INTO __deltasync_changes (
           table_name, record_id, operation, timestamp, data, version
         )
         SELECT
@@ -117,7 +127,7 @@ class DeltaSyncDatabase {
             END)) FROM pragma_table_info('$tableName')))
           ),
           COALESCE(MAX(version), 0) + 1
-        FROM _deltasync_changes;
+        FROM __deltasync_changes;
       END;
     ''');
 
@@ -126,7 +136,7 @@ class DeltaSyncDatabase {
       CREATE TRIGGER IF NOT EXISTS ${tableName}_delete_trigger
       AFTER DELETE ON $tableName
       BEGIN
-        INSERT INTO _deltasync_changes (
+        INSERT INTO __deltasync_changes (
           table_name, record_id, operation, timestamp, data, version
         )
         SELECT
@@ -142,7 +152,7 @@ class DeltaSyncDatabase {
             END)) FROM pragma_table_info('$tableName')))
           ),
           COALESCE(MAX(version), 0) + 1
-        FROM _deltasync_changes;
+        FROM __deltasync_changes;
       END;
     ''');
   }

@@ -7,10 +7,30 @@ class ChangesProcessor {
 
   ChangesProcessor(this._db);
 
+  /// Gets the last fetch date from the system device state database
+  Future<DateTime?> getLastFetchDate() async {
+    final result = await _db.query(
+      '__deltasync_state',
+      columns: ['last_sync_timestamp'],
+      limit: 1,
+    );
+
+    if (result.isEmpty) {
+      return null;
+    }
+
+    final timestamp = result.first['last_sync_timestamp'] as int?;
+    if (timestamp == null) {
+      return null;
+    }
+
+    return DateTime.fromMillisecondsSinceEpoch(timestamp);
+  }
+
   /// Gets local changes formatted as a ChangeSet
   Future<ChangeSet> getUnSyncedChanges() async {
     final changes = await _db.query(
-      '_deltasync_changes',
+      '__deltasync_changes',
       where: 'synced = 0',
       orderBy: 'version ASC',
     );
@@ -72,7 +92,7 @@ class ChangesProcessor {
     final batch = _db.batch();
     for (final id in changeIds) {
       batch.update(
-        '_deltasync_changes',
+        '__deltasync_changes',
         {'synced': 1},
         where: 'id = ?',
         whereArgs: [id],

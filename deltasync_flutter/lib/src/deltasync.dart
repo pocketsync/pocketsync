@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'package:deltasync_flutter/src/models/change_set.dart';
-import 'package:deltasync_flutter/src/services/device_manager.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'models/delta_sync_options.dart';
 import 'models/change_processing_response.dart';
@@ -47,7 +45,6 @@ class DeltaSync {
       serverUrl: options.serverUrl,
       projectId: options.projectId,
       projectApiKey: options.projectApiKey,
-      deviceManager: DeviceManager(await SharedPreferences.getInstance()),
     );
 
     _database = DeltaSyncDatabase();
@@ -128,7 +125,10 @@ class DeltaSync {
   /// Fetches and applies remote changes
   Future<void> _fetchAndApplyRemoteChanges() async {
     try {
-      final remoteChanges = await _networkService.fetchRemoteChanges();
+      final lastFetchedAt = await _changesProcessor.getLastFetchDate();
+      final remoteChanges = await _networkService.fetchRemoteChanges(
+        lastFetchedAt: lastFetchedAt,
+      );
       await _changesProcessor.applyRemoteChanges(remoteChanges);
     } catch (e) {
       // TODO: handle error
