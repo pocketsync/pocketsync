@@ -1,6 +1,8 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
+typedef UpgradeCallback = Future<void> Function(Database db, int oldVersion, int newVersion);
+
 class DeltaSyncDatabase {
   Database? _db;
 
@@ -8,18 +10,19 @@ class DeltaSyncDatabase {
   Future<Database> initialize({
     required String dbPath,
     Future<void> Function(Database db)? onCreate,
+    UpgradeCallback? onUpgrade,
+    int version = 1,
   }) async {
     _db = await openDatabase(
       dbPath,
-      version: 1,
+      version: version,
+      onUpgrade: onUpgrade,
       onCreate: (db, version) async {
-        // Let user create their tables first if onCreate is provided
         if (onCreate != null) {
           await onCreate(db);
         }
-        // Then set up DeltaSync system tables
+
         await _initializeDeltaSyncTables(db);
-        // Finally set up change tracking triggers
         await _setupChangeTracking(db, version);
       },
     );
@@ -28,7 +31,6 @@ class DeltaSyncDatabase {
 
   /// Sets up the initial DeltaSync system tables
   Future<void> _initializeDeltaSyncTables(Database db) async {
-    // Create change tracking table
     await db.execute('''
       CREATE TABLE __deltasync_changes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,7 +44,6 @@ class DeltaSyncDatabase {
       )
     ''');
 
-    // Create version tracking table
     await db.execute('''
       CREATE TABLE __deltasync_version (
         table_name TEXT PRIMARY KEY,
@@ -50,7 +51,6 @@ class DeltaSyncDatabase {
       )
     ''');
 
-    // Create device state tracking table
     await db.execute('''
       CREATE TABLE __deltasync_device_state (
         device_id TEXT PRIMARY KEY,
@@ -60,7 +60,6 @@ class DeltaSyncDatabase {
       )
     ''');
 
-    // Generate and store device ID if it doesn't exist
     final deviceState = await db.query('__deltasync_device_state');
     if (deviceState.isEmpty) {
       final deviceId = const Uuid().v4();
@@ -76,10 +75,11 @@ class DeltaSyncDatabase {
 
   /// Sets up change tracking triggers for all user tables
   Future<void> _setupChangeTracking(Database db, int version) async {
-    // Get list of user tables (excluding all system tables)
-    final tables = await db.query('sqlite_master',
-        where:
-            "type = 'table' AND name NOT LIKE '__deltasync_%' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'android_%' AND name NOT LIKE 'ios_%' AND name NOT LIKE '.%' AND name NOT LIKE 'system_%' AND name NOT LIKE 'sys_%'");
+    final tables = await db.query(
+      'sqlite_master',
+      where:
+          "type = 'table' AND name NOT LIKE '__deltasync_%' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'android_%' AND name NOT LIKE 'ios_%' AND name NOT LIKE '.%' AND name NOT LIKE 'system_%' AND name NOT LIKE 'sys_%'",
+    );
 
     for (final table in tables) {
       final tableName = table['name'] as String;
@@ -88,11 +88,8 @@ class DeltaSyncDatabase {
   }
 
   /// Creates triggers for a specific table
-  Future<void> _createTableTriggers(
-      Database db, int schemaVersion, String tableName) async {
-    // Get columns for the table
-    final columns = (await db
-            .rawQuery("SELECT name FROM pragma_table_info(?)", [tableName]))
+  Future<void> _createTableTriggers(Database db, int schemaVersion, String tableName) async {
+    final columns = (await db.rawQuery("SELECT name FROM pragma_table_info(?)", [tableName]))
         .map((row) => row['name'] as String)
         .toList();
 
@@ -122,7 +119,7 @@ class DeltaSyncDatabase {
       END;
     ''');
 
-    // INSERT trigger 
+    // INSERT trigger
     await db.execute('''
       CREATE TRIGGER IF NOT EXISTS after_insert_$tableName
       AFTER INSERT ON $tableName
