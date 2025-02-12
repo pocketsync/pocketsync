@@ -29,11 +29,9 @@ class ChangesProcessor {
     for (final change in changes) {
       final tableName = change['table_name'] as String;
       final operation = change['operation'] as String;
-      final rawData =
-          jsonDecode(change['data'] as String) as Map<String, dynamic>;
-      final data = operation == 'DELETE'
-          ? rawData['old'] as Map<String, dynamic>
-          : rawData['new'] as Map<String, dynamic>;
+      final rawData = jsonDecode(change['data'] as String) as Map<String, dynamic>;
+      final data =
+          operation == 'DELETE' ? rawData['old'] as Map<String, dynamic> : rawData['new'] as Map<String, dynamic>;
 
       switch (operation) {
         case 'INSERT':
@@ -146,26 +144,19 @@ class ChangesProcessor {
 
   /// Applies remote changes to local database
   Future<void> applyRemoteChanges(Iterable<ChangeLog> changeLogs) async {
-    log('Applying remote changes: $changeLogs');
     if (changeLogs.isEmpty) return;
 
     final changeSet = _computeChangeSetFromChangeLogs(changeLogs);
-    final now = DateTime.now().millisecondsSinceEpoch;
+    log('Applying change set: ${changeSet.toJson()}');
 
     await _db.transaction((txn) async {
-      Future<void> applyTableOperation(
-          String tableName, Map<String, dynamic> row, String operation) async {
+      Future<void> applyTableOperation(String tableName, Map<String, dynamic> row, String operation) async {
         try {
           // Store original trigger definitions before dropping
           final triggers = await txn.query(
             'sqlite_master',
             where: "type = 'trigger' AND tbl_name = ? AND name IN (?, ?, ?)",
-            whereArgs: [
-              tableName,
-              'after_insert_$tableName',
-              'after_update_$tableName',
-              'after_delete_$tableName'
-            ],
+            whereArgs: [tableName, 'after_insert_$tableName', 'after_update_$tableName', 'after_delete_$tableName'],
           );
 
           // Drop existing triggers

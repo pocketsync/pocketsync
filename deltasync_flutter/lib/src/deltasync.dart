@@ -68,6 +68,9 @@ class DeltaSync {
     );
 
     _networkService.onChangesReceived = _changesProcessor.applyRemoteChanges;
+
+    // Set up real-time change notification
+    _database.onChangesAdded = (_) => _sync();
     _isInitialized = true;
   }
 
@@ -102,7 +105,8 @@ class DeltaSync {
           changeSet.deletions.changes.isNotEmpty) {
         final processedResponse = await _sendChanges(changeSet);
 
-        if (processedResponse.status == 'success' && processedResponse.processed) {
+        if (processedResponse.status == 'success' &&
+            processedResponse.processed) {
           await _markChangesSynced(changeSet.changeIds);
         }
       }
@@ -114,10 +118,12 @@ class DeltaSync {
   }
 
   /// Sends changes to the server
-  Future<ChangeProcessingResponse> _sendChanges(ChangeSet changes) async => await _networkService.sendChanges(changes);
+  Future<ChangeProcessingResponse> _sendChanges(ChangeSet changes) async =>
+      await _networkService.sendChanges(changes);
 
   /// Marks changes as synced
-  Future<void> _markChangesSynced(List<int> changeIds) async => await _changesProcessor.markChangesSynced(changeIds);
+  Future<void> _markChangesSynced(List<int> changeIds) async =>
+      await _changesProcessor.markChangesSynced(changeIds);
 
   /// Cleans up resources
   Future<void> dispose() async {
