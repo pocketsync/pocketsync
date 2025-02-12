@@ -1,7 +1,6 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChangeSetDto } from './dto/change-set.dto';
-import { ChangeLog, Device } from '@prisma/client';
 import { ChangesGateway } from './changes.gateway';
 
 @Injectable()

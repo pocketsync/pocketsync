@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:deltasync_flutter/deltasync_flutter.dart';
 import 'package:deltasync_flutter/src/models/change_log.dart';
@@ -145,6 +146,7 @@ class ChangesProcessor {
 
   /// Applies remote changes to local database
   Future<void> applyRemoteChanges(Iterable<ChangeLog> changeLogs) async {
+    log('Applying remote changes: $changeLogs');
     if (changeLogs.isEmpty) return;
 
     final changeSet = _computeChangeSetFromChangeLogs(changeLogs);
@@ -291,12 +293,12 @@ class ChangesProcessor {
       }
 
       // Mark these changes as processed only if all operations succeed
-      for (final log in changeLogs) {
-        await txn.insert('__deltasync_processed_changes', {
-          'change_log_id': log.id,
-          'processed_at': now,
-        });
-      }
+      // for (final log in changeLogs) {
+      //   await txn.insert('__deltasync_processed_changes', {
+      //     'change_log_id': log.id,
+      //     'processed_at': now,
+      //   });
+      // }
     });
   }
 }

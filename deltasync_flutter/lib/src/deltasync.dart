@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 import 'package:deltasync_flutter/src/errors/sync_error.dart';
 import 'package:deltasync_flutter/src/models/change_set.dart';
 import 'package:sqflite/sqflite.dart';
@@ -88,7 +89,10 @@ class DeltaSync {
 
   /// Internal sync method
   Future<void> _sync() async {
-    if (_isSyncing || _userId == null) return;
+    if (_isSyncing || _userId == null) {
+      log('Sync already in progress or user ID not set');
+      return;
+    }
     _isSyncing = true;
 
     try {
@@ -98,8 +102,7 @@ class DeltaSync {
           changeSet.deletions.changes.isNotEmpty) {
         final processedResponse = await _sendChanges(changeSet);
 
-        if (processedResponse.status == 'success' &&
-            processedResponse.processed) {
+        if (processedResponse.status == 'success' && processedResponse.processed) {
           await _markChangesSynced(changeSet.changeIds);
         }
       }
@@ -111,12 +114,10 @@ class DeltaSync {
   }
 
   /// Sends changes to the server
-  Future<ChangeProcessingResponse> _sendChanges(ChangeSet changes) async =>
-      await _networkService.sendChanges(changes);
+  Future<ChangeProcessingResponse> _sendChanges(ChangeSet changes) async => await _networkService.sendChanges(changes);
 
   /// Marks changes as synced
-  Future<void> _markChangesSynced(List<int> changeIds) async =>
-      await _changesProcessor.markChangesSynced(changeIds);
+  Future<void> _markChangesSynced(List<int> changeIds) async => await _changesProcessor.markChangesSynced(changeIds);
 
   /// Cleans up resources
   Future<void> dispose() async {

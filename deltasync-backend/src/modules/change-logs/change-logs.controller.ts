@@ -16,31 +16,6 @@ export class ChangeLogsController {
     private readonly appUsersService: AppUsersService,
   ) { }
 
-  private async getOrCreateUserFromId(userId: string, projectId: string) {
-    let appUser = await this.appUsersService.findByUserIdentifier(userId, projectId);
-    if (!appUser) {
-      appUser = await this.appUsersService.createFromSdk({
-        userIdentifier: userId,
-        projectId: projectId,
-      });
-    }
-
-    return appUser
-  }
-
-  private async getOrCreateDeviceFromId(deviceId: string, userId: string, projectId: string) {
-    let device = await this.devicesService.findByDeviceId(deviceId);
-    if (!device) {
-      device = await this.devicesService.createFromSdk({
-        deviceId: deviceId,
-        userIdentifier: userId,
-        projectId: projectId,
-      });
-    }
-
-    return device
-  }
-
   @Post()
   async submitChange(
     @Headers('x-user-id') userIdentifier: string,
@@ -52,8 +27,8 @@ export class ChangeLogsController {
       throw new UnauthorizedException('User identifier and device id are required');
     }
 
-    const appUser = await this.getOrCreateUserFromId(userIdentifier, projectId)
-    const device = await this.getOrCreateDeviceFromId(deviceId, userIdentifier, projectId)
+    const appUser = await this.appUsersService.getOrCreateUserFromId(userIdentifier, projectId)
+    const device = await this.devicesService.getOrCreateDeviceFromId(deviceId, userIdentifier, projectId)
 
     try {
       await this.changesService.processChange(

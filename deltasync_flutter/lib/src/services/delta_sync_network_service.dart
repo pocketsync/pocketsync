@@ -11,7 +11,6 @@ import 'package:socket_io_client/socket_io_client.dart' as socket_io;
 class DeltaSyncNetworkService {
   final Dio _dio;
   socket_io.Socket? _socket;
-  bool _isConnected = false;
 
   final String _serverUrl;
   final String _projectId;
@@ -30,7 +29,8 @@ class DeltaSyncNetworkService {
   })  : _dio = Dio(),
         _serverUrl = serverUrl,
         _projectId = projectId,
-        _projectApiKey = projectApiKey;
+        _projectApiKey = projectApiKey,
+        _deviceId = deviceId;
 
   void setUserId(String userId) {
     _userId = userId;
@@ -87,7 +87,7 @@ class DeltaSyncNetworkService {
     if (_socket != null || _userId == null || _deviceId == null) return;
 
     try {
-      _socket = socket_io.io(_serverUrl, {
+      _socket = socket_io.io('$_serverUrl/changes', {
         'transports': ['websocket'],
         'autoConnect': true,
         'reconnection': true,
@@ -103,20 +103,13 @@ class DeltaSyncNetworkService {
         }
       });
 
-      _socket!.onConnect((_) {
-        _isConnected = true;
-        log('Socket.IO connected');
-      });
+      _socket!.onConnect((_) => log('Socket.IO connected'));
 
-      _socket!.onDisconnect((_) {
-        _isConnected = false;
-        log('Socket.IO disconnected');
-      });
+      _socket!.onDisconnect((_) => log('Socket.IO disconnected'));
 
       _socket!.on('changes', (data) {
         if (onChangesReceived != null) {
-          final changelogs =
-              List.from(data).map((raw) => ChangeLog.fromJson(raw));
+          final changelogs = List.from(data).map((raw) => ChangeLog.fromJson(raw));
           onChangesReceived!(changelogs);
         }
       });
@@ -128,7 +121,6 @@ class DeltaSyncNetworkService {
       _socket!.connect();
     } catch (e) {
       log('Socket.IO connection failed: $e');
-      _isConnected = false;
     }
   }
 

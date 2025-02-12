@@ -134,4 +134,16 @@ export class AppUsersService {
       },
     });
   }
+
+  async getOrCreateUserFromId(userId: string, projectId: string) {
+    let appUser = await this.findByUserIdentifier(userId, projectId);
+    if (!appUser) {
+      appUser = await this.createFromSdk({
+        userIdentifier: userId,
+        projectId: projectId,
+      });
+    }
+
+    return appUser
+  }
 }

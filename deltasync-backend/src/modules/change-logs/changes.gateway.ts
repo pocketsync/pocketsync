@@ -3,6 +3,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Server } from 'socket.io';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChangeLog } from '@prisma/client';
+import { AppUsersService } from '../app-users/app-users.service';
+import { DevicesService } from '../devices/devices.service';
 
 @Injectable()
 @WebSocketGateway({
@@ -19,6 +21,8 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
 
     constructor(
         private prisma: PrismaService,
+        private readonly devicesService: DevicesService,
+        private readonly appUsersService: AppUsersService,
     ) { }
 
     async handleConnection(client: any) {
@@ -44,25 +48,8 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
             return;
         }
 
-        // Verify device exists and belongs to the project
-        const device = await this.prisma.device.findFirst({
-            where: {
-                deviceId: device_id,
-                userIdentifier: user_id,
-                appUser: {
-                    projectId: project_id
-                }
-            },
-            include: {
-                appUser: true
-            }
-        });
-
-        if (!device) {
-            this.logger.warn(`Connection rejected: Invalid device credentials for device ${device_id}`);
-            client.disconnect();
-            return;
-        }
+        await this.appUsersService.getOrCreateUserFromId(user_id, project_id);
+        await this.devicesService.getOrCreateDeviceFromId(device_id, user_id, project_id);
 
         this.connectedDevices.set(device_id, client.id);
         this.logger.log(`Device ${device_id} connected to project ${project_id}`);
@@ -113,6 +100,8 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
         // Notify all connected devices except the source
         const connectedDeviceIds = Array.from(this.connectedDevices.entries())
             .filter(([id, sid]) => id !== sourceDeviceId && sid !== sourceSocketId);
+
+        this.logger.log(`Notifying ${connectedDeviceIds.length} devices of new change`);
 
         for (const [_, socketId] of connectedDeviceIds) {
             this.server.to(socketId).emit('changes', [changeLog]);

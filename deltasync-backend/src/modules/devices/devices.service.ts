@@ -135,4 +135,17 @@ export class DevicesService {
       throw new ForbiddenException('Access denied to this app user');
     }
   }
+
+  async getOrCreateDeviceFromId(deviceId: string, userId: string, projectId: string) {
+    let device = await this.findByDeviceId(deviceId);
+    if (!device) {
+      device = await this.createFromSdk({
+        deviceId: deviceId,
+        userIdentifier: userId,
+        projectId: projectId,
+      });
+    }
+
+    return device
+  }
 }
