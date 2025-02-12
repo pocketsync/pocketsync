@@ -43,7 +43,7 @@ export class ChangeLogsController {
 
   @Post()
   async submitChange(
-    @Headers('x-user-identifier') userIdentifier: string,
+    @Headers('x-user-id') userIdentifier: string,
     @Headers('x-project-id') projectId: string,
     @Headers('x-device-id') deviceId: string,
     @Body() submission: ChangeSubmissionDto,
@@ -86,10 +86,10 @@ export class ChangeLogsController {
 
   @Get()
   async fetchChanges(
-    @Headers('x-user-identifier') userIdentifier: string,
+    @Headers('x-user-id') userIdentifier: string,
     @Headers('x-device-id') deviceIdentifier: string,
     @Headers('x-project-id') projectId: string,
-    @Body() data: { lastFetchedAt: Date }
+    @Body() data: { lastFetchedAt?: Date }
   ) {
     if (!userIdentifier || !deviceIdentifier) {
       throw new UnauthorizedException('Both user identifier and device identifier are required');

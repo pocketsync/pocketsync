@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:deltasync_flutter/src/models/change_set.dart';
+import 'package:deltasync_flutter/src/services/device_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'models/delta_sync_options.dart';
 import 'models/change_processing_response.dart';
@@ -40,10 +42,12 @@ class DeltaSync {
     Future<void> Function(Database db)? onCreate,
   }) async {
     _syncInterval = syncInterval;
+
     _networkService = DeltaSyncNetworkService(
       serverUrl: options.serverUrl,
       projectId: options.projectId,
       projectApiKey: options.projectApiKey,
+      deviceManager: DeviceManager(await SharedPreferences.getInstance()),
     );
 
     _database = DeltaSyncDatabase();

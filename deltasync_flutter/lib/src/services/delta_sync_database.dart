@@ -18,8 +18,9 @@ class DeltaSyncDatabase {
         }
         // Then set up DeltaSync system tables
         await _initializeDeltaSyncTables(db);
+        // Finally set up change tracking triggers
+        await _setupChangeTracking(db);
       },
-      onOpen: _onOpen,
     );
     return _db!;
   }
@@ -47,12 +48,6 @@ class DeltaSyncDatabase {
         version INTEGER NOT NULL DEFAULT 0
       )
     ''');
-  }
-
-  /// Called when database is opened
-  Future<void> _onOpen(Database db) async {
-    // Set up triggers for change tracking on all user tables
-    await _setupChangeTracking(db);
   }
 
   /// Sets up change tracking triggers for all user tables
@@ -83,23 +78,26 @@ class DeltaSyncDatabase {
           NEW.id,
           'INSERT',
           strftime('%s', 'now'),
-          json_object((
-            SELECT group_concat(quote(name) || ', ' || quote(CASE 
+          json_object(
+            'new', json_object((SELECT group_concat(quote(name) || ', ' || quote(CASE 
               WHEN typeof(NEW.[' || name || ']) = 'text' THEN NEW.[' || name || ']
               WHEN typeof(NEW.[' || name || ']) = 'integer' THEN CAST(NEW.[' || name || '] AS TEXT)
               ELSE NULL
-            END))
-            FROM pragma_table_info('$tableName')
-          )),
+            END)) FROM pragma_table_info('$tableName')))
+          ),
           COALESCE(MAX(version), 0) + 1
         FROM _deltasync_changes;
       END;
     ''');
 
-    // Update trigger
+    // Update trigger with modified columns tracking
     await db.execute('''
       CREATE TRIGGER IF NOT EXISTS ${tableName}_update_trigger
       AFTER UPDATE ON $tableName
+      WHEN EXISTS (SELECT 1 FROM pragma_table_info('$tableName') AS cols
+        WHERE (OLD.[' || cols.name || '] IS NOT NEW.[' || cols.name || '] OR 
+               OLD.[' || cols.name || '] != NEW.[' || cols.name || '])
+      )
       BEGIN
         INSERT INTO _deltasync_changes (
           table_name, record_id, operation, timestamp, data, version
@@ -109,20 +107,21 @@ class DeltaSyncDatabase {
           NEW.id,
           'UPDATE',
           strftime('%s', 'now'),
-          json_object((
-            SELECT group_concat(quote(name) || ', ' || quote(CASE 
-              WHEN typeof(NEW.[' || name || ']) = 'text' THEN NEW.[' || name || ']
-              WHEN typeof(NEW.[' || name || ']) = 'integer' THEN CAST(NEW.[' || name || '] AS TEXT)
+          json_object(
+            'modified', json_object((SELECT group_concat(quote(name) || ', ' || quote(CASE
+              WHEN typeof(NEW.[' || name || ']) = 'text' AND (OLD.[' || name || '] IS NOT NEW.[' || name || '] OR OLD.[' || name || '] != NEW.[' || name || '])
+                THEN NEW.[' || name || ']
+              WHEN typeof(NEW.[' || name || ']) = 'integer' AND (OLD.[' || name || '] IS NOT NEW.[' || name || '] OR OLD.[' || name || '] != NEW.[' || name || '])
+                THEN CAST(NEW.[' || name || '] AS TEXT)
               ELSE NULL
-            END))
-            FROM pragma_table_info('$tableName')
-          )),
+            END)) FROM pragma_table_info('$tableName')))
+          ),
           COALESCE(MAX(version), 0) + 1
         FROM _deltasync_changes;
       END;
     ''');
 
-    // Delete trigger
+    // Delete trigger with old data capture
     await db.execute('''
       CREATE TRIGGER IF NOT EXISTS ${tableName}_delete_trigger
       AFTER DELETE ON $tableName
@@ -135,14 +134,13 @@ class DeltaSyncDatabase {
           OLD.id,
           'DELETE',
           strftime('%s', 'now'),
-          json_object((
-            SELECT group_concat(quote(name) || ', ' || quote(CASE 
+          json_object(
+            'old', json_object((SELECT group_concat(quote(name) || ', ' || quote(CASE 
               WHEN typeof(OLD.[' || name || ']) = 'text' THEN OLD.[' || name || ']
               WHEN typeof(OLD.[' || name || ']) = 'integer' THEN CAST(OLD.[' || name || '] AS TEXT)
               ELSE NULL
-            END))
-            FROM pragma_table_info('$tableName')
-          )),
+            END)) FROM pragma_table_info('$tableName')))
+          ),
           COALESCE(MAX(version), 0) + 1
         FROM _deltasync_changes;
       END;
