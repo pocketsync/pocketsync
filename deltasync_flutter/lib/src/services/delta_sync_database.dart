@@ -57,9 +57,10 @@ class DeltaSyncDatabase {
 
   /// Sets up change tracking triggers for all user tables
   Future<void> _setupChangeTracking(Database db) async {
-    // Get list of user tables (excluding DeltaSync system tables)
+    // Get list of user tables (excluding all system tables)
     final tables = await db.query('sqlite_master',
-        where: "type = 'table' AND name NOT LIKE '_deltasync_%'");
+        where:
+            "type = 'table' AND name NOT LIKE '_deltasync_%' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'android_%' AND name NOT LIKE 'ios_%' AND name NOT LIKE '.%' AND name NOT LIKE 'system_%' AND name NOT LIKE 'sys_%'");
 
     for (final table in tables) {
       final tableName = table['name'] as String;
