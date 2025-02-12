@@ -30,6 +30,10 @@ class ChangeLog {
     );
   }
 
+  static List<ChangeLog> fromJsonList(List<dynamic> jsonList) {
+    return jsonList.map((json) => ChangeLog.fromJson(json)).toList();
+  }
+
   @override
   String toString() {
     return 'ChangeLog{id: $id, userIdentifier: $userIdentifier, deviceId: $deviceId, '

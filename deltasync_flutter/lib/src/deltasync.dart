@@ -1,249 +1,245 @@
 import 'dart:async';
-import 'dart:developer';
 import 'package:deltasync_flutter/src/models/change_set.dart';
-import 'package:deltasync_flutter/src/models/delta_sync_options.dart';
-import 'package:deltasync_flutter/src/services/device_manager.dart';
-import 'package:deltasync_flutter/src/services/sync_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sqlite3/sqlite3.dart';
-import 'package:synchronized/synchronized.dart';
-import 'services/change_tracker.dart';
-import 'errors/sync_error.dart';
-
-const kDefaultSyncInternal = Duration(seconds: 10);
+import 'package:sqflite/sqflite.dart';
+import 'models/delta_sync_options.dart';
+import 'models/change_processing_response.dart';
+import 'services/delta_sync_network_service.dart';
+import 'services/changes_processor.dart';
 
 class DeltaSync {
-  static final DeltaSync instance = DeltaSync._();
-  DeltaSync._();
+  static final DeltaSync instance = DeltaSync._internal();
+  DeltaSync._internal();
 
   Database? _db;
-  ChangeTracker? _changeTracker;
-  SyncService? _syncService;
-  DeviceManager? _deviceManager;
-  bool _isInitialized = false;
-  DateTime? _lastFetchedAt;
   Timer? _syncTimer;
   String? _userId;
-  final _syncController = StreamController<ChangeSet>.broadcast();
-  StreamSubscription? _schemaChangeSubscription;
-  SharedPreferences? _sharedPreferences;
-  Duration? _syncInterval;
+
+  late DeltaSyncNetworkService _networkService;
+  late ChangesProcessor _changesProcessor;
   bool _isSyncing = false;
+  Duration? _syncInterval;
 
-  // Add new fields for sync state management
-  final _syncLock = Lock();
-  static const _syncTimeout = Duration(minutes: 5);
-  DateTime? _lastSyncAttempt;
-
-  Stream<ChangeSet> get changes => _syncController.stream;
-
+  /// Initializes DeltaSync with the given configuration
   Future<void> initialize({
     required String dbPath,
-    Duration syncInterval = const Duration(seconds: 30),
+    required Duration syncInterval,
     required DeltaSyncOptions options,
   }) async {
-    if (_isInitialized) return;
-
-    try {
-      _syncInterval = syncInterval;
-      _db = sqlite3.open(dbPath);
-      _sharedPreferences = await SharedPreferences.getInstance();
-      _deviceManager = DeviceManager(_sharedPreferences!);
-      _changeTracker = ChangeTracker(_db!, _deviceManager!.getDeviceId());
-
-      await _changeTracker!.setupTracking();
-      _lastFetchedAt = await _changeTracker!.getLastFetchedAt();
-
-      _syncService = SyncService(
-        serverUrl: options.serverUrl,
-        projectId: options.projectId,
-        apiKey: options.projectApiKey,
-        userIdentifier: _userId ?? '',
-        changeTracker: _changeTracker!,
-        deviceManager: _deviceManager!,
-      );
-
-      await _initializeWatcher();
-
-      _isInitialized = true;
-    } catch (e, stackTrace) {
-      await dispose();
-      throw SyncError('Failed to initialize DeltaSync: $e\n$stackTrace');
-    }
+    _syncInterval = syncInterval;
+    _networkService = DeltaSyncNetworkService(
+      serverUrl: options.serverUrl,
+      projectId: options.projectId,
+      projectApiKey: options.projectApiKey,
+    );
+    _db = await openDatabase(
+      dbPath,
+      version: 1,
+      onCreate: _onCreate,
+      onOpen: _onOpen,
+    );
+    _changesProcessor = ChangesProcessor(_db!);
   }
 
-  Future<void> setUserId({required String userId}) async {
-    if (!_isInitialized) throw StateError('DeltaSync not initialized');
+  /// Sets up the initial database schema
+  Future<void> _onCreate(Database db, int version) async {
+    // Create change tracking table
+    await db.execute('''
+      CREATE TABLE _deltasync_changes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        table_name TEXT NOT NULL,
+        record_id TEXT NOT NULL,
+        operation TEXT NOT NULL,
+        timestamp INTEGER NOT NULL,
+        data TEXT NOT NULL,
+        version INTEGER NOT NULL,
+        synced INTEGER DEFAULT 0
+      )
+    ''');
 
-    // Pause sync while updating user ID
-    final wasRunning = _syncTimer != null;
-    if (wasRunning) {
-      await pauseSync();
-    }
-
-    try {
-      _userId = userId;
-      if (_syncService != null) {
-        _syncService!.dispose();
-
-        _syncService = SyncService(
-          serverUrl: _syncService!.serverUrl,
-          projectId: _syncService!.projectId,
-          apiKey: _syncService!.apiKey,
-          userIdentifier: userId,
-          changeTracker: _changeTracker!,
-          deviceManager: _deviceManager!,
-        );
-      }
-    } finally {
-      if (wasRunning && _isInitialized) {
-        await resumeSync();
-      }
-    }
+    // Create version tracking table
+    await db.execute('''
+      CREATE TABLE _deltasync_version (
+        table_name TEXT PRIMARY KEY,
+        version INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
   }
 
-  Future<void> startSync() async {
-    if (!_isInitialized) throw StateError('DeltaSync not initialized');
-    if (_userId == null) throw StateError('User ID not set');
-
-    _startPeriodicSync(_syncInterval);
+  /// Called when database is opened
+  Future<void> _onOpen(Database db) async {
+    // Set up triggers for change tracking on all user tables
+    await _setupChangeTracking(db);
   }
 
-  Future<void> _checkForChanges() async {
-    if (!_isInitialized) return;
-
-    // Check if we're already syncing or if we've synced too recently
-    if (_isSyncing) {
-      // Check for stuck sync state
-      if (_lastSyncAttempt != null && DateTime.now().difference(_lastSyncAttempt!) > _syncTimeout) {
-        log('Sync appears stuck, resetting sync state');
-        _isSyncing = false;
-      } else {
-        return;
-      }
-    }
-
-    // Use a lock to prevent concurrent sync operations
-    await _syncLock.synchronized(() async {
-      if (_isSyncing) return;
-      _isSyncing = true;
-      _lastSyncAttempt = DateTime.now();
-
-      try {
-        // First process and upload local changes
-        final localChangeSets = await _changeTracker!.generateChangeSets(_lastFetchedAt ?? DateTime.now());
-
-        if (localChangeSets.isNotEmpty) {
-          try {
-            log('Uploading change set: ${localChangeSets.map((c) => c.toJson())}');
-            await _syncService!.uploadChanges(localChangeSets);
-
-            if (_isInitialized) {
-              for (var change in localChangeSets) {
-                _syncController.add(change);
-              }
-            }
-          } catch (e, stack) {
-            // Log the error but continue processing other changes
-            log('Failed to sync change set: $e\n$stack');
-          }
-        }
-
-        // Then fetch and apply remote changes
-        _lastFetchedAt ??= await _changeTracker!.getLastFetchedAt();
-        final remoteChanges = await _syncService!.fetchChanges(_lastFetchedAt!);
-
-        if (remoteChanges.isNotEmpty) {
-          for (final change in remoteChanges) {
-            final changeSet = change.changeSet;
-            await _changeTracker!.applyChangeSet(changeSet);
-          }
-
-          // Update last fetched timestamp after successfully applying changes
-          final now = DateTime.now().toUtc();
-          await _changeTracker!.updateLastFetchedAt(now);
-          _lastFetchedAt = now;
-        }
-      } catch (e, stack) {
-        if (_isInitialized) {
-          log('Sync error: $e\n$stack');
-          _syncController.addError(SyncError('Failed to sync changes: $e'));
-        }
-      } finally {
-        _isSyncing = false;
-        _lastSyncAttempt = null;
-      }
-    });
-  }
-
-  Future<void> dispose() async {
-    await _syncLock.synchronized(() async {
-      _syncTimer?.cancel();
-      await _schemaChangeSubscription?.cancel();
-      await _syncController.close();
-      _syncService?.dispose();
-      _db?.dispose();
-      _db = null;
-      _isInitialized = false;
-    });
-  }
-
-  void _setupSchemaChangeListener() {
-    _schemaChangeSubscription = _changeTracker!.schemaChanges.listen((schemaChange) {
-      _syncController.addError(SyncError(
-        'Schema changed for table ${schemaChange.tableName} '
-        'to version ${schemaChange.version}',
-      ));
-      pauseSync();
-    }, onError: (error) {
-      _syncController.addError(SyncError('Failed to monitor schema changes: $error'));
-    });
-  }
-
-  Future<void> _initializeWatcher() async {
-    final tables = _db!.select('''
-      SELECT name FROM sqlite_master 
-      WHERE type='table' 
-      AND name NOT LIKE 'sqlite_%'
-      AND name NOT LIKE '__deltasync_%'
-      AND name NOT LIKE 'android_%'
-      AND name NOT IN ('android_metadata', '_sync_metadata')
-    ''').map((row) => row['name'] as String).toList();
+  /// Sets up change tracking triggers for all user tables
+  Future<void> _setupChangeTracking(Database db) async {
+    // Get list of user tables (excluding DeltaSync system tables)
+    final tables = await db.query('sqlite_master',
+        where: "type = 'table' AND name NOT LIKE '_deltasync_%'");
 
     for (final table in tables) {
-      try {
-        await _changeTracker!.setupTableTracking(table);
-      } catch (e) {
-        log('Failed to set up tracking for table $table: $e');
-      }
+      final tableName = table['name'] as String;
+      await _createTableTriggers(db, tableName);
     }
-
-    _setupSchemaChangeListener();
   }
 
-  void _startPeriodicSync(Duration? interval) {
-    _syncTimer?.cancel();
-    _syncTimer = Timer.periodic(interval ?? kDefaultSyncInternal, (_) => _checkForChanges());
+  /// Creates triggers for a specific table
+  Future<void> _createTableTriggers(Database db, String tableName) async {
+    // Insert trigger
+    await db.execute('''
+      CREATE TRIGGER IF NOT EXISTS ${tableName}_insert_trigger
+      AFTER INSERT ON $tableName
+      BEGIN
+        INSERT INTO _deltasync_changes (
+          table_name, record_id, operation, timestamp, data, version
+        )
+        VALUES (
+          '$tableName',
+          NEW.id,
+          'INSERT',
+          strftime('%s', 'now'),
+          json_object('id', NEW.id),
+          (SELECT COALESCE(MAX(version), 0) + 1 FROM _deltasync_changes)
+        );
+      END;
+    ''');
+
+    // Update trigger
+    await db.execute('''
+      CREATE TRIGGER IF NOT EXISTS ${tableName}_update_trigger
+      AFTER UPDATE ON $tableName
+      BEGIN
+        INSERT INTO _deltasync_changes (
+          table_name, record_id, operation, timestamp, data, version
+        )
+        VALUES (
+          '$tableName',
+          NEW.id,
+          'UPDATE',
+          strftime('%s', 'now'),
+          json_object('id', NEW.id),
+          (SELECT COALESCE(MAX(version), 0) + 1 FROM _deltasync_changes)
+        );
+      END;
+    ''');
+
+    // Delete trigger
+    await db.execute('''
+      CREATE TRIGGER IF NOT EXISTS ${tableName}_delete_trigger
+      AFTER DELETE ON $tableName
+      BEGIN
+        INSERT INTO _deltasync_changes (
+          table_name, record_id, operation, timestamp, data, version
+        )
+        VALUES (
+          '$tableName',
+          OLD.id,
+          'DELETE',
+          strftime('%s', 'now'),
+          json_object('id', OLD.id),
+          (SELECT COALESCE(MAX(version), 0) + 1 FROM _deltasync_changes)
+        );
+      END;
+    ''');
   }
 
-  Future<List<ChangeSet>> getChanges() async {
-    if (!_isInitialized) throw StateError('DeltaSync not initialized');
-    return await _changeTracker!.generateChangeSets(_lastFetchedAt ?? DateTime.now());
+  /// Sets the user ID for synchronization
+  Future<void> setUserId({required String userId}) async {
+    _userId = userId;
+    _networkService.setUserId(userId);
   }
 
+  /// Starts the synchronization process
+  Future<void> startSync() async {
+    if (_syncTimer != null) return;
+    if (_syncInterval == null) throw Exception('Sync interval not set');
+    if (_userId == null) throw Exception('User ID not set');
+
+    // Start periodic sync
+    _syncTimer = Timer.periodic(_syncInterval!, (_) => _sync());
+    // Perform initial sync
+    await _sync();
+  }
+
+  /// Pauses the synchronization process
   Future<void> pauseSync() async {
     _syncTimer?.cancel();
     _syncTimer = null;
   }
 
-  Future<void> resumeSync({Duration? interval}) async {
-    if (!_isInitialized) throw StateError('DeltaSync not initialized');
-    if (_userId == null) throw StateError('User ID not set');
-
-    _startPeriodicSync(interval ?? _syncInterval);
+  /// Resumes the synchronization process
+  Future<void> resumeSync() async {
+    await startSync();
   }
 
-  bool get isInitialized => _isInitialized;
-  bool get isSyncing => _syncTimer != null;
-  bool get isUserSet => _userId != null;
+  /// Internal sync method
+  Future<void> _sync() async {
+    if (_isSyncing || _userId == null || _db == null) return;
+    _isSyncing = true;
+
+    try {
+      // Get local changes
+      final changeSet = await _getLocalChanges();
+      if (changeSet.insertions.changes.isEmpty &&
+          changeSet.updates.changes.isEmpty &&
+          changeSet.deletions.changes.isEmpty) {
+        return;
+      }
+
+      // Send changes to server
+      final processedResponse = await _sendChanges(changeSet);
+
+      if (processedResponse.status == 'success' &&
+          processedResponse.processed) {
+        final changes = await _db!.query(
+          '_deltasync_changes',
+          where: 'synced = 0',
+          orderBy: 'version ASC',
+        );
+
+        // Mark changes as synced
+        await _markChangesSynced(changes);
+
+        // Get and apply remote changes
+        await _fetchAndApplyRemoteChanges();
+      }
+    } catch (e) {
+      print('Sync error: $e');
+    } finally {
+      _isSyncing = false;
+    }
+  }
+
+  /// Gets local changes that haven't been synced
+  Future<ChangeSet> _getLocalChanges() async {
+    return await _changesProcessor.getLocalChanges();
+  }
+
+  /// Sends changes to the server
+  Future<ChangeProcessingResponse> _sendChanges(ChangeSet changes) async {
+    return await _networkService.sendChanges(changes);
+  }
+
+  /// Marks changes as synced
+  Future<void> _markChangesSynced(List<Map<String, dynamic>> changes) async {
+    await _changesProcessor.markChangesSynced(changes);
+  }
+
+  /// Fetches and applies remote changes
+  Future<void> _fetchAndApplyRemoteChanges() async {
+    try {
+      final remoteChanges = await _networkService.fetchRemoteChanges();
+      await _changesProcessor.applyRemoteChanges(remoteChanges);
+    } catch (e) {
+      // TODO: handle error
+    }
+  }
+
+  /// Cleans up resources
+  Future<void> dispose() async {
+    await pauseSync();
+    await _db?.close();
+    _db = null;
+    _networkService.dispose();
+  }
 }
