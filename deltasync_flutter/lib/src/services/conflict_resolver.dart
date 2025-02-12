@@ -17,9 +17,10 @@ enum ConflictResolutionStrategy {
 class ConflictResolver {
   final ConflictResolutionStrategy strategy;
   final Future<Map<String, dynamic>> Function(
-      String tableName,
-      Map<String, dynamic> localRow,
-      Map<String, dynamic> remoteRow)? customResolver;
+    String tableName,
+    Map<String, dynamic> localRow,
+    Map<String, dynamic> remoteRow,
+  )? customResolver;
 
   const ConflictResolver({
     this.strategy = ConflictResolutionStrategy.ignore,

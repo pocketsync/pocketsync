@@ -4,7 +4,6 @@ import 'dart:developer';
 import 'package:deltasync_flutter/deltasync_flutter.dart';
 import 'package:deltasync_flutter/src/models/change_log.dart';
 import 'package:deltasync_flutter/src/models/change_set.dart';
-import 'package:deltasync_flutter/src/services/conflict_resolver.dart';
 import 'package:sqflite/sqflite.dart';
 
 class ChangesProcessor {

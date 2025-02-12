@@ -1,8 +1,6 @@
+import 'package:deltasync_flutter/deltasync_flutter.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
-
-typedef UpgradeCallback = Future<void> Function(
-    Database db, int oldVersion, int newVersion);
 
 class DeltaSyncDatabase {
   Database? _db;
@@ -11,18 +9,19 @@ class DeltaSyncDatabase {
   /// Opens and initializes the database
   Future<Database> initialize({
     required String dbPath,
-    Future<void> Function(Database db)? onCreate,
-    UpgradeCallback? onUpgrade,
+    required DatabaseOptions options,
     int version = 1,
   }) async {
     _db = await openDatabase(
       dbPath,
       version: version,
-      onUpgrade: onUpgrade,
+      onOpen: options.onOpen,
+      onUpgrade: options.onUpgrade,
+      onConfigure: options.onConfigure,
+      onDowngrade: options.onDowngrade,
+      singleInstance: true,
       onCreate: (db, version) async {
-        if (onCreate != null) {
-          await onCreate(db);
-        }
+        await options.onCreate(db, version);
 
         await _initializeDeltaSyncTables(db);
         await _setupChangeTracking(db, version);

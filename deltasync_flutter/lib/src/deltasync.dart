@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:developer';
 import 'package:deltasync_flutter/src/errors/sync_error.dart';
 import 'package:deltasync_flutter/src/models/change_set.dart';
-import 'package:sqflite/sqflite.dart';
 import 'models/delta_sync_options.dart';
 import 'models/change_processing_response.dart';
 import 'services/delta_sync_network_service.dart';
@@ -40,7 +39,7 @@ class DeltaSync {
   Future<void> initialize({
     required String dbPath,
     required DeltaSyncOptions options,
-    Future<void> Function(Database db)? onCreate,
+    required DatabaseOptions databaseOptions,
   }) async {
     if (_isInitialized) return;
 
@@ -53,7 +52,7 @@ class DeltaSync {
     _database = DeltaSyncDatabase();
     final db = await _database.initialize(
       dbPath: dbPath,
-      onCreate: onCreate,
+      options: databaseOptions,
     );
 
     // Set device ID in network service

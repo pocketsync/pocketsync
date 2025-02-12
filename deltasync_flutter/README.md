@@ -31,6 +31,15 @@ dependencies:
 ```dart
 await DeltaSync.instance.initialize(
   dbPath: 'path/to/db',
+  databaseOptions: DatabaseOptions(
+    version: 1,
+    onCreate: (db) {
+      // Create tables logic
+    },
+    onUpgrade: (db, oldVersion, newVersion) {
+      // Upgrade logic
+    },
+  ),
   options: DeltaSyncOptions(
     projectId: 'project-id',
     projectApiKey: 'projectApiKey',
