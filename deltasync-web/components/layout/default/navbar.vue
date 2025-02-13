@@ -41,3 +41,26 @@
         </div>
     </nav>
 </template>
+
+
+<style scoped>
+.get-started-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.get-started-btn::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: 0.5s;
+}
+
+.get-started-btn:hover::after {
+    left: 100%;
+}
+</style>

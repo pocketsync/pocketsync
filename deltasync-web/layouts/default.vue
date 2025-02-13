@@ -2,43 +2,27 @@
 import Footer from '~/components/layout/default/Footer.vue';
 import NavBar from '~/components/layout/default/NavBar.vue';
 
+const route = useRoute();
+
+const useContentWrapper = () => {
+    return route.name !== 'index'
+};
 </script>
 
 <template>
     <div class="min-h-screen flex flex-col">
         <!-- Navbar -->
-       <NavBar />
+        <NavBar />
 
         <!-- Main Content -->
         <main class="flex-grow mt-16">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div v-if="useContentWrapper()" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <slot />
             </div>
+            <slot v-else />
         </main>
 
         <!-- Footer -->
         <Footer />
     </div>
 </template>
-
-<style scoped>
-.get-started-btn {
-    position: relative;
-    overflow: hidden;
-}
-
-.get-started-btn::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-    transition: 0.5s;
-}
-
-.get-started-btn:hover::after {
-    left: 100%;
-}
-</style>
