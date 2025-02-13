@@ -3,7 +3,9 @@ CREATE TABLE "projects" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "name" VARCHAR(255) NOT NULL,
     "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "user_id" UUID,
+    "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deleted_at" TIMESTAMP,
+    "user_id" UUID NOT NULL,
 
     CONSTRAINT "projects_pkey" PRIMARY KEY ("id")
 );
@@ -13,6 +15,7 @@ CREATE TABLE "app_users" (
     "user_identifier" VARCHAR(255) NOT NULL,
     "project_id" UUID NOT NULL,
     "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deleted_at" TIMESTAMP,
 
     CONSTRAINT "app_users_pkey" PRIMARY KEY ("user_identifier")
 );
@@ -23,6 +26,7 @@ CREATE TABLE "devices" (
     "user_identifier" VARCHAR(255) NOT NULL,
     "last_seen_at" TIMESTAMP,
     "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deleted_at" TIMESTAMP,
 
     CONSTRAINT "devices_pkey" PRIMARY KEY ("device_id")
 );
@@ -35,6 +39,7 @@ CREATE TABLE "change_logs" (
     "change_set" JSONB NOT NULL,
     "received_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "processed_at" TIMESTAMP,
+    "deleted_at" TIMESTAMP,
 
     CONSTRAINT "change_logs_pkey" PRIMARY KEY ("id")
 );
@@ -100,6 +105,7 @@ CREATE TABLE "auth_tokens" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "project_id" UUID NOT NULL,
     "user_id" UUID NOT NULL,
+    "name" VARCHAR(255),
     "token" VARCHAR(255) NOT NULL,
     "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -120,10 +126,13 @@ CREATE UNIQUE INDEX "user_social_connections_provider_id_provider_user_id_key" O
 CREATE UNIQUE INDEX "refresh_tokens_token_key" ON "refresh_tokens"("token");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "auth_tokens_name_key" ON "auth_tokens"("name");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "auth_tokens_token_key" ON "auth_tokens"("token");
 
 -- AddForeignKey
-ALTER TABLE "projects" ADD CONSTRAINT "projects_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "projects" ADD CONSTRAINT "projects_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "app_users" ADD CONSTRAINT "app_users_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "projects"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

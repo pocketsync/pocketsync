@@ -27,7 +27,10 @@ export class AppUsersService {
 
     const [data, total] = await Promise.all([
       this.prisma.appUser.findMany({
-        where: { projectId },
+        where: { 
+          projectId,
+          deletedAt: null
+        },
         include: {
           _count: {
             select: { devices: true },
@@ -38,7 +41,10 @@ export class AppUsersService {
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.appUser.count({
-        where: { projectId },
+        where: { 
+          projectId,
+          deletedAt: null
+        },
       }),
     ]);
 
@@ -56,8 +62,11 @@ export class AppUsersService {
   }
 
   async findOne(userId: string, userIdentifier: string) {
-    const appUser = await this.prisma.appUser.findUnique({
-      where: { userIdentifier },
+    const appUser = await this.prisma.appUser.findFirst({
+      where: { 
+        userIdentifier,
+        deletedAt: null
+      },
       include: {
         devices: true,
         project: true,
@@ -87,8 +96,9 @@ export class AppUsersService {
   async remove(userId: string, userIdentifier: string) {
     await this.findOne(userId, userIdentifier);
 
-    return this.prisma.appUser.delete({
+    return this.prisma.appUser.update({
       where: { userIdentifier },
+      data: { deletedAt: new Date() },
     });
   }
 
@@ -111,6 +121,7 @@ export class AppUsersService {
       where: {
         userIdentifier,
         projectId,
+        deletedAt: null
       },
       include: {
         project: true,

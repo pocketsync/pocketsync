@@ -4,13 +4,19 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { PaginatedResponse } from 'src/common/dto/paginated-response.dto';
+import { Project } from '@prisma/client';
+import { ProjectMapper } from './mappers/project.mapper';
 
 @Injectable()
 export class ProjectsService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private projectMapper: ProjectMapper,
+  ) { }
 
   async create(userId: string, createProjectDto: CreateProjectDto) {
-    const [project, defaultToken] = await this.prisma.$transaction(async (prisma) => {
+    const response = await this.prisma.$transaction(async (prisma) => {
       const project = await prisma.project.create({
         data: {
           ...createProjectDto,
@@ -27,13 +33,10 @@ export class ProjectsService {
         }
       });
 
-      return [project, defaultToken];
+      return this.projectMapper.toResponse(project, 0, [defaultToken]);
     });
 
-    return {
-      project,
-      defaultToken,
-    }
+    return response
   }
 
   async findAll(userId: string, { page = 1, limit = 10 }: PaginationQueryDto) {
@@ -56,17 +59,7 @@ export class ProjectsService {
       }),
     ]);
 
-    return {
-      data,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-        hasNextPage: skip + limit < total,
-        hasPreviousPage: page > 1,
-      },
-    };
+    return this.projectMapper.mapToPaginatedResponse(data, total, page, limit);
   }
 
   async findOne(userId: string, id: string) {
@@ -87,23 +80,45 @@ export class ProjectsService {
       throw new ForbiddenException('Access denied');
     }
 
-    return project;
+    const authTokens = await this.prisma.projectAuthTokens.findMany({
+      where: { projectId: id },
+    });
+
+    const userCount = project._count.appUsers;
+
+    return this.projectMapper.toResponse(project, userCount, authTokens);
   }
 
   async update(userId: string, id: string, updateProjectDto: UpdateProjectDto) {
     await this.findOne(userId, id); // Check ownership
 
-    return this.prisma.project.update({
+    const updatedProject = await this.prisma.project.update({
       where: { id },
       data: updateProjectDto,
+      include: {
+        _count: {
+          select: { appUsers: true },
+        },
+      },
     });
+
+    const authTokens = await this.prisma.projectAuthTokens.findMany({
+      where: { projectId: id },
+    });
+
+    const userCount = updatedProject._count.appUsers;
+
+    return this.projectMapper.toResponse(updatedProject, userCount, authTokens);
   }
 
   async remove(userId: string, id: string) {
     await this.findOne(userId, id); // Check ownership
 
-    return this.prisma.project.delete({
+    const updatedProject = await this.prisma.project.update({
       where: { id },
+      data: { deletedAt: new Date() },
     });
+
+    return this.projectMapper.toResponse(updatedProject, 0, []);
   }
 }

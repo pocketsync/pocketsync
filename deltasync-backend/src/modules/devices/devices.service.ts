@@ -14,7 +14,10 @@ export class DevicesService {
 
   async findByDeviceId(deviceId: string): Promise<Device | null> {
     return this.prisma.device.findFirst({
-      where: { deviceId },
+      where: { 
+        deviceId,
+        deletedAt: null
+      },
       include: {
         appUser: true,
       },
@@ -42,6 +45,17 @@ export class DevicesService {
       throw new NotFoundException('App user not found');
     }
 
+    const existingDevice = await this.prisma.device.findFirst({
+      where: {
+        deviceId: data.deviceId,
+        deletedAt: null
+      }
+    });
+
+    if (existingDevice) {
+      return existingDevice;
+    }
+
     return this.prisma.device.create({
       data: {
         deviceId: data.deviceId,
@@ -60,7 +74,10 @@ export class DevicesService {
 
     const [data, total] = await Promise.all([
       this.prisma.device.findMany({
-        where: { userIdentifier },
+        where: { 
+          userIdentifier,
+          deletedAt: null
+        },
         include: {
           _count: {
             select: { changeLogs: true },
@@ -116,8 +133,9 @@ export class DevicesService {
   async remove(userId: string, deviceId: string) {
     await this.findOne(userId, deviceId);
 
-    return this.prisma.device.delete({
+    return this.prisma.device.update({
       where: { deviceId },
+      data: { deletedAt: new Date() },
     });
   }
 

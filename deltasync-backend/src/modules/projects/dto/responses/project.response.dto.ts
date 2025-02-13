@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { AuthTokenResponseDto } from './auth-token.response.dto';
 
 export class ProjectResponseDto {
   @ApiProperty({
@@ -36,4 +37,19 @@ export class ProjectResponseDto {
     example: '2024-02-12T19:32:03.000Z',
   })
   updatedAt: Date;
+
+  @ApiProperty({
+    description: 'When the project was deleted',
+    example: '2024-02-12T19:32:03.000Z',
+    nullable: false,
+    default: 0,
+  })
+  userCount: number;
+
+  @ApiProperty({
+    description: 'Auth tokens for the project',
+    type: () => AuthTokenResponseDto,
+    isArray: true
+  })
+  authTokens: AuthTokenResponseDto[];
 }
