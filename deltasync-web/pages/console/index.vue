@@ -22,8 +22,9 @@
                                     First, create a new project to get your API keys and configure your sync settings.
                                 </p>
                                 <button @click="createProject"
-                                    class="mt-4 inline-flex items-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
-                                    Create new project
+                                    class="mt-4 inline-flex items-center rounded-md flex flex-inline space-x-3 border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                                    <PhPlus :size="20" />
+                                    <span>Create new project</span>
                                 </button>
                             </div>
                         </div>
@@ -126,6 +127,7 @@ DeltaSync.instance.startSync();
 </template>
 
 <script setup>
+import { PhPlus } from '@phosphor-icons/vue'
 import AlphaStageWarningCard from '~/components/layout/dashboard/alpha-stage-warning-card.vue'
 
 definePageMeta({
