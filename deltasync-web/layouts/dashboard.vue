@@ -39,7 +39,7 @@
         </div>
 
         <!-- Static sidebar for desktop -->
-        <LayoutDashboardSidebar />
+        <DashboardSidebar />
 
         <div class="flex flex-1 flex-col md:pl-64">
             <!-- Top header -->
@@ -52,37 +52,7 @@
             </div>
 
             <!-- Header -->
-            <header class="bg-white shadow">
-                <div class="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-                    <h1 class="text-lg font-semibold text-gray-900">Dashboard</h1>
-                    <div class="ml-4 flex items-center md:ml-6">
-                        <!-- Profile dropdown -->
-                        <div class="relative ml-3">
-                            <div>
-                                <button @click="userMenuOpen = !userMenuOpen" type="button"
-                                    class="flex max-w-xs items-center rounded-full bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
-                                    <span class="sr-only">Open user menu</span>
-                                    <div
-                                        class="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-medium">
-                                        JS
-                                    </div>
-                                </button>
-                            </div>
-                            <div v-if="userMenuOpen"
-                                class="absolute right-0 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                                <NuxtLink to="/console/profile"
-                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Your Profile
-                                </NuxtLink>
-                                <NuxtLink to="/console/settings"
-                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</NuxtLink>
-                                <button @click="handleSignOut"
-                                    class="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">Sign
-                                    out</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </header>
+            <DashboardHeader />
 
             <main class="flex-1">
                 <div class="py-6">
@@ -100,6 +70,9 @@ import { ref } from 'vue'
 import { PhList, PhX } from '@phosphor-icons/vue'
 import { PhBook, PhCode, PhFolder, PhArrowSquareOut } from '@phosphor-icons/vue'
 import { useRoute } from 'vue-router'
+
+import DashboardSidebar from '~/components/layout/dashboard/sidebar.vue'
+import DashboardHeader from '~/components/layout/dashboard/header.vue'
 
 const route = useRoute()
 const OpenMenuIcon = PhList
@@ -137,13 +110,4 @@ onMounted(() => {
         }
     })
 })
-
-async function handleSignOut() {
-    try {
-        // TODO: Implement sign out logic
-        console.log('Sign out clicked')
-    } catch (error) {
-        console.error('Sign out error:', error)
-    }
-}
 </script>
