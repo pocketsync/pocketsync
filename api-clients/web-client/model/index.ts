@@ -7,6 +7,7 @@ export * from './create-project-dto';
 export * from './login-dto';
 export * from './project-response-dto';
 export * from './project-response-list';
+export * from './refresh-token-dto';
 export * from './refresh-token-response-dto';
 export * from './register-dto';
 export * from './update-project-dto';

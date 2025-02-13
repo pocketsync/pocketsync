@@ -26,6 +26,8 @@ import type { AuthenticatedResponseDto } from '../model';
 // @ts-ignore
 import type { LoginDto } from '../model';
 // @ts-ignore
+import type { RefreshTokenDto } from '../model';
+// @ts-ignore
 import type { RefreshTokenResponseDto } from '../model';
 // @ts-ignore
 import type { RegisterDto } from '../model';
@@ -134,10 +136,13 @@ export const AuthenticationApiAxiosParamCreator = function (configuration?: Conf
         /**
          * Get a new access token using a valid refresh token
          * @summary Refresh access token
+         * @param {RefreshTokenDto} refreshTokenDto 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        refreshToken: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        refreshToken: async (refreshTokenDto: RefreshTokenDto, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'refreshTokenDto' is not null or undefined
+            assertParamExists('refreshToken', 'refreshTokenDto', refreshTokenDto)
             const localVarPath = `/auth/token/refresh`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -152,9 +157,12 @@ export const AuthenticationApiAxiosParamCreator = function (configuration?: Conf
 
 
     
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
             setSearchParams(localVarUrlObj, localVarQueryParameter);
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(refreshTokenDto, localVarRequestOptions, configuration)
 
             return {
                 url: toPathString(localVarUrlObj),
@@ -247,11 +255,12 @@ export const AuthenticationApiFp = function(configuration?: Configuration) {
         /**
          * Get a new access token using a valid refresh token
          * @summary Refresh access token
+         * @param {RefreshTokenDto} refreshTokenDto 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async refreshToken(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<RefreshTokenResponseDto>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.refreshToken(options);
+        async refreshToken(refreshTokenDto: RefreshTokenDto, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<RefreshTokenResponseDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.refreshToken(refreshTokenDto, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['AuthenticationApi.refreshToken']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -310,11 +319,12 @@ export const AuthenticationApiFactory = function (configuration?: Configuration,
         /**
          * Get a new access token using a valid refresh token
          * @summary Refresh access token
+         * @param {RefreshTokenDto} refreshTokenDto 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        refreshToken(options?: RawAxiosRequestConfig): AxiosPromise<RefreshTokenResponseDto> {
-            return localVarFp.refreshToken(options).then((request) => request(axios, basePath));
+        refreshToken(refreshTokenDto: RefreshTokenDto, options?: RawAxiosRequestConfig): AxiosPromise<RefreshTokenResponseDto> {
+            return localVarFp.refreshToken(refreshTokenDto, options).then((request) => request(axios, basePath));
         },
         /**
          * Register a new user with email and password
@@ -373,12 +383,13 @@ export class AuthenticationApi extends BaseAPI {
     /**
      * Get a new access token using a valid refresh token
      * @summary Refresh access token
+     * @param {RefreshTokenDto} refreshTokenDto 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof AuthenticationApi
      */
-    public refreshToken(options?: RawAxiosRequestConfig) {
-        return AuthenticationApiFp(this.configuration).refreshToken(options).then((request) => request(this.axios, this.basePath));
+    public refreshToken(refreshTokenDto: RefreshTokenDto, options?: RawAxiosRequestConfig) {
+        return AuthenticationApiFp(this.configuration).refreshToken(refreshTokenDto, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

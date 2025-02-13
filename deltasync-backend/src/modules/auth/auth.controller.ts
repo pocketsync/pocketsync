@@ -7,6 +7,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthenticatedResponseDto } from './dto/responses/authenticated.response.dto';
 import { RefreshTokenResponseDto } from './dto/responses/refresh-token.response.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -146,7 +147,7 @@ export class AuthController {
     status: 401,
     description: 'Invalid or expired refresh token'
   })
-  async refreshToken(@Body('refreshToken') refreshToken: string) {
-    return this.authService.refreshAccessToken(refreshToken);
+  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
+    return this.authService.refreshAccessToken(refreshTokenDto.refreshToken);
   }
 }

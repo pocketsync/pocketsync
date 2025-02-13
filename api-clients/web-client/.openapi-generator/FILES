@@ -22,6 +22,7 @@ model/index.ts
 model/login-dto.ts
 model/project-response-dto.ts
 model/project-response-list.ts
+model/refresh-token-dto.ts
 model/refresh-token-response-dto.ts
 model/register-dto.ts
 model/update-project-dto.ts
