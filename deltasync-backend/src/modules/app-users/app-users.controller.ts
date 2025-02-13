@@ -21,11 +21,6 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 export class AppUsersController {
   constructor(private readonly appUsersService: AppUsersService) {}
 
-  @Post()
-  create(@Request() req, @Body() createAppUserDto: CreateAppUserDto) {
-    return this.appUsersService.create(req.user.id, createAppUserDto);
-  }
-
   @Get('project/:projectId')
   findAll(
     @Request() req,
