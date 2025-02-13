@@ -5,8 +5,8 @@ import { ConfigService } from '@nestjs/config';
 import { ApiTags, ApiOperation, ApiResponse, ApiExcludeEndpoint } from '@nestjs/swagger';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import { UserResponseDto } from './dto/responses/user.response.dto';
 import { AuthenticatedResponseDto } from './dto/responses/authenticated.response.dto';
+import { RefreshTokenResponseDto } from './dto/responses/refresh-token.response.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -129,5 +129,24 @@ export class AuthController {
       HttpStatus.TEMPORARY_REDIRECT,
       `${frontendUrl}/auth/callback?${queryParams.toString()}`
     );
+  }
+
+  @Post('token/refresh')
+  @ApiOperation({
+    summary: 'Refresh access token',
+    description: 'Get a new access token using a valid refresh token',
+    operationId: 'refreshToken',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'New access token generated successfully',
+    type: RefreshTokenResponseDto
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid or expired refresh token'
+  })
+  async refreshToken(@Body('refreshToken') refreshToken: string) {
+    return this.authService.refreshAccessToken(refreshToken);
   }
 }

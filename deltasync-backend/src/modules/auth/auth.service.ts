@@ -8,6 +8,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { UserMapper } from './mappers/user.mapper';
 import { AuthenticatedResponseDto } from './dto/responses/authenticated.response.dto';
+import { RefreshTokenResponseDto } from './dto/responses/refresh-token.response.dto';
 
 @Injectable()
 export class AuthService {
@@ -81,7 +82,7 @@ export class AuthService {
     };
   }
 
-  async refreshAccessToken(refreshToken: string) {
+  async refreshAccessToken(refreshToken: string): Promise<RefreshTokenResponseDto> {
     const tokenRecord = await this.prisma.refreshToken.findUnique({
       where: { token: refreshToken },
       include: { user: true },
