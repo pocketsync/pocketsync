@@ -5,10 +5,28 @@ import type { LoginDto, RegisterDto, UserResponseDto } from 'web-client'
 import { useApi } from './useApi'
 import { AuthenticationApi } from 'web-client'
 
+interface AuthError {
+    message: string
+    code: AuthErrorCode
+    details?: Record<string, string[]>
+}
+
+type AuthErrorCode = 
+    | 'NETWORK_ERROR'
+    | 'INVALID_CREDENTIALS'
+    | 'ACCESS_DENIED'
+    | 'EMAIL_EXISTS'
+    | 'VALIDATION_ERROR'
+    | 'INVALID_TOKEN'
+    | 'TOKEN_EXPIRED'
+    | 'SOCIAL_AUTH_ERROR'
+    | 'UNKNOWN_ERROR'
+
 export const useAuth = () => {
     const user = ref<UserResponseDto | null>(null)
     const isAuthenticated = ref(false)
     const isLoading = ref(false)
+    const error = ref<AuthError | null>(null)
 
     // Initialize API client using the shared configuration
     const { config } = useApi()
@@ -35,8 +53,68 @@ export const useAuth = () => {
         refreshTokenCookie.value = null
     }
 
+    const handleAuthError = (err: any): AuthError => {
+        // Network or connection errors
+        if (!err.response || err.code === 'ECONNABORTED') {
+            return {
+                message: 'Network error. Please check your connection and try again.',
+                code: 'NETWORK_ERROR'
+            }
+        }
+
+        const status = err.response.status
+        const data = err.response.data
+
+        switch (status) {
+            case 400:
+                return {
+                    message: data.message || 'Invalid request. Please check your input.',
+                    code: 'VALIDATION_ERROR',
+                    details: data.errors
+                }
+            case 401:
+                if (data.code === 'TOKEN_EXPIRED') {
+                    return {
+                        message: 'Your session has expired. Please log in again.',
+                        code: 'TOKEN_EXPIRED'
+                    }
+                }
+                return {
+                    message: 'Invalid credentials. Please check your email and password.',
+                    code: 'INVALID_CREDENTIALS'
+                }
+            case 403:
+                return {
+                    message: 'Access denied. Please log in again.',
+                    code: 'ACCESS_DENIED'
+                }
+            case 409:
+                return {
+                    message: 'This email is already registered.',
+                    code: 'EMAIL_EXISTS'
+                }
+            case 422:
+                return {
+                    message: data.message || 'Invalid input. Please check your information.',
+                    code: 'VALIDATION_ERROR',
+                    details: data.errors
+                }
+            case 500:
+                return {
+                    message: 'An internal server error occurred. Please try again later.',
+                    code: 'UNKNOWN_ERROR'
+                }
+            default:
+                return {
+                    message: data.message || 'An unexpected error occurred. Please try again.',
+                    code: 'UNKNOWN_ERROR'
+                }
+        }
+    }
+
     // Authentication methods
     const login = async (email: string, password: string) => {
+        error.value = null
         try {
             isLoading.value = true
             const loginData: LoginDto = { email, password }
@@ -49,14 +127,16 @@ export const useAuth = () => {
             }
 
             return response.data
-        } catch (error) {
-            throw error
+        } catch (err: any) {
+            error.value = handleAuthError(err)
+            throw error.value
         } finally {
             isLoading.value = false
         }
     }
 
     const register = async (userData: { email: string; password: string; firstName: string; lastName: string }) => {
+        error.value = null
         try {
             isLoading.value = true
             const registerData: RegisterDto = userData
@@ -69,8 +149,9 @@ export const useAuth = () => {
             }
 
             return response.data
-        } catch (error) {
-            throw error
+        } catch (err: any) {
+            error.value = handleAuthError(err)
+            throw error.value
         } finally {
             isLoading.value = false
         }
@@ -80,9 +161,11 @@ export const useAuth = () => {
         user.value = null
         isAuthenticated.value = false
         clearTokens()
+        error.value = null
     }
 
     const refreshToken = async () => {
+        error.value = null
         try {
             const currentRefreshToken = refreshTokenCookie.value
             if (!currentRefreshToken) {
@@ -95,26 +178,31 @@ export const useAuth = () => {
                 setTokens(response.data.accessToken, response.data.refreshToken)
                 return response.data
             }
-        } catch (error) {
+        } catch (err: any) {
+            error.value = handleAuthError(err)
             logout()
-            throw error
+            throw error.value
         }
     }
 
     // Social authentication methods
     const loginWithGithub = async () => {
+        error.value = null
         try {
             await authApi.initiateGithubAuth()
-        } catch (error) {
-            throw error
+        } catch (err: any) {
+            error.value = handleAuthError(err)
+            throw error.value
         }
     }
 
     const loginWithGoogle = async () => {
+        error.value = null
         try {
             await authApi.initiateGoogleAuth()
-        } catch (error) {
-            throw error
+        } catch (err: any) {
+            error.value = handleAuthError(err)
+            throw error.value
         }
     }
 
@@ -122,6 +210,7 @@ export const useAuth = () => {
         user,
         isAuthenticated,
         isLoading,
+        error,
         login,
         register,
         logout,

@@ -4,11 +4,21 @@
             Create your account
         </h2>
 
+        <div v-if="errorMessage" class="mb-4 p-4 bg-red-50 border border-red-400 rounded-md">
+            <p class="text-sm text-red-700">{{ errorMessage }}</p>
+            <ul v-if="validationErrors" class="mt-2 text-sm text-red-700 list-disc list-inside">
+                <li v-for="(errors, field) in validationErrors" :key="field">
+                    {{ errors.join(', ') }}
+                </li>
+            </ul>
+        </div>
+
         <div class="space-y-6">
             <!-- Social Registration Buttons -->
             <div class="space-y-4">
                 <button @click="handleGithubRegister" type="button"
-                    class="w-full flex justify-center items-center px-4 py-2.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200">
+                    class="w-full flex justify-center items-center px-4 py-2.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200"
+                    :disabled="isLoading">
                     <svg class="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
                         <path fill-rule="evenodd" clip-rule="evenodd"
                             d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
@@ -17,7 +27,8 @@
                 </button>
 
                 <button @click="handleGoogleRegister" type="button"
-                    class="w-full flex justify-center items-center px-4 py-2.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200">
+                    class="w-full flex justify-center items-center px-4 py-2.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200"
+                    :disabled="isLoading">
                     <svg class="h-5 w-5 mr-2" viewBox="0 0 24 24">
                         <path fill="#EA4335" d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115Z" />
                         <path fill="#34A853" d="M16.04 18.013c-1.09.703-2.474 1.078-4.04 1.078a7.077 7.077 0 0 1-6.723-4.823l-4.04 3.067A11.965 11.965 0 0 0 12 24c2.933 0 5.735-1.043 7.834-3l-3.793-2.987Z" />
@@ -46,6 +57,7 @@
                         </label>
                         <div class="mt-1">
                             <input id="firstName" v-model="userForm.firstName" name="firstName" type="text" required
+                                :class="{'border-red-300 focus:ring-red-500 focus:border-red-500': validationErrors?.firstName}"
                                 class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
                         </div>
                     </div>
@@ -56,6 +68,7 @@
                         </label>
                         <div class="mt-1">
                             <input id="lastName" v-model="userForm.lastName" name="lastName" type="text" required
+                                :class="{'border-red-300 focus:ring-red-500 focus:border-red-500': validationErrors?.lastName}"
                                 class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
                         </div>
                     </div>
@@ -67,6 +80,7 @@
                     </label>
                     <div class="mt-1">
                         <input id="email" v-model="userForm.email" name="email" type="email" autocomplete="email" required
+                            :class="{'border-red-300 focus:ring-red-500 focus:border-red-500': validationErrors?.email}"
                             class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
                     </div>
                 </div>
@@ -77,12 +91,15 @@
                     </label>
                     <div class="mt-1">
                         <input id="password" v-model="userForm.password" name="password" type="password" required
+                            :class="{'border-red-300 focus:ring-red-500 focus:border-red-500': validationErrors?.password}"
                             class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
                     </div>
+                    <p class="mt-1 text-sm text-gray-500">Must be at least 8 characters with numbers and letters</p>
                 </div>
 
                 <div class="flex items-center">
                     <input id="terms" v-model="acceptTerms" name="terms" type="checkbox" required
+                        :class="{'border-red-300': termsError}"
                         class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer" />
                     <label for="terms" class="ml-2 block text-sm text-gray-900">
                         I agree to the
@@ -119,14 +136,16 @@
 </template>
 
 <script setup>
+import { ref, computed } from 'vue'
 import { useAuth } from '~/composables/useAuth'
 import { useRouter } from '#app'
+import { useValidation } from '~/composables/useValidation'
 
 definePageMeta({
     layout: 'auth'
 })
 
-const { register, loginWithGoogle, loginWithGithub } = useAuth()
+const { register, loginWithGoogle, loginWithGithub, error: authError } = useAuth()
 const router = useRouter()
 
 const userForm = ref({
@@ -138,26 +157,54 @@ const userForm = ref({
 const acceptTerms = ref(false)
 const isLoading = ref(false)
 const errorMessage = ref('')
+const termsError = ref(false)
+
+// Computed property to extract validation errors
+const validationErrors = computed(() => {
+    if (authError.value?.code === 'VALIDATION_ERROR') {
+        return authError.value.details
+    }
+    return null
+})
+
+const { rules, validate, clearErrors } = useValidation()
 
 async function handleRegister() {
+    errorMessage.value = ''
+    termsError.value = false
+    clearErrors()
+
+    // Validate terms acceptance
     if (!acceptTerms.value) {
         errorMessage.value = 'Please accept the terms and conditions'
+        termsError.value = true
+        return
+    }
+
+    // Validate form
+    const validationRules = {
+        firstName: [rules.required()],
+        lastName: [rules.required()],
+        email: [rules.required(), rules.email()],
+        password: [rules.required(), rules.password()]
+    }
+
+    if (!validate(userForm.value, validationRules)) {
+        errorMessage.value = 'Please check your input'
         return
     }
 
     try {
         isLoading.value = true
-        errorMessage.value = ''
         await register(userForm.value)
         await router.push('/console')
     } catch (error) {
-        console.error('Registration error:', error)
-        if (error.response?.status === 409) {
+        if (error.code === 'EMAIL_EXISTS') {
             errorMessage.value = 'This email is already registered'
-        } else if (error.response?.data?.message) {
-            errorMessage.value = error.response.data.message
+        } else if (error.code === 'VALIDATION_ERROR') {
+            errorMessage.value = 'Please check your input'
         } else {
-            errorMessage.value = 'An error occurred during registration. Please try again.'
+            errorMessage.value = error.message || 'An error occurred during registration. Please try again.'
         }
     } finally {
         isLoading.value = false
