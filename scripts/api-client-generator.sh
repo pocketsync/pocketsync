@@ -4,9 +4,9 @@
 set -e
 
 # Read configuration
-CONFIG_FILE="./scripts/api-client-generator-config.yaml"
+CONFIG_FILE="$(dirname "$0")/api-client-generator-config.yaml"
 BACKEND_DIR="$(dirname "$0")/../deltasync-backend"
-CLIENT_DIR="api-clients/web-client"
+CLIENT_DIR="$(dirname "$0")/../deltasync-web/api-client"
 
 # Function to check if backend is running
 check_backend() {

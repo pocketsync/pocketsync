@@ -45,7 +45,7 @@
                             First name
                         </label>
                         <div class="mt-1">
-                            <input id="firstName" v-model="firstName" name="firstName" type="text" required
+                            <input id="firstName" v-model="userForm.firstName" name="firstName" type="text" required
                                 class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
                         </div>
                     </div>
@@ -55,7 +55,7 @@
                             Last name
                         </label>
                         <div class="mt-1">
-                            <input id="lastName" v-model="lastName" name="lastName" type="text" required
+                            <input id="lastName" v-model="userForm.lastName" name="lastName" type="text" required
                                 class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
                         </div>
                     </div>
@@ -66,7 +66,7 @@
                         Email address
                     </label>
                     <div class="mt-1">
-                        <input id="email" v-model="email" name="email" type="email" autocomplete="email" required
+                        <input id="email" v-model="userForm.email" name="email" type="email" autocomplete="email" required
                             class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
                     </div>
                 </div>
@@ -76,7 +76,7 @@
                         Password
                     </label>
                     <div class="mt-1">
-                        <input id="password" v-model="password" name="password" type="password" required
+                        <input id="password" v-model="userForm.password" name="password" type="password" required
                             class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
                     </div>
                 </div>
@@ -119,34 +119,46 @@
 </template>
 
 <script setup>
+import { useAuth } from '~/composables/useAuth'
+import { useRouter } from '#app'
+
 definePageMeta({
     layout: 'auth'
 })
 
-const firstName = ref('')
-const lastName = ref('')
-const email = ref('')
-const password = ref('')
+const { register, loginWithGoogle, loginWithGithub } = useAuth()
+const router = useRouter()
+
+const userForm = ref({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: ''
+})
 const acceptTerms = ref(false)
 const isLoading = ref(false)
+const errorMessage = ref('')
 
 async function handleRegister() {
     if (!acceptTerms.value) {
+        errorMessage.value = 'Please accept the terms and conditions'
         return
     }
 
     try {
         isLoading.value = true
-        // TODO: Implement registration logic here
-        await new Promise(resolve => setTimeout(resolve, 1000)) // Simulated delay
-        console.log('Registration attempt with:', {
-            firstName: firstName.value,
-            lastName: lastName.value,
-            email: email.value,
-            password: password.value
-        })
+        errorMessage.value = ''
+        await register(userForm.value)
+        await router.push('/console')
     } catch (error) {
         console.error('Registration error:', error)
+        if (error.response?.status === 409) {
+            errorMessage.value = 'This email is already registered'
+        } else if (error.response?.data?.message) {
+            errorMessage.value = error.response.data.message
+        } else {
+            errorMessage.value = 'An error occurred during registration. Please try again.'
+        }
     } finally {
         isLoading.value = false
     }
@@ -154,19 +166,27 @@ async function handleRegister() {
 
 async function handleGithubRegister() {
     try {
-        // TODO: Implement GitHub OAuth registration
-        console.log('GitHub registration clicked')
+        isLoading.value = true
+        await loginWithGithub()
+        await router.push('/console')
     } catch (error) {
         console.error('GitHub registration error:', error)
+        errorMessage.value = 'Failed to register with GitHub. Please try again.'
+    } finally {
+        isLoading.value = false
     }
 }
 
 async function handleGoogleRegister() {
     try {
-        // TODO: Implement Google OAuth registration
-        console.log('Google registration clicked')
+        isLoading.value = true
+        await loginWithGoogle()
+        await router.push('/console')
     } catch (error) {
         console.error('Google registration error:', error)
+        errorMessage.value = 'Failed to register with Google. Please try again.'
+    } finally {
+        isLoading.value = false
     }
 }
 </script>

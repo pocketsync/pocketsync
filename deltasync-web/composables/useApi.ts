@@ -1,4 +1,4 @@
-import { Configuration } from 'deltasync-web-client'
+import { Configuration } from 'web-client'
 
 export const useApi = () => {
     // Initialize API client configuration

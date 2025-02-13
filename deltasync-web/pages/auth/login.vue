@@ -105,23 +105,39 @@
 </template>
 
 <script setup>
+import { useAuth } from '~/composables/useAuth'
+import { useRouter } from '#app'
+
 definePageMeta({
     layout: 'auth'
 })
+
+const { login, loginWithGoogle, loginWithGithub } = useAuth()
+const router = useRouter()
 
 const email = ref('')
 const password = ref('')
 const rememberMe = ref(false)
 const isLoading = ref(false)
+const errorMessage = ref('')
 
 async function handleLogin() {
     try {
         isLoading.value = true
-        // TODO: Implement login logic here
-        await new Promise(resolve => setTimeout(resolve, 1000)) // Simulated delay
-        console.log('Login attempt with:', { email: email.value, password: password.value, rememberMe: rememberMe.value })
+        errorMessage.value = ''
+        await login({
+            email: email.value,
+            password: password.value,
+            rememberMe: rememberMe.value
+        })
+        await router.push('/console')
     } catch (error) {
         console.error('Login error:', error)
+        if (error.response?.data?.message) {
+            errorMessage.value = error.response.data.message
+        } else {
+            errorMessage.value = 'An error occurred during login. Please try again.'
+        }
     } finally {
         isLoading.value = false
     }
@@ -129,19 +145,27 @@ async function handleLogin() {
 
 async function handleGithubLogin() {
     try {
-        // TODO: Implement GitHub OAuth login
-        console.log('GitHub login clicked')
+        isLoading.value = true
+        await loginWithGithub()
+        await router.push('/console')
     } catch (error) {
         console.error('GitHub login error:', error)
+        errorMessage.value = 'Failed to login with GitHub. Please try again.'
+    } finally {
+        isLoading.value = false
     }
 }
 
 async function handleGoogleLogin() {
     try {
-        // TODO: Implement Google OAuth login
-        console.log('Google login clicked')
+        isLoading.value = true
+        await loginWithGoogle()
+        await router.push('/console')
     } catch (error) {
         console.error('Google login error:', error)
+        errorMessage.value = 'Failed to login with Google. Please try again.'
+    } finally {
+        isLoading.value = false
     }
 }
 </script>

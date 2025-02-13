@@ -1,8 +1,9 @@
 import { ref } from 'vue'
 import { useCookie } from 'nuxt/app'
-import { AuthenticationApi } from 'deltasync-web-client'
-import type { LoginDto, RegisterDto, UserResponseDto } from 'deltasync-web-client'
+
+import type { LoginDto, RegisterDto, UserResponseDto } from 'web-client'
 import { useApi } from './useApi'
+import { AuthenticationApi } from 'web-client'
 
 export const useAuth = () => {
     const user = ref<UserResponseDto | null>(null)
