@@ -1,22 +1,23 @@
 <template>
     <div class="hidden md:fixed md:inset-y-0 md:flex md:w-64 md:flex-col">
         <!-- Sidebar component -->
-        <div class="flex min-h-0 flex-1 flex-col border-r border-gray-200 bg-white">
-            <div class="flex flex-1 flex-col overflow-y-auto pt-5 pb-4">
-                <div class="flex flex-shrink-0 items-center px-4">
-                    <span class="text-xl font-bold text-primary-600">DeltaSync</span>
+        <div class="flex min-h-0 flex-1 flex-col border-r border-gray-200 bg-gradient-to-b from-white to-gray-50">
+            <div class="flex flex-1 flex-col overflow-y-auto pt-6 pb-4">
+                <div class="flex flex-shrink-0 items-center px-6">
+                    <span
+                        class="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">DeltaSync</span>
                 </div>
-                <nav class="mt-5 flex-1 space-y-1 bg-white px-2">
+                <nav class="mt-6 flex-1 space-y-1.5 px-3">
                     <NuxtLink v-for="item in navigation" :key="item.name" :to="item.href" :class="[
                         isActive(item.href)
-                            ? 'bg-primary-50 text-primary-600'
-                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
-                        'group flex items-center rounded-md px-2 py-2 text-sm font-medium'
+                            ? 'bg-primary-50/80 text-primary-600 shadow-sm ring-1 ring-primary-100'
+                            : 'text-gray-600 hover:bg-gray-50/80 hover:text-gray-900',
+                        'group flex items-center rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200 ease-in-out'
                     ]">
                         <component :is="item.icon" :class="[
-                            isActive(item.href) ? 'text-primary-600' : 'text-gray-400 group-hover:text-gray-500',
-                            'mr-3 h-5 w-5 flex-shrink-0'
-                        ]" />
+                        isActive(item.href) ? 'text-primary-600' : 'text-gray-400 group-hover:text-gray-500',
+                        'mr-3 h-5 w-5 flex-shrink-0 transition-colors duration-200 ease-in-out'
+                    ]" />
                         {{ item.name }}
                     </NuxtLink>
                 </nav>
