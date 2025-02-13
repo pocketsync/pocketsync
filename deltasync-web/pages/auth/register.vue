@@ -196,8 +196,10 @@ async function handleRegister() {
 
     try {
         isLoading.value = true
-        await register(userForm.value)
-        await router.push('/console')
+        const data = await register(userForm.value)
+        if (data) {
+            router.push({ name: 'console' })
+        }
     } catch (error) {
         if (error.code === 'EMAIL_EXISTS') {
             errorMessage.value = 'This email is already registered'

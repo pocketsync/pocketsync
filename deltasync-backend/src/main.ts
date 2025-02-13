@@ -12,9 +12,9 @@ async function bootstrap() {
 
   // Enable CORS with secure configuration
   app.enableCors({
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:3030'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-project-id'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-project-id', 'user-agent'],
     credentials: true,
   });
 
