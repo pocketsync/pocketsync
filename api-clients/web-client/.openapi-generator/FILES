@@ -15,9 +15,14 @@ index.ts
 model/app-user-response-dto.ts
 model/app-user-response-list.ts
 model/auth-token-response-dto.ts
+model/authenticated-response-dto.ts
 model/create-app-user-dto.ts
 model/create-project-dto.ts
 model/index.ts
+model/login-dto.ts
 model/project-response-dto.ts
 model/project-response-list.ts
+model/refresh-token-response-dto.ts
+model/register-dto.ts
 model/update-project-dto.ts
+model/user-response-dto.ts

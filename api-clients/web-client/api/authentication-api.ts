@@ -21,6 +21,14 @@ import globalAxios from 'axios';
 import { DUMMY_BASE_URL, assertParamExists, setApiKeyToObject, setBasicAuthToObject, setBearerAuthToObject, setOAuthToObject, setSearchParams, serializeDataIfNeeded, toPathString, createRequestFunction } from '../common';
 // @ts-ignore
 import { BASE_PATH, COLLECTION_FORMATS, type RequestArgs, BaseAPI, RequiredError, operationServerMap } from '../base';
+// @ts-ignore
+import type { AuthenticatedResponseDto } from '../model';
+// @ts-ignore
+import type { LoginDto } from '../model';
+// @ts-ignore
+import type { RefreshTokenResponseDto } from '../model';
+// @ts-ignore
+import type { RegisterDto } from '../model';
 /**
  * AuthenticationApi - axios parameter creator
  * @export
@@ -87,6 +95,108 @@ export const AuthenticationApiAxiosParamCreator = function (configuration?: Conf
                 options: localVarRequestOptions,
             };
         },
+        /**
+         * Login with email and password
+         * @summary User login
+         * @param {LoginDto} loginDto 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        loginUser: async (loginDto: LoginDto, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'loginDto' is not null or undefined
+            assertParamExists('loginUser', 'loginDto', loginDto)
+            const localVarPath = `/auth/login`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(loginDto, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Get a new access token using a valid refresh token
+         * @summary Refresh access token
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        refreshToken: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/auth/token/refresh`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Register a new user with email and password
+         * @summary Register new user
+         * @param {RegisterDto} registerDto 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        registerUser: async (registerDto: RegisterDto, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'registerDto' is not null or undefined
+            assertParamExists('registerUser', 'registerDto', registerDto)
+            const localVarPath = `/auth/register`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(registerDto, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
     }
 };
 
@@ -121,6 +231,44 @@ export const AuthenticationApiFp = function(configuration?: Configuration) {
             const localVarOperationServerBasePath = operationServerMap['AuthenticationApi.initiateGoogleAuth']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
+        /**
+         * Login with email and password
+         * @summary User login
+         * @param {LoginDto} loginDto 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async loginUser(loginDto: LoginDto, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AuthenticatedResponseDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.loginUser(loginDto, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AuthenticationApi.loginUser']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Get a new access token using a valid refresh token
+         * @summary Refresh access token
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async refreshToken(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<RefreshTokenResponseDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.refreshToken(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AuthenticationApi.refreshToken']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Register a new user with email and password
+         * @summary Register new user
+         * @param {RegisterDto} registerDto 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async registerUser(registerDto: RegisterDto, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AuthenticatedResponseDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.registerUser(registerDto, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AuthenticationApi.registerUser']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
     }
 };
 
@@ -148,6 +296,35 @@ export const AuthenticationApiFactory = function (configuration?: Configuration,
          */
         initiateGoogleAuth(options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.initiateGoogleAuth(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Login with email and password
+         * @summary User login
+         * @param {LoginDto} loginDto 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        loginUser(loginDto: LoginDto, options?: RawAxiosRequestConfig): AxiosPromise<AuthenticatedResponseDto> {
+            return localVarFp.loginUser(loginDto, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Get a new access token using a valid refresh token
+         * @summary Refresh access token
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        refreshToken(options?: RawAxiosRequestConfig): AxiosPromise<RefreshTokenResponseDto> {
+            return localVarFp.refreshToken(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Register a new user with email and password
+         * @summary Register new user
+         * @param {RegisterDto} registerDto 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        registerUser(registerDto: RegisterDto, options?: RawAxiosRequestConfig): AxiosPromise<AuthenticatedResponseDto> {
+            return localVarFp.registerUser(registerDto, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -179,6 +356,41 @@ export class AuthenticationApi extends BaseAPI {
      */
     public initiateGoogleAuth(options?: RawAxiosRequestConfig) {
         return AuthenticationApiFp(this.configuration).initiateGoogleAuth(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Login with email and password
+     * @summary User login
+     * @param {LoginDto} loginDto 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof AuthenticationApi
+     */
+    public loginUser(loginDto: LoginDto, options?: RawAxiosRequestConfig) {
+        return AuthenticationApiFp(this.configuration).loginUser(loginDto, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Get a new access token using a valid refresh token
+     * @summary Refresh access token
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof AuthenticationApi
+     */
+    public refreshToken(options?: RawAxiosRequestConfig) {
+        return AuthenticationApiFp(this.configuration).refreshToken(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Register a new user with email and password
+     * @summary Register new user
+     * @param {RegisterDto} registerDto 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof AuthenticationApi
+     */
+    public registerUser(registerDto: RegisterDto, options?: RawAxiosRequestConfig) {
+        return AuthenticationApiFp(this.configuration).registerUser(registerDto, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
