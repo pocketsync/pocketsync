@@ -6,12 +6,6 @@
                     <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">{{
                         project.name }}</h2>
                 </div>
-                <div class="mt-4 flex md:ml-4 md:mt-0">
-                    <button @click="showCreateTokenModal = true"
-                        class="ml-3 inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600">
-                        Create auth token
-                    </button>
-                </div>
             </div>
 
             <!-- Stats Grid -->
@@ -77,8 +71,9 @@
             <div class="mt-8">
                 <OverviewTab v-if="currentTab === 'overview'" :project="project" :recent-changes="recentChanges" />
                 <UsersTab v-if="currentTab === 'users'" :users="users" />
-                <AuthTokensTab v-if="currentTab === 'tokens'" :auth-tokens="authTokens"
-                    @create-token="showCreateTokenModal = true" />
+                <div v-if="currentTab === 'tokens'">
+                    <AuthTokensTab :auth-tokens="authTokens" @create-token="showCreateTokenModal = true" />
+                </div>
                 <SettingsTab v-if="currentTab === 'settings'" :project="project" />
             </div>
         </div>
@@ -86,6 +81,7 @@
         <!-- Modals -->
         <CreateTokenModal :show="showCreateTokenModal" :project-id="project.id" @close="showCreateTokenModal = false"
             @token-created="handleTokenCreated" />
+
     </div>
 </template>
 

@@ -31,6 +31,14 @@
                 </div>
             </div>
 
+            <div class="mt-6 flex items-center justify-end gap-x-6">
+                <button type="button" class="text-sm font-semibold leading-6 text-gray-900">Cancel</button>
+                <button type="submit" @click="saveSettings"
+                    class="rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600">
+                    Save
+                </button>
+            </div>
+
             <div class="grid grid-cols-1 gap-x-8 gap-y-10 border-t border-gray-900/10 pt-12 md:grid-cols-3">
                 <div>
                     <h2 class="text-base font-semibold leading-7 text-gray-900">Danger Zone</h2>
@@ -50,14 +58,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="mt-6 flex items-center justify-end gap-x-6">
-            <button type="button" class="text-sm font-semibold leading-6 text-gray-900">Cancel</button>
-            <button type="submit" @click="saveSettings"
-                class="rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600">
-                Save
-            </button>
         </div>
     </div>
 </template>

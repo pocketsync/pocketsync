@@ -1,11 +1,13 @@
 <template>
-    <div v-if="show" class="relative z-10" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+    <div v-if="show" class="fixed inset-0 z-[100]" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-500/60 transition-opacity"></div>
 
-        <div class="fixed inset-0 z-10 overflow-y-auto">
-            <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-                <div
-                    class="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+        <!-- Modal panel -->
+        <div class="fixed inset-0 z-[100] overflow-y-auto">
+            <div class="flex min-h-full items-center justify-center p-4 sm:p-0">
+                <div class="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+                
                     <div>
                         <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-100">
                             <component :is="KeyIcon" class="h-6 w-6 text-primary-600" />
@@ -36,7 +38,8 @@
                                     </div>
                                     <p class="mt-2 text-sm text-gray-500">A descriptive name to help you identify this
                                         token
-                                        later.</p>
+                                        later.
+                                    </p>
                                 </div>
 
                                 <div v-if="createdToken">

@@ -8,7 +8,7 @@
                     <p class="mt-2 text-sm text-gray-700">Manage authentication tokens for your application.</p>
                 </div>
                 <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
-                    <button @click="showCreateTokenModal = true"
+                    <button @click="$emit('create-token')"
                         class="block rounded-md bg-primary-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-primary-500">
                         Create Auth Token
                     </button>
@@ -68,6 +68,14 @@
                                 <tr v-if="authTokens.length === 0">
                                     <td colspan="4" class="px-6 py-8 text-center">
                                         <component :is="KeyIcon" class="mx-auto h-12 w-12 text-gray-400" />
+                                        <h3 class="mt-2 text-sm font-semibold text-gray-900">No authentication tokens</h3>
+                                        <p class="mt-1 text-sm text-gray-500">Get started by creating a new authentication token.</p>
+                                        <div class="mt-6">
+                                            <button @click="$emit('create-token')"
+                                                class="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500">
+                                                Create Auth Token
+                                            </button>
+                                        </div>nt :is="KeyIcon" class="mx-auto h-12 w-12 text-gray-400" />
                                         <h3 class="mt-2 text-sm font-semibold text-gray-900">No authentication tokens</h3>
                                         <p class="mt-1 text-sm text-gray-500">Get started by creating a new authentication token.</p>
                                         <div class="mt-6">
