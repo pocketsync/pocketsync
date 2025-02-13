@@ -23,6 +23,7 @@ export class ProjectsService {
           projectId: project.id,
           token: `ds_${Buffer.from(uuidv4().replace(/-/g, '')).toString('base64').replace(/[+/]/g, '').slice(0, 60)}`,
           userId,
+          name: 'Default',
         }
       });
 

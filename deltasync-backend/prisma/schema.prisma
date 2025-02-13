@@ -11,9 +11,10 @@ model Project {
   id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name              String              @db.VarChar(255)
   createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt         DateTime            @default(now()) @map("updated_at") @db.Timestamp()
   appUsers          AppUser[]
-  user              User?               @relation(fields: [userId], references: [id])
-  userId            String?             @map("user_id") @db.Uuid
+  user              User               @relation(fields: [userId], references: [id])
+  userId            String             @map("user_id") @db.Uuid
   projectAuthTokens ProjectAuthTokens[]
 
   @@map("projects")

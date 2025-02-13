@@ -30,20 +30,6 @@ export class AppUsersController {
     return this.appUsersService.findAll(req.user.id, projectId, paginationQuery);
   }
 
-  @Get(':id')
-  findOne(@Request() req, @Param('id') id: string) {
-    return this.appUsersService.findOne(req.user.id, id);
-  }
-
-  @Patch(':id')
-  update(
-    @Request() req,
-    @Param('id') id: string,
-    @Body() updateAppUserDto: UpdateAppUserDto,
-  ) {
-    return this.appUsersService.update(req.user.id, id, updateAppUserDto);
-  }
-
   @Delete(':id')
   remove(@Request() req, @Param('id') id: string) {
     return this.appUsersService.remove(req.user.id, id);
