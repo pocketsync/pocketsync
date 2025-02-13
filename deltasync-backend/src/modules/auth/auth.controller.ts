@@ -1,8 +1,12 @@
-import { Controller, Get, UseGuards, Req, Res, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Req, Res, Body, HttpStatus } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { ConfigService } from '@nestjs/config';
 import { ApiTags, ApiOperation, ApiResponse, ApiExcludeEndpoint } from '@nestjs/swagger';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
+import { UserResponseDto } from './dto/responses/user.response.dto';
+import { AuthenticatedResponseDto } from './dto/responses/authenticated.response.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -11,6 +15,44 @@ export class AuthController {
     private authService: AuthService,
     private configService: ConfigService,
   ) {}
+
+  @Post('register')
+  @ApiOperation({
+    summary: 'Register new user',
+    description: 'Register a new user with email and password',
+    operationId: 'registerUser'
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'User registered successfully',
+    type: AuthenticatedResponseDto,
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Email already exists'
+  })
+  async register(@Body() registerDto: RegisterDto) {
+    return this.authService.register(registerDto);
+  }
+
+  @Post('login')
+  @ApiOperation({
+    summary: 'User login',
+    description: 'Login with email and password',
+    operationId: 'loginUser',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Login successful',
+    type: AuthenticatedResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid credentials'
+  })
+  async login(@Body() loginDto: LoginDto) {
+    return this.authService.login(loginDto);
+  }
 
   @Get('google')
   @UseGuards(AuthGuard('google'))

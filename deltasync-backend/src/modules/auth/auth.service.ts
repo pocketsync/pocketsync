@@ -1,8 +1,13 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { v4 as uuidv4 } from 'uuid';
+import * as bcrypt from 'bcrypt';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
+import { UserMapper } from './mappers/user.mapper';
+import { AuthenticatedResponseDto } from './dto/responses/authenticated.response.dto';
 
 @Injectable()
 export class AuthService {
@@ -10,9 +15,52 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private userMapper: UserMapper,
   ) { }
 
-  async generateTokens(userId: string, email: string) {
+  async register(registerDto: RegisterDto): Promise<AuthenticatedResponseDto> {
+    const existingUser = await this.findUserByEmail(registerDto.email);
+    if (existingUser) {
+      throw new ConflictException('Email already exists');
+    }
+
+    const hashedPassword = await bcrypt.hash(registerDto.password, 10);
+    const user = await this.prisma.user.create({
+      data: {
+        email: registerDto.email,
+        passwordHash: hashedPassword,
+        firstName: registerDto.firstName,
+        lastName: registerDto.lastName,
+        isEmailVerified: false,
+      },
+    });
+
+    const tokens = await this.generateTokens(user.id, user.email!);
+    return {
+      user: this.userMapper.toResponse(user),
+      ...tokens,
+    };
+  }
+
+  async login(loginDto: LoginDto): Promise<AuthenticatedResponseDto> {
+    const user = await this.findUserByEmail(loginDto.email);
+    if (!user || !user.passwordHash) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const isPasswordValid = await bcrypt.compare(loginDto.password, user.passwordHash);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const tokens = await this.generateTokens(user.id, user.email!);
+    return {
+      user: this.userMapper.toResponse(user),
+      ...tokens,
+    };
+  }
+
+  private async generateTokens(userId: string, email: string) {
     const payload = { sub: userId, email };
 
     const accessToken = this.jwtService.sign(payload);
@@ -79,7 +127,7 @@ export class AuthService {
     const tokens = await this.generateTokens(user.id, user.email!);
 
     return {
-      user,
+      user: this.userMapper.toResponse(user),
       ...tokens,
     };
   }
