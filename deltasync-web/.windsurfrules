@@ -1,0 +1,5 @@
+1. Avoid long explanations when you make code changes
+2. Don't add comments in the code
+3. When your changes contain UI updates, make sure to fit the existing app design system
+4. Think well before you code and make sure the changes you suggest are the best ones
+5. Do your best to write clear and concise code 
