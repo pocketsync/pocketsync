@@ -7,8 +7,9 @@
             </div>
             <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
                 <button @click="showCreateProjectModal = true"
-                    class="block rounded-md bg-primary-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600">
-                    Create project
+                    class="block rounded-md bg-primary-600 px-3 py-2 flex flex-inline items-center space-x-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600">
+                    <PhPlus :size="20" />
+                    <span>Create project</span>
                 </button>
             </div>
         </div>
@@ -23,10 +24,10 @@
                 <span class="mt-2 block text-sm font-semibold text-gray-900">No projects</span>
                 <p class="mt-1 text-sm text-gray-500">Get started by creating a new project.</p>
                 <NuxtLink to="/console/projects/create"
-                    class="mt-6 inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600">
+                    class="mt-6 inline-flex items-center rounded-md bg-primary-600 px-3 py-2 space-x-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600">
                     <PhPlus :size="20" />
-                    
-                    Create Project
+
+                    <span>Create project</span>
                 </NuxtLink>
             </div>
         </div>
