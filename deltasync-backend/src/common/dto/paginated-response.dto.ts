@@ -14,6 +14,7 @@ export const OpenApiPaginationResponse = (model: any) => {
     return applyDecorators(
         ApiOkResponse({
             schema: {
+                title: `${model.name.replace('Dto', '')}List`,
                 properties: {
                     total: {
                         type: 'number'
