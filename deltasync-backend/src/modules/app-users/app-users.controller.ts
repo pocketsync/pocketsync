@@ -11,17 +11,20 @@ import {
   Query,
 } from '@nestjs/common';
 import { AppUsersService } from './app-users.service';
-import { CreateAppUserDto } from './dto/create-app-user.dto';
-import { UpdateAppUserDto } from './dto/update-app-user.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { OpenApiPaginationResponse, PaginatedResponse } from 'src/common/dto/paginated-response.dto';
+import { AppUserResponseDto } from './dto/responses/app-users-response.dto';
 
 @Controller('app-users')
 @UseGuards(JwtAuthGuard)
 export class AppUsersController {
-  constructor(private readonly appUsersService: AppUsersService) {}
+  constructor(private readonly appUsersService: AppUsersService) { }
 
   @Get('project/:projectId')
+  @OpenApiPaginationResponse(AppUserResponseDto)
+  @ApiOperation({ summary: 'Find all app users', operationId: 'projectUsers' })
   findAll(
     @Request() req,
     @Param('projectId') projectId: string,
@@ -31,6 +34,11 @@ export class AppUsersController {
   }
 
   @Delete(':id')
+  @ApiResponse({
+    status: 200,
+    description: 'The found record',
+  })
+  @ApiOperation({ summary: 'Delete app user', operationId: 'deleteAppUser' })
   remove(@Request() req, @Param('id') id: string) {
     return this.appUsersService.remove(req.user.id, id);
   }

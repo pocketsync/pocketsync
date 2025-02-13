@@ -3,10 +3,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateAppUserDto } from './dto/create-app-user.dto';
 import { UpdateAppUserDto } from './dto/update-app-user.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { AppUserMapper } from './mappers/app-user.mapper';
 
 @Injectable()
 export class AppUsersService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private appUserMapper: AppUserMapper,
+  ) { }
 
   async create(userId: string, createAppUserDto: CreateAppUserDto) {
     await this.validateProjectAccess(userId, createAppUserDto.projectId);
@@ -48,17 +52,8 @@ export class AppUsersService {
       }),
     ]);
 
-    return {
-      data,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-        hasNextPage: skip + limit < total,
-        hasPreviousPage: page > 1,
-      },
-    };
+    return this.appUserMapper.mapToPaginatedResponse(data, total, page, limit);
+
   }
 
   async findOne(userId: string, userIdentifier: string) {
