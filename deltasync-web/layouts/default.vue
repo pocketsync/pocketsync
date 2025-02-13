@@ -1,7 +1,13 @@
+<script setup lang="ts">
+import Footer from '~/components/layout/default/Footer.vue';
+import NavBar from '~/components/layout/default/NavBar.vue';
+
+</script>
+
 <template>
     <div class="min-h-screen flex flex-col">
         <!-- Navbar -->
-       <Navbar />
+       <NavBar />
 
         <!-- Main Content -->
         <main class="flex-grow mt-16">

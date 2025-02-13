@@ -73,6 +73,11 @@ const user = ref({
 })
 
 function isActive(href) {
+    if (href === '/console') {
+        // Dashboard should only be active when exactly on /console
+        return route.path === href
+    }
+    // For other routes, check if the current path starts with the href
     return route.path.startsWith(href)
 }
 
