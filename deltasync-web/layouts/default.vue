@@ -1,45 +1,7 @@
 <template>
     <div class="min-h-screen flex flex-col">
         <!-- Navbar -->
-        <nav class="bg-white border-b border-gray-200 fixed w-full z-30 top-0">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between h-16">
-                    <div class="flex">
-                        <div class="flex-shrink-0 flex items-center">
-                            <NuxtLink to="/" class="text-xl font-bold text-gray-900">
-                                DeltaSync
-                            </NuxtLink>
-                        </div>
-                        <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-                            <NuxtLink to="/"
-                                class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900"
-                                active-class="border-b-2 border-primary-500">
-                                Home
-                            </NuxtLink>
-                            <NuxtLink to="/docs"
-                                class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900"
-                                active-class="border-b-2 border-primary-500">
-                                Documentation
-                            </NuxtLink>
-                            <NuxtLink to="/about"
-                                class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900"
-                                active-class="border-b-2 border-primary-500">
-                                About
-                            </NuxtLink>
-                        </div>
-                    </div>
-                    <div class="flex items-center">
-                        <NuxtLink to="/auth/login"
-                            class="get-started-btn ml-8 inline-flex items-center justify-center px-6 py-2.5 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transform transition-all duration-200 hover:scale-105 hover:shadow-lg">
-                            Get Started
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2 transform transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                            </svg>
-                        </NuxtLink>
-                    </div>
-                </div>
-            </div>
-        </nav>
+       <Navbar />
 
         <!-- Main Content -->
         <main class="flex-grow mt-16">
@@ -49,51 +11,9 @@
         </main>
 
         <!-- Footer -->
-        <footer class="bg-white border-t border-gray-200">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
-                    <div>
-                        <h3 class="text-sm font-semibold text-gray-400 tracking-wider uppercase">Product</h3>
-                        <div class="mt-4 space-y-4">
-                            <NuxtLink to="/docs" class="text-base text-gray-500 hover:text-gray-900 block">Documentation
-                            </NuxtLink>
-                            <NuxtLink to="/pricing" class="text-base text-gray-500 hover:text-gray-900 block">Pricing
-                            </NuxtLink>
-                        </div>
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-semibold text-gray-400 tracking-wider uppercase">Support</h3>
-                        <div class="mt-4 space-y-4">
-                            <NuxtLink to="/faq" class="text-base text-gray-500 hover:text-gray-900 block">FAQ</NuxtLink>
-                            <NuxtLink to="/contact" class="text-base text-gray-500 hover:text-gray-900 block">Contact
-                            </NuxtLink>
-                        </div>
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-semibold text-gray-400 tracking-wider uppercase">Company</h3>
-                        <div class="mt-4 space-y-4">
-                            <NuxtLink to="/about" class="text-base text-gray-500 hover:text-gray-900 block">About
-                            </NuxtLink>
-                            <NuxtLink to="/privacy" class="text-base text-gray-500 hover:text-gray-900 block">Privacy
-                            </NuxtLink>
-                            <NuxtLink to="/terms" class="text-base text-gray-500 hover:text-gray-900 block">Terms
-                            </NuxtLink>
-                        </div>
-                    </div>
-                </div>
-                <div class="mt-8 border-t border-gray-200 pt-8">
-                    <p class="text-base text-gray-400">
-                        &copy; {{ currentYear }} DeltaSync. All rights reserved.
-                    </p>
-                </div>
-            </div>
-        </footer>
+        <Footer />
     </div>
 </template>
-
-<script setup>
-const currentYear = new Date().getFullYear()
-</script>
 
 <style scoped>
 .get-started-btn {
