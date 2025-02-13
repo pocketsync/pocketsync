@@ -7,18 +7,16 @@
                     <span class="text-xl font-bold text-primary-600">DeltaSync</span>
                 </div>
                 <nav class="mt-5 flex-1 space-y-1 bg-white px-2">
-                    <NuxtLink v-for="item in navigation" :key="item.name" :to="item.href"
-                        :class="[
-                            isActive(item.href)
-                                ? 'bg-primary-50 text-primary-600'
-                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
-                            'group flex items-center rounded-md px-2 py-2 text-sm font-medium'
-                        ]">
-                        <component :is="item.icon"
-                            :class="[
-                                isActive(item.href) ? 'text-primary-600' : 'text-gray-400 group-hover:text-gray-500',
-                                'mr-3 h-5 w-5 flex-shrink-0'
-                            ]" />
+                    <NuxtLink v-for="item in navigation" :key="item.name" :to="item.href" :class="[
+                        isActive(item.href)
+                            ? 'bg-primary-50 text-primary-600'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                        'group flex items-center rounded-md px-2 py-2 text-sm font-medium'
+                    ]">
+                        <component :is="item.icon" :class="[
+                            isActive(item.href) ? 'text-primary-600' : 'text-gray-400 group-hover:text-gray-500',
+                            'mr-3 h-5 w-5 flex-shrink-0'
+                        ]" />
                         {{ item.name }}
                     </NuxtLink>
                 </nav>
@@ -30,7 +28,8 @@
                             <div v-if="user.avatar_url" class="inline-block h-9 w-9 rounded-full">
                                 <img :src="user.avatar_url" :alt="user.name" class="h-full w-full rounded-full" />
                             </div>
-                            <div v-else class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary-100">
+                            <div v-else
+                                class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary-100">
                                 <span class="text-sm font-medium text-primary-600">{{ getUserInitials(user) }}</span>
                             </div>
                         </div>
@@ -51,9 +50,7 @@ import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import {
     PhBook,
-    PhGear,
     PhHouse,
-    PhUsers,
 } from '@phosphor-icons/vue'
 
 const route = useRoute()
@@ -61,8 +58,6 @@ const route = useRoute()
 const navigation = [
     { name: 'Dashboard', href: '/console', icon: PhHouse },
     { name: 'Projects', href: '/console/projects', icon: PhBook },
-    { name: 'Team', href: '/console/team', icon: PhUsers },
-    { name: 'Settings', href: '/console/settings', icon: PhGear },
 ]
 
 // Sample user data - replace with actual user data from your auth system
