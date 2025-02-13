@@ -1,6 +1,7 @@
 <template>
     <div class="py-6">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
+            <AlphaStageWarningCard class="mb-8" />
             <h1 class="text-2xl font-semibold text-gray-900">Getting Started with DeltaSync</h1>
         </div>
         <div class="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
@@ -178,6 +179,8 @@ class MainApplication : Application() {
 </template>
 
 <script setup>
+import AlphaStageWarningCard from '~/components/layout/dashboard/alpha-stage-warning-card.vue'
+
 definePageMeta({
     layout: 'dashboard'
 })
