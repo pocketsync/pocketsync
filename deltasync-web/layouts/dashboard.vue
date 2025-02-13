@@ -110,4 +110,8 @@ onMounted(() => {
         }
     })
 })
+
+useHead({
+    title: 'DeltaSync Console'
+})
 </script>
