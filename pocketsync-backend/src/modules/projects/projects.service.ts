@@ -162,6 +162,14 @@ export class ProjectsService {
       throw new ForbiddenException('Access denied');
     }
 
+    const tokenCount = await this.prisma.projectAuthTokens.count({
+      where: { projectId: token.projectId }
+    });
+
+    if (tokenCount <= 1) {
+      throw new ForbiddenException('Cannot delete the last authentication token for the project');
+    }
+
     await this.prisma.projectAuthTokens.delete({
       where: { id: tokenId },
     });
