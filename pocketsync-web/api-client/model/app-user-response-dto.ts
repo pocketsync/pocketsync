@@ -39,6 +39,12 @@ export interface AppUserResponseDto {
      */
     'createdAt': string;
     /**
+     * Timestamp when the user was last updated
+     * @type {object}
+     * @memberof AppUserResponseDto
+     */
+    'lastSeenAt': object | null;
+    /**
      * List of devices associated with the user
      * @type {Array<object>}
      * @memberof AppUserResponseDto

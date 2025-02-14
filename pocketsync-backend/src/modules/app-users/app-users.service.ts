@@ -18,6 +18,11 @@ export class AppUsersService {
     return this.prisma.appUser.create({
       data: createAppUserDto,
       include: {
+        devices: {
+          where: {
+            deletedAt: null
+          }
+        },
         _count: {
           select: { devices: true },
         },
@@ -36,9 +41,14 @@ export class AppUsersService {
           deletedAt: null
         },
         include: {
-          _count: {
-            select: { devices: true },
+          devices: {
+            where: {
+              deletedAt: null
+            }
           },
+          _count: {
+            select: { devices: true }
+          }
         },
         skip,
         take: limit,
@@ -53,7 +63,6 @@ export class AppUsersService {
     ]);
 
     return this.appUserMapper.mapToPaginatedResponse(data, total, page, limit);
-
   }
 
   async findOne(userId: string, userIdentifier: string) {
@@ -85,6 +94,16 @@ export class AppUsersService {
     return this.prisma.appUser.update({
       where: { userIdentifier },
       data: updateAppUserDto,
+      include: {
+        devices: {
+          where: {
+            deletedAt: null
+          }
+        },
+        _count: {
+          select: { devices: true },
+        },
+      },
     });
   }
 

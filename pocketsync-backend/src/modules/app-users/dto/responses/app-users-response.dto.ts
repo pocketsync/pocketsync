@@ -24,6 +24,13 @@ export class AppUserResponseDto {
     createdAt: Date;
 
     @ApiProperty({
+        description: 'Timestamp when the user was last updated',
+        example: '2023-01-01T00:00:00Z',
+        nullable: true
+    })
+    lastSeenAt?: Date | null;
+
+    @ApiProperty({
         description: 'List of devices associated with the user',
         type: [DeviceResponseDto]
     })

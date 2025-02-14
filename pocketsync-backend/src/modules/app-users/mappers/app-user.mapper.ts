@@ -8,12 +8,18 @@ import { DevicesMapper } from 'src/modules/devices/mappers/devices.mapper';
 export class AppUserMapper {
   constructor(private devicesMapper: DevicesMapper) { }
 
-  toResponse(appUser: AppUser, devices: Device[]): AppUserResponseDto {
+  toResponse(appUser: AppUser & { devices?: Device[] }): AppUserResponseDto {
+    const lastSeenAt = appUser.devices?.length
+      ? Math.max(...appUser.devices
+        .filter(device => device.lastSeenAt)
+        .map(device => device.lastSeenAt?.getTime() ?? 0)) || null
+      : null;
     return {
       userIdentifier: appUser.userIdentifier,
       projectId: appUser.projectId,
       createdAt: appUser.createdAt,
-      devices: this.devicesMapper.mapDevices(devices),
+      lastSeenAt: lastSeenAt ? new Date(lastSeenAt) : null,
+      devices: appUser.devices ? this.devicesMapper.mapDevices(appUser.devices) : [],
     };
   }
 
@@ -24,7 +30,7 @@ export class AppUserMapper {
     limit: number,
   ): PaginatedResponse<AppUserResponseDto> {
     return {
-      data: data.map((appUser) => this.toResponse(appUser, [])),
+      data: data.map((appUser) => this.toResponse(appUser)),
       total,
       currentPage: page,
       totalPages: Math.ceil(total / limit),
