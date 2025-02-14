@@ -1,10 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ChangeSetDto } from '../dto/change-set.dto';
+import { ChangeStatsService } from './change-stats.service';
 
 @Injectable()
 export class ChangeMergerService {
   private readonly logger = new Logger(ChangeMergerService.name);
   private readonly MAX_TIMESTAMP_DRIFT = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+  constructor(
+    private readonly changeStats: ChangeStatsService
+  ) {}
 
   mergeChangeSets(changeSets: ChangeSetDto[]): ChangeSetDto {
     const mergedChangeSet: ChangeSetDto = {
@@ -27,6 +32,7 @@ export class ChangeMergerService {
     for (const changeSet of changeSets) {
       // Validate timestamp
       if (!this.isValidTimestamp(changeSet.timestamp)) {
+        this.changeStats.incrementInvalidTimestamp(changeSet.timestamp);
         continue;
       }
 
@@ -53,6 +59,13 @@ export class ChangeMergerService {
                 version,
                 changeType
               };
+            } else {
+              this.changeStats.incrementOlderVersion(
+                tableName,
+                primaryKey,
+                latestVersions[tableName][primaryKey].version,
+                version
+              );
             }
           }
         }

@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger, Inject } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChangeSetDto } from './dto/change-set.dto';
 import { ChangesGateway } from './changes.gateway';
@@ -7,49 +7,54 @@ import { BatchProcessorService } from './services/batch-processor.service';
 import { ChangeMergerService } from './services/change-merger.service';
 import { ChangeStatsService } from './services/change-stats.service';
 import { DeviceValidatorService } from './services/device-validator.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
+import { createHash } from 'crypto';
 
 @Injectable()
 export class ChangeLogsService {
   private readonly logger = new Logger(ChangeLogsService.name);
-  private readonly MAX_CHANGES_PER_BATCH = 1000;
-  private readonly MAX_BATCH_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
-
-  // Statistics for monitoring skipped changes
-  private skippedChangeStats = {
-    invalidTimestamp: 0,
-    olderVersion: 0,
-    total: 0,
-    lastReset: new Date()
-  };
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
   constructor(
     private prisma: PrismaService,
     private changesGateway: ChangesGateway,
     private batchProcessor: BatchProcessorService,
     private changeMerger: ChangeMergerService,
-    private changeStats: ChangeStatsService,
     private deviceValidator: DeviceValidatorService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async processChange(userIdentifier: string, deviceId: string, changeSets: ChangeSetDto[]) {
     this.logger.log(`Processing change for user ${userIdentifier} from device ${deviceId}`);
     try {
+      // Check if this exact change set was recently processed
+      const changeSetHash = this.computeChangeSetHash(changeSets);
+      const cacheKey = `changes:${userIdentifier}:${deviceId}:${changeSetHash}`;
+      
+      const cachedResult = await this.cacheManager.get(cacheKey);
+      if (cachedResult) {
+        this.logger.debug(`Returning cached result for change set ${changeSetHash}`);
+        return cachedResult;
+      }
+
       await this.deviceValidator.validateDevice(userIdentifier, deviceId);
       
       const batches = this.batchProcessor.splitIntoBatches(changeSets);
       const processedLogs: ChangeLog[] = [];
 
       for (const batch of batches) {
-        const mergedChangeSet = this.changeMerger.mergeChangeSets(batch);
+        const batchHash = this.computeChangeSetHash(batch);
+        const mergedChangeSet = await this.getCachedOrMergeChanges(batchHash, batch);
         const changeLog = await this.createChangeLog(userIdentifier, deviceId, mergedChangeSet);
-        this.logger.log(`Change log ${changeLog.id} ${changeLog.processedAt ? 'already exists' : 'created'} (Batch size: ${batch.length})`);
-
-        // Notify other devices through the gateway
-        this.changesGateway.notifyChanges(deviceId, changeLog);
+        await this.notifyDevicesWithCache(deviceId, changeLog);
         processedLogs.push(changeLog);
       }
 
-      return processedLogs.length === 1 ? processedLogs[0] : processedLogs;
+      const result = processedLogs.length === 1 ? processedLogs[0] : processedLogs;
+      await this.cacheManager.set(cacheKey, result, this.CACHE_TTL);
+      
+      return result;
     } catch (error) {
       this.logger.error('Error processing change', {
         error: error.message,
@@ -71,5 +76,34 @@ export class ChangeLogsService {
         processedAt: new Date(),
       },
     });
+  }
+
+  private computeChangeSetHash(changeSets: ChangeSetDto[]): string {
+    return createHash('sha256')
+      .update(JSON.stringify(changeSets))
+      .digest('hex');
+  }
+
+  private async getCachedOrMergeChanges(hash: string, batch: ChangeSetDto[]): Promise<ChangeSetDto> {
+    const cacheKey = `merged:${hash}`;
+    const cached = await this.cacheManager.get(cacheKey);
+    
+    if (cached) {
+      return cached as ChangeSetDto;
+    }
+
+    const merged = this.changeMerger.mergeChangeSets(batch);
+    await this.cacheManager.set(cacheKey, merged, this.CACHE_TTL);
+    return merged;
+  }
+
+  private async notifyDevicesWithCache(deviceId: string, changeLog: ChangeLog): Promise<void> {
+    const notificationKey = `notification:${changeLog.id}:${deviceId}`;
+    const hasNotified = await this.cacheManager.get(notificationKey);
+
+    if (!hasNotified) {
+      this.changesGateway.notifyChanges(deviceId, changeLog);
+      await this.cacheManager.set(notificationKey, true, this.CACHE_TTL);
+    }
   }
 }
