@@ -4,9 +4,6 @@ import { AppModule } from './app.module';
 import { swaggerConfig } from './config/swagger.config';
 import { ValidationPipe } from '@nestjs/common';
 
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
-
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 

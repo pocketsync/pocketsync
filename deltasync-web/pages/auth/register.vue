@@ -4,14 +4,7 @@
             Create your account
         </h2>
 
-        <div v-if="errorMessage" class="mb-4 p-4 bg-red-50 border border-red-400 rounded-md">
-            <p class="text-sm text-red-700">{{ errorMessage }}</p>
-            <ul v-if="validationErrors" class="mt-2 text-sm text-red-700 list-disc list-inside">
-                <li v-for="(errors, field) in validationErrors" :key="field">
-                    {{ errors.join(', ') }}
-                </li>
-            </ul>
-        </div>
+        <ErrorAlert :error="errorMessage" :validation-errors="validationErrors" />
 
         <div class="space-y-6">
             <!-- Social Registration Buttons -->
@@ -140,6 +133,7 @@ import { ref, computed } from 'vue'
 import { useAuth } from '~/composables/useAuth'
 import { useRouter } from '#app'
 import { useValidation } from '~/composables/useValidation'
+import ErrorAlert from '~/components/common/error-alert'
 
 definePageMeta({
     layout: 'auth'

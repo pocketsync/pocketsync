@@ -32,6 +32,17 @@ export const useAuth = () => {
     const { config } = useApi()
     const authApi = new AuthenticationApi(config)
 
+    // Initialize authentication state
+    const initAuth = () => {
+        const token = useCookie('access_token').value
+        if (token) {
+            isAuthenticated.value = true
+        }
+    }
+    
+    // Call initAuth when the composable is created
+    initAuth()
+
     // Cookie options
     const cookieOptions = {
         maxAge: 7 * 24 * 60 * 60, // 7 days
