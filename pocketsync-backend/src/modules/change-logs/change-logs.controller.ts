@@ -1,9 +1,10 @@
-import { Controller, Post, Body, UseGuards, Headers, UnauthorizedException, Get, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Headers, UnauthorizedException, Get, HttpException, HttpStatus, Logger, NotFoundException } from '@nestjs/common';
 import { ChangeLogsService } from './change-logs.service';
 import { DevicesService } from '../devices/devices.service';
 import { SdkAuthGuard } from '../../common/guards/sdk-auth.guard';
 import { ChangeSubmissionDto } from './dto/change-submission.dto';
 import { AppUsersService } from '../app-users/app-users.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('sdk/changes')
 @UseGuards(SdkAuthGuard)
@@ -14,6 +15,7 @@ export class ChangeLogsController {
     private readonly changesService: ChangeLogsService,
     private readonly devicesService: DevicesService,
     private readonly appUsersService: AppUsersService,
+    private readonly prisma: PrismaService,
   ) { }
 
   @Post()
@@ -25,6 +27,17 @@ export class ChangeLogsController {
   ) {
     if (!userIdentifier || !deviceId) {
       throw new UnauthorizedException('User identifier and device id are required');
+    }
+
+    const project = await this.prisma.project.findFirst({
+      where: {
+        id: projectId,
+        deletedAt: null
+      }
+    });
+
+    if (!project) {
+      throw new NotFoundException('Project not found or has been deleted');
     }
 
     const appUser = await this.appUsersService.getOrCreateUserFromId(userIdentifier, projectId)
