@@ -50,9 +50,18 @@ export const useApi = () => {
         async (error) => {
             const originalRequest = error.config
 
-            // If error is not 401 or request already retried, reject
-            if (error.response?.status !== 401 || originalRequest._retry) {
+            // If request already retried or error is not 401, reject
+            if (originalRequest._retry || error.response?.status !== 401) {
                 return Promise.reject(error)
+            }
+
+            // If refresh token request fails with 401, clear tokens and logout
+            if (originalRequest.url === '/auth/token/refresh') {
+                useCookie('access_token').value = null
+                useCookie('refresh_token').value = null
+                return Promise.reject({
+                    message: 'Session expired. Please login again.'
+                })
             }
 
             if (isRefreshing) {
@@ -61,7 +70,7 @@ export const useApi = () => {
                         failedQueue.push({ resolve, reject })
                     })
                     originalRequest.headers['Authorization'] = `Bearer ${token}`
-                    return originalRequest
+                    return axiosInstance(originalRequest)
                 } catch (err) {
                     return Promise.reject(err)
                 }
@@ -93,9 +102,13 @@ export const useApi = () => {
 
                     originalRequest.headers['Authorization'] = `Bearer ${newToken}`
                     processQueue(null, newToken)
-                    return originalRequest
+                    return axiosInstance(originalRequest)
                 }
-            } catch (refreshError) {
+
+                throw new Error('Failed to refresh token')
+
+            } catch (refreshError: any) {
+                // Process failed queue and reject with error
                 processQueue(refreshError, null)
                 return Promise.reject(refreshError)
             } finally {
