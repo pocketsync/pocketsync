@@ -1,19 +1,45 @@
 import 'dart:convert';
 
+class Row {
+  final String primaryKey;
+  final int timestamp;
+  final Map<String, dynamic> data;
+
+  Row({
+    required this.primaryKey,
+    required this.timestamp,
+    required this.data,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'primaryKey': primaryKey,
+    'timestamp': timestamp,
+    'data': data,
+  };
+
+  factory Row.fromJson(Map<String, dynamic> json) {
+    return Row(
+      primaryKey: json['primaryKey'] as String,
+      timestamp: json['timestamp'] as int,
+      data: json['data'] as Map<String, dynamic>,
+    );
+  }
+}
+
 class TableRows {
-  final List<Map<String, dynamic>> rows;
+  final List<Row> rows;
 
   TableRows(this.rows);
 
   Map<String, dynamic> toJson() => {
-    'rows': rows,
+    'rows': rows.map((row) => row.toJson()).toList(),
   };
 
   factory TableRows.fromJson(Map<String, dynamic> json) {
     return TableRows(
-      List<Map<String, dynamic>>.from(
+      List<Row>.from(
         (json['rows'] as List).map((row) => 
-          row is String ? jsonDecode(row) : row as Map<String, dynamic>
+          Row.fromJson(row is String ? jsonDecode(row) : row as Map<String, dynamic>)
         ),
       ),
     );

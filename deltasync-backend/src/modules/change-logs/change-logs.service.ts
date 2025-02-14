@@ -67,13 +67,41 @@ export class ChangeLogsService {
       version: Math.max(...changeSets.map(cs => cs.version)),
     };
 
+    // Track the latest version of each record by primary key
+    const latestVersions: Record<string, Record<string, { row: any; timestamp: number }>> = {};
+
     for (const changeSet of changeSets) {
       for (const changeType of ['insertions', 'updates', 'deletions'] as const) {
         for (const [tableName, tableChanges] of Object.entries(changeSet[changeType])) {
           if (!mergedChangeSet[changeType][tableName]) {
             mergedChangeSet[changeType][tableName] = { rows: [] };
           }
-          mergedChangeSet[changeType][tableName].rows.push(...tableChanges.rows);
+          if (!latestVersions[tableName]) {
+            latestVersions[tableName] = {};
+          }
+
+          // Process each row using the Row class structure
+          for (const row of tableChanges.rows) {
+            const primaryKey = row.primaryKey;
+            const timestamp = row.timestamp || changeSet.timestamp;
+
+            // Apply last-write-wins strategy based on timestamp
+            if (!latestVersions[tableName][primaryKey] ||
+              timestamp > latestVersions[tableName][primaryKey].timestamp) {
+              latestVersions[tableName][primaryKey] = { row, timestamp };
+            }
+          }
+        }
+      }
+    }
+
+    // Populate the merged change set with the latest versions
+    for (const changeType of ['insertions', 'updates', 'deletions'] as const) {
+      for (const [tableName, versions] of Object.entries(latestVersions)) {
+        if (Object.keys(versions).length > 0) {
+          mergedChangeSet[changeType][tableName] = {
+            rows: Object.values(versions).map(v => v.row)
+          };
         }
       }
     }

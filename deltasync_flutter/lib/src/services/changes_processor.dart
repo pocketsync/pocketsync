@@ -21,26 +21,34 @@ class ChangesProcessor {
       orderBy: 'version ASC',
     );
 
-    final insertions = <String, List<Map<String, dynamic>>>{};
-    final updates = <String, List<Map<String, dynamic>>>{};
-    final deletions = <String, List<Map<String, dynamic>>>{};
+    final insertions = <String, List<Row>>{};
+    final updates = <String, List<Row>>{};
+    final deletions = <String, List<Row>>{};
 
     for (final change in changes) {
       final tableName = change['table_name'] as String;
       final operation = change['operation'] as String;
-      final rawData = jsonDecode(change['data'] as String) as Map<String, dynamic>;
-      final data =
-          operation == 'DELETE' ? rawData['old'] as Map<String, dynamic> : rawData['new'] as Map<String, dynamic>;
+      final rawData =
+          jsonDecode(change['data'] as String) as Map<String, dynamic>;
+      final data = operation == 'DELETE'
+          ? rawData['old'] as Map<String, dynamic>
+          : rawData['new'] as Map<String, dynamic>;
+
+      final row = Row(
+        primaryKey: data['id'] as String,
+        timestamp: data['timestamp'] as int,
+        data: data,
+      );
 
       switch (operation) {
         case 'INSERT':
-          insertions.putIfAbsent(tableName, () => []).add(data);
+          insertions.putIfAbsent(tableName, () => []).add(row);
           break;
         case 'UPDATE':
-          updates.putIfAbsent(tableName, () => []).add(data);
+          updates.putIfAbsent(tableName, () => []).add(row);
           break;
         case 'DELETE':
-          deletions.putIfAbsent(tableName, () => []).add(data);
+          deletions.putIfAbsent(tableName, () => []).add(row);
           break;
       }
     }
@@ -90,25 +98,49 @@ class ChangesProcessor {
   }
 
   ChangeSet _computeChangeSetFromChangeLogs(Iterable<ChangeLog> changeLogs) {
-    final insertions = <String, List<Map<String, dynamic>>>{};
-    final updates = <String, List<Map<String, dynamic>>>{};
-    final deletions = <String, List<Map<String, dynamic>>>{};
+    final insertions = <String, List<Row>>{};
+    final updates = <String, List<Row>>{};
+    final deletions = <String, List<Row>>{};
 
     // Process each changelog to merge changes
     for (final log in changeLogs) {
       // Merge insertions
       log.changeSet.insertions.changes.forEach((tableName, tableRows) {
-        insertions.putIfAbsent(tableName, () => []).addAll(tableRows.rows);
+        insertions.putIfAbsent(tableName, () => []).addAll(
+              tableRows.rows.map(
+                (row) => Row(
+                  primaryKey: row.primaryKey,
+                  timestamp: row.timestamp,
+                  data: row.data,
+                ),
+              ),
+            );
       });
 
       // Merge updates
       log.changeSet.updates.changes.forEach((tableName, tableRows) {
-        updates.putIfAbsent(tableName, () => []).addAll(tableRows.rows);
+        updates.putIfAbsent(tableName, () => []).addAll(
+              tableRows.rows.map(
+                (row) => Row(
+                  primaryKey: row.primaryKey,
+                  timestamp: row.timestamp,
+                  data: row.data,
+                ),
+              ),
+            );
       });
 
       // Merge deletions
       log.changeSet.deletions.changes.forEach((tableName, tableRows) {
-        deletions.putIfAbsent(tableName, () => []).addAll(tableRows.rows);
+        deletions.putIfAbsent(tableName, () => []).addAll(
+              tableRows.rows.map(
+                (row) => Row(
+                  primaryKey: row.primaryKey,
+                  timestamp: row.timestamp,
+                  data: row.data,
+                ),
+              ),
+            );
       });
     }
 
@@ -149,13 +181,39 @@ class ChangesProcessor {
     log('Applying change set: ${changeSet.toJson()}');
 
     await _db.transaction((txn) async {
-      Future<void> applyTableOperation(String tableName, Map<String, dynamic> row, String operation) async {
+      Future<void> applyTableOperation(
+        String tableName,
+        Row row,
+        String operation,
+      ) async {
         try {
+          // Get existing row if any
+          final existingRow = await txn.query(
+            tableName,
+            where: "id = ?",
+            whereArgs: [row.primaryKey],
+          );
+
+          // Apply last-write-wins conflict resolution
+          if (existingRow.isNotEmpty) {
+            final existingTimestamp = existingRow.first['timestamp'] as int;
+            final incomingTimestamp = row.timestamp;
+            if (existingTimestamp >= incomingTimestamp) {
+              // Skip this change as we already have a newer version
+              return;
+            }
+          }
+
           // Store original trigger definitions before dropping
           final triggers = await txn.query(
             'sqlite_master',
             where: "type = 'trigger' AND tbl_name = ? AND name IN (?, ?, ?)",
-            whereArgs: [tableName, 'after_insert_$tableName', 'after_update_$tableName', 'after_delete_$tableName'],
+            whereArgs: [
+              tableName,
+              'after_insert_$tableName',
+              'after_update_$tableName',
+              'after_delete_$tableName'
+            ],
           );
 
           // Drop existing triggers
@@ -183,25 +241,25 @@ class ChangesProcessor {
           switch (operation) {
             case 'INSERT':
               try {
-                await txn.insert(tableName, row);
+                await txn.insert(tableName, row.data);
               } catch (e) {
                 // Handle insert conflict by attempting to update instead
                 final existingRow = await txn.query(
                   tableName,
                   where: 'id = ?',
-                  whereArgs: [row['id']],
+                  whereArgs: [row.primaryKey],
                 );
                 if (existingRow.isNotEmpty) {
                   final resolvedRow = await _conflictResolver.resolveConflict(
                     tableName,
                     existingRow.first,
-                    row,
+                    row.data,
                   );
                   await txn.update(
                     tableName,
                     resolvedRow,
                     where: 'id = ?',
-                    whereArgs: [row['id']],
+                    whereArgs: [row.primaryKey],
                   );
                 } else {
                   rethrow;
@@ -212,23 +270,23 @@ class ChangesProcessor {
               final existingRow = await txn.query(
                 tableName,
                 where: 'id = ?',
-                whereArgs: [row['id']],
+                whereArgs: [row.primaryKey],
               );
               if (existingRow.isNotEmpty) {
                 final resolvedRow = await _conflictResolver.resolveConflict(
                   tableName,
                   existingRow.first,
-                  row,
+                  row.data,
                 );
                 await txn.update(
                   tableName,
                   resolvedRow,
                   where: 'id = ?',
-                  whereArgs: [row['id']],
+                  whereArgs: [row.primaryKey],
                 );
               } else {
                 // If row doesn't exist, insert it instead
-                await txn.insert(tableName, row);
+                await txn.insert(tableName, row.data);
               }
               break;
             case 'DELETE':
@@ -237,7 +295,7 @@ class ChangesProcessor {
               await txn.delete(
                 tableName,
                 where: 'id = ?',
-                whereArgs: [row['id']],
+                whereArgs: [row.primaryKey],
               );
               break;
           }
@@ -283,12 +341,13 @@ class ChangesProcessor {
       }
 
       // Mark these changes as processed only if all operations succeed
-      // for (final log in changeLogs) {
-      //   await txn.insert('__deltasync_processed_changes', {
-      //     'change_log_id': log.id,
-      //     'processed_at': now,
-      //   });
-      // }
+      final now = DateTime.now().toIso8601String();
+      for (final log in changeLogs) {
+        await txn.insert('__deltasync_processed_changes', {
+          'change_log_id': log.id,
+          'processed_at': now,
+        });
+      }
     });
   }
 }

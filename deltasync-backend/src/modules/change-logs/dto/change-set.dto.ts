@@ -3,9 +3,13 @@ import { Type } from 'class-transformer';
 
 class RowChange {
     @IsString()
-    row_id: string;
+    primaryKey: string;
 
-    [key: string]: any;
+    @IsNumber()
+    timestamp: number;
+
+    @IsObject()
+    data: { [key: string]: any };
 }
 
 class TableRows {
