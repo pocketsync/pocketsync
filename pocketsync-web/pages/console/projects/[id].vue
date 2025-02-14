@@ -35,7 +35,7 @@
                     <div v-if="currentTab === 'tokens'">
                         <AuthTokensTab :auth-tokens="authTokens" @create-token="showCreateTokenModal = true" @token-revoked="handleTokenRevoked" />
                     </div>
-                    <SettingsTab v-if="currentTab === 'settings'" :project="project" />
+                    <SettingsTab v-if="currentTab === 'settings'" :project="project" @project-updated="handleProjectUpdated" />
                 </div>
             </div>
         </div>
@@ -127,5 +127,9 @@ async function handleTokenCreated() {
 
 async function handleTokenRevoked() {
     await fetchProjectById(route.params.id as string)
+}
+
+function handleProjectUpdated() {
+    fetchProjectById(route.params.id as string)
 }
 </script>

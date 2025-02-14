@@ -12,20 +12,23 @@
                         <label for="project-name" class="block text-sm font-medium leading-6 text-gray-900">Project
                             name</label>
                         <div class="mt-2">
-                            <div
-                                class="flex rounded-md shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-inset focus-within:ring-primary-600">
+                            <div class="flex rounded-md shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-inset focus-within:ring-primary-600" :class="{ 'ring-red-300': errors.name.length > 0 }">
                                 <input type="text" name="project-name" id="project-name" v-model="projectName"
                                     class="block flex-1 border-0 bg-transparent py-1.5 pl-2 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm sm:leading-6"
-                                    :placeholder="project.name" />
+                                    :placeholder="project.name"
+                                    @blur="validateForm"
+                                    :disabled="isLoading" />
                             </div>
+                            <p v-if="errors.name.length > 0" class="mt-2 text-sm text-red-600">{{ errors.name.join(', ') }}</p>
                         </div>
                     </div>
                 </div>
                 <div class="sm:col-span-8 flex items-center justify-end gap-x-8 mt-4">
-                    <button type="button" class="text-sm font-semibold leading-6 text-gray-900">Cancel</button>
-                    <button type="submit" @click="saveSettings"
-                        class="rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600">
-                        Save
+                    <button type="button" class="text-sm font-semibold leading-6 text-gray-900" :disabled="isLoading">Cancel</button>
+                    <button type="submit" @click="saveSettings" :disabled="isLoading"
+                        class="rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span v-if="isLoading">Saving...</span>
+                        <span v-else>Save</span>
                     </button>
                 </div>
             </div>
@@ -54,8 +57,10 @@
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
+import { useProjects } from '@/composables/useProjects'
+import { useToast } from '@/composables/useToast'
 
 const props = defineProps({
     project: {
@@ -64,11 +69,47 @@ const props = defineProps({
     }
 })
 
+const emit = defineEmits(['project-updated'])
+
 const projectName = ref(props.project.name)
 const description = ref(props.project.description)
 
-function saveSettings() {
-    // Implement save settings functionality
+const { updateProject } = useProjects()
+const { success, error: errorToast } = useToast()
+const isLoading = ref(false)
+const errors = ref<{ name: string[] }>({
+    name: []
+})
+
+function validateForm() {
+    errors.value.name = []
+    if (!projectName.value?.trim()) {
+        errors.value.name.push('Project name is required')
+        return false
+    }
+    return true
+}
+
+async function saveSettings() {
+    if (!validateForm()) return
+
+    try {
+        isLoading.value = true
+        await updateProject(props.project.id, {
+            name: projectName.value.trim(),
+            description: description.value
+        })
+        emit('project-updated')
+        success('Project settings updated successfully')
+    } catch (err: any) {
+        if (err.code === 'VALIDATION_ERROR' && err.details?.name) {
+            errors.value.name = err.details.name
+        } else {
+            errorToast(err.message || 'Failed to update project settings')
+        }
+    } finally {
+        isLoading.value = false
+    }
 }
 
 function confirmDelete() {
