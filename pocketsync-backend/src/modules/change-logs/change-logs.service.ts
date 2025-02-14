@@ -24,7 +24,7 @@ export class ChangeLogsService {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
-  async processChange(userIdentifier: string, deviceId: string, changeSets: ChangeSetDto[]) {
+  async processChange(projectId: string, userIdentifier: string, deviceId: string, changeSets: ChangeSetDto[]) {
     this.logger.log(`Processing change for user ${userIdentifier} from device ${deviceId}`);
     try {
       // Check if this exact change set was recently processed
@@ -45,7 +45,7 @@ export class ChangeLogsService {
       for (const batch of batches) {
         const batchHash = this.computeChangeSetHash(batch);
         const mergedChangeSet = await this.getCachedOrMergeChanges(batchHash, batch);
-        const changeLog = await this.createChangeLog(userIdentifier, deviceId, mergedChangeSet);
+        const changeLog = await this.createChangeLog(projectId, userIdentifier, deviceId, mergedChangeSet);
         await this.notifyDevicesWithCache(deviceId, changeLog);
         processedLogs.push(changeLog);
       }
@@ -65,12 +65,13 @@ export class ChangeLogsService {
     }
   }
 
-  private async createChangeLog(userIdentifier: string, deviceId: string, mergedChangeSet: ChangeSetDto) {
+  private async createChangeLog(projectId: string, userIdentifier: string, deviceId: string, mergedChangeSet: ChangeSetDto) {
     return await this.prisma.changeLog.create({
       data: {
         userIdentifier,
         deviceId,
         changeSet: JSON.stringify(mergedChangeSet),
+        projectId: projectId,
         receivedAt: new Date(),
         processedAt: new Date(),
       },

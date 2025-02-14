@@ -61,6 +61,20 @@ export class ProjectResponseDto {
   deviceCount: number;
 
   @ApiProperty({
+    description: 'Total number of changes in the project',
+    example: 500,
+    default: 0
+  })
+  changesCount: number;
+
+  @ApiProperty({
+    description: 'Number of changes pending synchronization',
+    example: 25,
+    default: 0
+  })
+  pendingChangesCount: number;
+
+  @ApiProperty({
     description: 'Auth tokens for the project',
     type: () => AuthTokenResponseDto,
     isArray: true

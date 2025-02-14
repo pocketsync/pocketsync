@@ -45,7 +45,10 @@ export class ProjectsService {
         where: { userId },
         include: {
           _count: {
-            select: { appUsers: true },
+            select: {
+              appUsers: true,
+              changeLogs: true,
+            },
           },
           appUsers: {
             include: {
@@ -79,7 +82,10 @@ export class ProjectsService {
       where: { id },
       include: {
         _count: {
-          select: { appUsers: true },
+          select: {
+            appUsers: true,
+            changeLogs: true,
+          },
         },
         appUsers: {
           include: {
@@ -123,8 +129,25 @@ export class ProjectsService {
       data: updateProjectDto,
       include: {
         _count: {
-          select: { appUsers: true },
+          select: {
+            appUsers: true,
+            changeLogs: true,
+          },
         },
+        appUsers: {
+          include: {
+            _count: {
+              select: { devices: true }
+            },
+            devices: {
+              where: {
+                lastSeenAt: {
+                  gte: new Date(new Date().setHours(0, 0, 0, 0))
+                }
+              }
+            }
+          }
+        }
       },
     });
 

@@ -17,6 +17,7 @@ model Project {
   user              User               @relation(fields: [userId], references: [id])
   userId            String             @map("user_id") @db.Uuid
   projectAuthTokens ProjectAuthTokens[]
+  changeLogs        ChangeLog[]
 
   @@map("projects")
 }
@@ -52,9 +53,11 @@ model ChangeLog {
   changeSet      Json      @map("change_set") @db.JsonB
   receivedAt     DateTime  @default(now()) @map("received_at") @db.Timestamp()
   processedAt    DateTime? @map("processed_at") @db.Timestamp()
+  projectId      String    @map("project_id") @db.Uuid
   deletedAt      DateTime? @map("deleted_at") @db.Timestamp()
   appUser        AppUser   @relation(fields: [userIdentifier], references: [userIdentifier])
   device         Device    @relation(fields: [deviceId], references: [deviceId])
+  project        Project   @relation(fields: [projectId], references: [id])
 
   @@map("change_logs")
 }

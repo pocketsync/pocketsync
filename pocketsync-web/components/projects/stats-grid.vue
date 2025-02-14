@@ -4,7 +4,7 @@
             <dt class="truncate text-sm font-medium text-gray-500">Total Users</dt>
             <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">{{ stats.totalUsers }}</dd>
             <dd class="mt-2 flex items-center text-sm text-gray-600">
-                <component :is="UsersIcon" class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-400" />
+                <PhUsers class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-400" />
                 <span>{{ stats.activeUsers }} active today</span>
             </dd>
         </div>
@@ -13,7 +13,7 @@
             <dt class="truncate text-sm font-medium text-gray-500">Connected Devices</dt>
             <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">{{ stats.totalDevices }}</dd>
             <dd class="mt-2 flex items-center text-sm text-gray-600">
-                <component :is="DevicesIcon" class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-400" />
+                <PhDeviceMobile class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-400" />
                 <span>{{ stats.activeDevices }} online now</span>
             </dd>
         </div>
@@ -22,7 +22,7 @@
             <dt class="truncate text-sm font-medium text-gray-500">Changes Today</dt>
             <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">{{ stats.changesCount }}</dd>
             <dd class="mt-2 flex items-center text-sm text-gray-600">
-                <component :is="SyncIcon" class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-400" />
+                <PhArrowsClockwise class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-400" />
                 <span>{{ stats.pendingChanges }} pending sync</span>
             </dd>
         </div>
@@ -32,11 +32,7 @@
 <script setup lang="ts">
 import { PhUsers, PhDeviceMobile, PhArrowsClockwise } from '@phosphor-icons/vue'
 
-const UsersIcon = PhUsers
-const DevicesIcon = PhDeviceMobile
-const SyncIcon = PhArrowsClockwise
-
-defineProps<{
+const props = defineProps<{
     stats: {
         totalUsers: number
         activeUsers: number
@@ -46,4 +42,8 @@ defineProps<{
         pendingChanges: number
     }
 }>()
+
+onMounted(() => {
+    console.log(props.stats)
+})
 </script>

@@ -32,6 +32,7 @@ export class ChangeLogsController {
 
     try {
       await this.changesService.processChange(
+        projectId,
         appUser.userIdentifier,
         device.deviceId,
         submission.changeSets,
