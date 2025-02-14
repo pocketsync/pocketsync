@@ -213,17 +213,18 @@ export const useAuth = () => {
         const token = useCookie('access_token').value
         if (token) {
             isAuthenticated.value = true
-            try {
-                await fetchUserProfile()
-            } catch (err) {
-                // Handle initialization errors silently
-                console.error('Failed to initialize auth:', err)
-            }
         }
     }
-    
-    // Call initAuth when the composable is created
+
+    // Initialize auth state but don't fetch profile yet
     initAuth()
+
+    // Lazy profile loading
+    const ensureUserProfile = async () => {
+        if (isAuthenticated.value && !user.value) {
+            await fetchUserProfile()
+        }
+    }
 
     return {
         user,
@@ -235,6 +236,7 @@ export const useAuth = () => {
         logout,
         loginWithGithub,
         loginWithGoogle,
-        fetchUserProfile
+        fetchUserProfile,
+        ensureUserProfile
     }
 }

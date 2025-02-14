@@ -70,6 +70,7 @@ import { ref } from 'vue'
 import { PhList, PhX } from '@phosphor-icons/vue'
 import { PhBook, PhCode, PhFolder, PhArrowSquareOut } from '@phosphor-icons/vue'
 import { useRoute } from 'vue-router'
+import { useAuth } from '~/composables/useAuth'
 
 import DashboardSidebar from '~/components/layout/dashboard/sidebar.vue'
 import DashboardHeader from '~/components/layout/dashboard/header.vue'
@@ -109,6 +110,13 @@ onMounted(() => {
             userMenuOpen.value = false
         }
     })
+})
+
+const { ensureUserProfile } = useAuth()
+
+// Fetch user profile when layout is mounted
+onMounted(async () => {
+    await ensureUserProfile()
 })
 
 useHead({

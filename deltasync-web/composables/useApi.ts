@@ -76,13 +76,9 @@ export const useApi = () => {
                     throw new Error('No refresh token available')
                 }
 
-                const response = await axios.post(
+                const response = await axiosInstance.post(
                     '/auth/token/refresh',
-                    { refreshToken: refreshTokenValue },
-                    {
-                        baseURL: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:3000',
-                        headers: { 'Content-Type': 'application/json' }
-                    }
+                    { refreshToken: refreshTokenValue }
                 )
 
                 const { data } = response
