@@ -36,7 +36,7 @@ class PocketSyncDatabase {
       CREATE TABLE __pocketsync_changes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         table_name TEXT NOT NULL,
-        record_id TEXT NOT NULL,
+        record_rowid INTEGER NOT NULL,
         operation TEXT NOT NULL,
         timestamp INTEGER NOT NULL,
         data TEXT NOT NULL,
@@ -48,7 +48,8 @@ class PocketSyncDatabase {
       CREATE INDEX idx_pocketsync_changes_synced ON __pocketsync_changes(synced);
       CREATE INDEX idx_pocketsync_changes_version ON __pocketsync_changes(version);
       CREATE INDEX idx_pocketsync_changes_timestamp ON __pocketsync_changes(timestamp);
-      CREATE INDEX idx_pocketsync_changes_table_name ON __pocketsync_changes(table_name)
+      CREATE INDEX idx_pocketsync_changes_table_name ON __pocketsync_changes(table_name);
+      CREATE INDEX idx_pocketsync_changes_record_rowid ON __pocketsync_changes(record_rowid)
     ''');
 
     await db.execute('''
@@ -121,7 +122,7 @@ class PocketSyncDatabase {
       WHEN ${_generateUpdateCondition(columns)}
       BEGIN
         INSERT INTO __pocketsync_changes (
-          table_name, record_id, operation, timestamp, data, version
+          table_name, record_rowid, operation, timestamp, data, version
         ) VALUES (
           '$tableName',
           NEW.rowid,
@@ -153,7 +154,7 @@ class PocketSyncDatabase {
       AFTER INSERT ON $tableName
       BEGIN
         INSERT INTO __pocketsync_changes (
-          table_name, record_id, operation, timestamp, data, version
+          table_name, record_rowid, operation, timestamp, data, version
         ) VALUES (
           '$tableName',
           NEW.rowid,
@@ -184,7 +185,7 @@ class PocketSyncDatabase {
       AFTER DELETE ON $tableName
       BEGIN
         INSERT INTO __pocketsync_changes (
-          table_name, record_id, operation, timestamp, data, version
+          table_name, record_rowid, operation, timestamp, data, version
         ) VALUES (
           '$tableName',
           OLD.rowid,

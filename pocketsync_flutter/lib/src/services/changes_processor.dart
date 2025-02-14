@@ -64,15 +64,15 @@ class ChangesProcessor {
                       : rawData;
             } catch (e) {
               log('Error parsing change data for id $id: $e');
-              throw SyncStateError('Failed to parse change data: ${e.toString()}');
+              throw SyncStateError(
+                  'Failed to parse change data: ${e.toString()}');
             }
 
-            if (!data.containsKey('id')) {
-              throw SyncStateError('Change data missing required "id" field');
-            }
+            // Use rowid as the primary key identifier
+            final primaryKey = change['record_rowid'].toString();
 
             final row = Row(
-              primaryKey: data['id'].toString(),
+              primaryKey: primaryKey,
               timestamp: timestamp,
               data: data,
               version: version,
@@ -109,13 +109,16 @@ class ChangesProcessor {
         version: lastVersion,
         changeIds: changeIds,
         insertions: TableChanges(
-          Map.fromEntries(insertions.entries.map((e) => MapEntry(e.key, TableRows(e.value)))),
+          Map.fromEntries(insertions.entries
+              .map((e) => MapEntry(e.key, TableRows(e.value)))),
         ),
         updates: TableChanges(
-          Map.fromEntries(updates.entries.map((e) => MapEntry(e.key, TableRows(e.value)))),
+          Map.fromEntries(
+              updates.entries.map((e) => MapEntry(e.key, TableRows(e.value)))),
         ),
         deletions: TableChanges(
-          Map.fromEntries(deletions.entries.map((e) => MapEntry(e.key, TableRows(e.value)))),
+          Map.fromEntries(deletions.entries
+              .map((e) => MapEntry(e.key, TableRows(e.value)))),
         ),
       );
     } catch (e) {
@@ -235,7 +238,7 @@ class ChangesProcessor {
           // Get existing row if any
           final existingRow = await txn.query(
             tableName,
-            where: "id = ?",
+            where: "rowid = ?",
             whereArgs: [row.primaryKey],
           );
 
@@ -253,7 +256,12 @@ class ChangesProcessor {
           final triggers = await txn.query(
             'sqlite_master',
             where: "type = 'trigger' AND tbl_name = ? AND name IN (?, ?, ?)",
-            whereArgs: [tableName, 'after_insert_$tableName', 'after_update_$tableName', 'after_delete_$tableName'],
+            whereArgs: [
+              tableName,
+              'after_insert_$tableName',
+              'after_update_$tableName',
+              'after_delete_$tableName'
+            ],
           );
 
           // Drop existing triggers
@@ -286,7 +294,7 @@ class ChangesProcessor {
                 // Handle insert conflict by attempting to update instead
                 final existingRow = await txn.query(
                   tableName,
-                  where: 'id = ?',
+                  where: 'rowid = ?',
                   whereArgs: [row.primaryKey],
                 );
                 if (existingRow.isNotEmpty) {
@@ -309,7 +317,7 @@ class ChangesProcessor {
             case 'UPDATE':
               final existingRow = await txn.query(
                 tableName,
-                where: 'id = ?',
+                where: 'rowid = ?',
                 whereArgs: [row.primaryKey],
               );
               if (existingRow.isNotEmpty) {
@@ -334,7 +342,7 @@ class ChangesProcessor {
               // If the row doesn't exist, that's fine
               await txn.delete(
                 tableName,
-                where: 'id = ?',
+                where: 'rowid = ?',
                 whereArgs: [row.primaryKey],
               );
               break;

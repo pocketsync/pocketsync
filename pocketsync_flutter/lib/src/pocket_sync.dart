@@ -154,8 +154,8 @@ class PocketSync {
           await _markChangesSynced(changeSet.changeIds);
         }
       }
-    } on SyncError {
-      rethrow;
+    } on SyncError catch(e) {
+      log('$e');
     } finally {
       _isSyncing = false;
     }
