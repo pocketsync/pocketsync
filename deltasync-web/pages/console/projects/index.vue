@@ -6,7 +6,7 @@
                 <p class="mt-2 text-sm text-gray-700">A list of all your DeltaSync apps and their registered users.</p>
             </div>
             <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
-                <button @click="showCreateProjectModal = true"
+                <button @click="showCreateProjectModal = true" v-if="!isLoading && projects.length > 0"
                     class="block rounded-md bg-primary-600 px-3 py-2 flex flex-inline items-center space-x-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600">
                     <PhPlus :size="20" />
                     <span>Create project</span>
@@ -14,77 +14,70 @@
             </div>
         </div>
 
-        <div class="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <!-- Error Alert -->
+        <ErrorAlert v-if="error" :error="error" title="Error loading projects" />
+
+        <!-- Loading State -->
+        <div v-if="isLoading && !projects.length" class="mt-8">
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <div v-for="i in 3" :key="i" class="animate-pulse rounded-lg border border-gray-200 bg-white p-6">
+                    <div class="h-4 w-3/4 rounded bg-gray-200"></div>
+                    <div class="mt-4 space-y-3">
+                        <div class="h-3 w-1/2 rounded bg-gray-200"></div>
+                        <div class="h-3 w-1/3 rounded bg-gray-200"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Projects Grid -->
+        <div v-else class="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <ProjectCard v-for="project in projects" :key="project.id" :project="project" />
 
             <!-- Empty state -->
-            <div v-if="projects.length === 0"
+            <div v-if="!isLoading && projects.length === 0"
                 class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
                 <component :is="FolderIcon" class="mx-auto h-12 w-12 text-gray-400" />
                 <span class="mt-2 block text-sm font-semibold text-gray-900">No projects</span>
                 <p class="mt-1 text-sm text-gray-500">Get started by creating a new project.</p>
-                <NuxtLink to="/console/projects/create"
+                <button @click="showCreateProjectModal = true"
                     class="mt-6 inline-flex items-center rounded-md bg-primary-600 px-3 py-2 space-x-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600">
                     <PhPlus :size="20" />
-
                     <span>Create project</span>
-                </NuxtLink>
+                </button>
             </div>
         </div>
 
         <!-- Create Project Modal -->
-        <CreateProjectModal :show="showCreateProjectModal" @close="showCreateProjectModal = false"
-            @project-created="handleProjectCreated" />
+        <CreateProjectModal :show="showCreateProjectModal" @close="showCreateProjectModal = false" />
     </div>
 </template>
 
 <script setup>
 import { PhFolder, PhPlus } from '@phosphor-icons/vue'
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import CreateProjectModal from '~/components/projects/create-project-modal.vue'
 import ProjectCard from '~/components/projects/project-card.vue'
+import { useProjects } from '~/composables/useProjects'
+import ErrorAlert from '~/components/common/error-alert.vue'
 
 definePageMeta({
     layout: 'dashboard'
 })
 
 const FolderIcon = PhFolder
-
 const showCreateProjectModal = ref(false)
 
-function handleProjectCreated(project) {
-    // Here you would typically refresh the projects list
-    // For now, we'll just add the new project to the list
-    projects.value.unshift({
-        id: project.id,
-        name: project.name,
-        users: [],
-        activeUsers: 0,
-        devices: 0,
-        storageUsed: 0,
-        storageLimit: 5 * 1024 * 1024 * 1024 // 5GB
-    })
-}
+// Initialize projects composable
+const { projects, isLoading, error, fetchProjects } = useProjects()
 
-// Sample data - replace with actual API call
-const projects = ref([
-    {
-        id: 1,
-        name: 'Mobile App Sync',
-        users: Array(1234), // Simulating array length for user count
-        activeUsers: 856,
-        devices: 2891,
-        storageUsed: 2.1 * 1024 * 1024 * 1024, // 2.1GB
-        storageLimit: 5 * 1024 * 1024 * 1024 // 5GB
-    },
-    {
-        id: 2,
-        name: 'Web Dashboard',
-        users: Array(421),
-        activeUsers: 198,
-        devices: 534,
-        storageUsed: 0.8 * 1024 * 1024 * 1024, // 0.8GB
-        storageLimit: 5 * 1024 * 1024 * 1024 // 5GB
+// Load projects on component mount
+onMounted(async () => {
+    try {
+        await fetchProjects()
+    } catch (err) {
+        // Error is handled by the composable
+        console.error('Failed to fetch projects:', err)
     }
-])
+})
 </script>
