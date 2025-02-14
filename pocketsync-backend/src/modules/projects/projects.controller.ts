@@ -70,13 +70,13 @@ export class ProjectsController {
     return this.projectsService.remove(req.user.id, id);
   }
 
-  @Post('auth-tokens')
+  @Post('/:projectId/auth-tokens')
   @ApiOperation({ summary: 'Generate a new auth token for a project', operationId: 'generateAuthToken' })
   @ApiResponse({ status: 201, description: 'Auth token generated successfully', type: AuthTokenResponseDto })
   @ApiResponse({ status: 404, description: 'Project not found' })
   @ApiResponse({ status: 403, description: 'Access denied' })
-  async generateAuthToken(@Request() req, @Body() createAuthTokenDto: CreateAuthTokenDto) {
-    return this.projectsService.createAuthToken(req.user.id, createAuthTokenDto.projectId, createAuthTokenDto.name);
+  async generateAuthToken(@Request() req, @Param('projectId') projectId: string, @Body() createAuthTokenDto: CreateAuthTokenDto) {
+    return this.projectsService.createAuthToken(req.user.id, projectId, createAuthTokenDto);
   }
 
   @Delete('auth-tokens/:tokenId')

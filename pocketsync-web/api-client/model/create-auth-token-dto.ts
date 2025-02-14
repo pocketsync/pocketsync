@@ -21,12 +21,6 @@
  */
 export interface CreateAuthTokenDto {
     /**
-     * The ID of the project to generate an auth token for
-     * @type {string}
-     * @memberof CreateAuthTokenDto
-     */
-    'projectId': string;
-    /**
      * The name of the auth token
      * @type {string}
      * @memberof CreateAuthTokenDto

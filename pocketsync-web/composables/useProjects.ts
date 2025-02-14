@@ -1,9 +1,8 @@
 import { ref } from 'vue'
-import type { ProjectResponseDto, CreateProjectDto, UpdateProjectDto } from '~/api-client'
+import type { ProjectResponseDto, CreateProjectDto, UpdateProjectDto, CreateAuthTokenDto } from '~/api-client'
 import { ProjectsApi } from '~/api-client'
 import { useApi } from './useApi'
 import { useToast } from './useToast'
-import { AuthenticationApi } from '~/api-client'
 
 interface ProjectError {
     message: string
@@ -19,6 +18,7 @@ type ProjectErrorCode =
     | 'UNKNOWN_ERROR'
 
 export const useProjects = () => {
+    const { success, error: errorToast } = useToast()
     const projects = ref<ProjectResponseDto[]>([])
     const currentProject = ref<ProjectResponseDto | null>(null)
     const isLoading = ref(false)
@@ -189,7 +189,15 @@ export const useProjects = () => {
         }
     }
 
-    const { success, error: errorToast } = useToast()
+    const generateAuthToken = async (projectId: string, body: CreateAuthTokenDto) => {
+        try {
+            const response = await projectsApi.generateAuthToken(projectId, body)
+            return response.data
+        } catch (error: any) {
+            errorToast(error.response?.data?.message || 'Failed to generate token')
+            return null
+        }
+    }
 
     const revokeToken = async (tokenId: string) => {
         try {

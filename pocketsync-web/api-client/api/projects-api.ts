@@ -112,14 +112,18 @@ export const ProjectsApiAxiosParamCreator = function (configuration?: Configurat
         /**
          * 
          * @summary Generate a new auth token for a project
+         * @param {string} projectId 
          * @param {CreateAuthTokenDto} createAuthTokenDto 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        generateAuthToken: async (createAuthTokenDto: CreateAuthTokenDto, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        generateAuthToken: async (projectId: string, createAuthTokenDto: CreateAuthTokenDto, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'projectId' is not null or undefined
+            assertParamExists('generateAuthToken', 'projectId', projectId)
             // verify required parameter 'createAuthTokenDto' is not null or undefined
             assertParamExists('generateAuthToken', 'createAuthTokenDto', createAuthTokenDto)
-            const localVarPath = `/projects/auth-tokens`;
+            const localVarPath = `/projects/{projectId}/auth-tokens`
+                .replace(`{${"projectId"}}`, encodeURIComponent(String(projectId)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
             let baseOptions;
@@ -332,12 +336,13 @@ export const ProjectsApiFp = function(configuration?: Configuration) {
         /**
          * 
          * @summary Generate a new auth token for a project
+         * @param {string} projectId 
          * @param {CreateAuthTokenDto} createAuthTokenDto 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async generateAuthToken(createAuthTokenDto: CreateAuthTokenDto, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AuthTokenResponseDto>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.generateAuthToken(createAuthTokenDto, options);
+        async generateAuthToken(projectId: string, createAuthTokenDto: CreateAuthTokenDto, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AuthTokenResponseDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.generateAuthToken(projectId, createAuthTokenDto, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ProjectsApi.generateAuthToken']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -429,12 +434,13 @@ export const ProjectsApiFactory = function (configuration?: Configuration, baseP
         /**
          * 
          * @summary Generate a new auth token for a project
+         * @param {string} projectId 
          * @param {CreateAuthTokenDto} createAuthTokenDto 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        generateAuthToken(createAuthTokenDto: CreateAuthTokenDto, options?: RawAxiosRequestConfig): AxiosPromise<AuthTokenResponseDto> {
-            return localVarFp.generateAuthToken(createAuthTokenDto, options).then((request) => request(axios, basePath));
+        generateAuthToken(projectId: string, createAuthTokenDto: CreateAuthTokenDto, options?: RawAxiosRequestConfig): AxiosPromise<AuthTokenResponseDto> {
+            return localVarFp.generateAuthToken(projectId, createAuthTokenDto, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -515,13 +521,14 @@ export class ProjectsApi extends BaseAPI {
     /**
      * 
      * @summary Generate a new auth token for a project
+     * @param {string} projectId 
      * @param {CreateAuthTokenDto} createAuthTokenDto 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof ProjectsApi
      */
-    public generateAuthToken(createAuthTokenDto: CreateAuthTokenDto, options?: RawAxiosRequestConfig) {
-        return ProjectsApiFp(this.configuration).generateAuthToken(createAuthTokenDto, options).then((request) => request(this.axios, this.basePath));
+    public generateAuthToken(projectId: string, createAuthTokenDto: CreateAuthTokenDto, options?: RawAxiosRequestConfig) {
+        return ProjectsApiFp(this.configuration).generateAuthToken(projectId, createAuthTokenDto, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

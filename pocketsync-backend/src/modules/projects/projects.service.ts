@@ -5,6 +5,7 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ProjectMapper } from './mappers/project.mapper';
+import { CreateAuthTokenDto } from './dto/create-auth-token.dto';
 
 @Injectable()
 export class ProjectsService {
@@ -175,7 +176,7 @@ export class ProjectsService {
     return this.projectMapper.toResponse(updatedProject, 0, []);
   }
 
-  async createAuthToken(userId: string, projectId: string, name: string) {
+  async createAuthToken(userId: string, projectId: string, data: CreateAuthTokenDto) {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
     });
@@ -190,7 +191,7 @@ export class ProjectsService {
         projectId,
         token: this.generateToken(),
         userId,
-        name,
+        name: data.name,
       }
     });
     return { token: token.token };
