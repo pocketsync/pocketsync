@@ -18,7 +18,7 @@
                     <div class="mt-3 text-center sm:mt-0 sm:text-left w-full">
                         <h3 class="text-lg font-semibold leading-6 text-gray-900">User Devices</h3>
                         <div class="mt-4 border-t border-gray-200 pt-4">
-                            <div v-if="user" class="space-y-4">
+                            <div v-if="user" class="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
                                 <div v-for="device in user.devices" :key="device.id"
                                     class="flex items-start justify-between space-x-4 p-4 border border-gray-200 rounded-lg">
                                     <div class="flex-1 min-w-0">
