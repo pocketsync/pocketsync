@@ -44,5 +44,11 @@ export interface AuthTokenResponseDto {
      * @memberof AuthTokenResponseDto
      */
     'name': string;
+    /**
+     * The auth token itself
+     * @type {string}
+     * @memberof AuthTokenResponseDto
+     */
+    'token': string;
 }
 

@@ -9,6 +9,7 @@ export class AuthTokensMapper {
             id: token.id,
             projectId: token.projectId,
             userId: token.userId,
+            token: token.token,
             name: token.name ?? 'Default',
         }));
     }

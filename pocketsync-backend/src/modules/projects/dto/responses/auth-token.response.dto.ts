@@ -24,4 +24,10 @@ export class AuthTokenResponseDto {
     example: 'Production API Key'
   })
   name: string;
+
+  @ApiProperty({
+    description: 'The auth token itself',
+    example: 'sk_1234567890abcdefghijklmnopqrstuvwxyz'
+  })
+  token: string;
 }

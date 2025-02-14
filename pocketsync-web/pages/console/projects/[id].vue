@@ -120,12 +120,12 @@ const recentChanges = ref([
 ])
 
 const currentTab = ref('overview')
-const tabs = [
+const tabs = computed(() => [
     { name: 'Overview', value: 'overview' },
-    { name: 'Users', value: 'users', count: users.value.length },
-    { name: 'Auth Tokens', value: 'tokens', count: authTokens.value.length },
+    { name: 'Users', value: 'users', count: users.value?.length || 0 },
+    { name: 'Auth Tokens', value: 'tokens', count: authTokens.value?.length || 0 },
     { name: 'Settings', value: 'settings' }
-]
+])
 
 function handleTokenCreated() {
    

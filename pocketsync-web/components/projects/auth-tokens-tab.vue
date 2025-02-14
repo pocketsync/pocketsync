@@ -29,9 +29,6 @@
                                                 Token</th>
                                             <th scope="col"
                                                 class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                                Created By</th>
-                                            <th scope="col"
-                                                class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                                                 Created At</th>
                                             <th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-6">
                                                 <span class="sr-only">Actions</span>
@@ -53,20 +50,6 @@
                                                             <component :is="CopyIcon" class="h-5 w-5" />
                                                         </button>
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                                <div class="flex items-center">
-                                                    <img v-if="token.user.avatar_url" :src="token.user.avatar_url"
-                                                        class="h-6 w-6 rounded-full" :alt="token.user.first_name" />
-                                                    <div v-else
-                                                        class="h-6 w-6 rounded-full bg-primary-100 flex items-center justify-center">
-                                                        <span class="text-xs font-medium text-primary-600">
-                                                            {{ getUserInitials(token.user) }}
-                                                        </span>
-                                                    </div>
-                                                    <span class="ml-2 text-sm text-gray-900">{{ token.user.first_name }}
-                                                        {{ token.user.last_name }}</span>
                                                 </div>
                                             </td>
                                             <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
@@ -109,29 +92,26 @@
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import { PhKey, PhCopy, PhPlus } from '@phosphor-icons/vue'
 import CreateTokenModal from './create-token-modal.vue'
+import { AuthTokenResponseDto } from '~/api-client'
 
 const KeyIcon = PhKey
 const CopyIcon = PhCopy
 const showCreateTokenModal = ref(false)
 
-const authTokens = ref([
-    {
-        id: 1,
-        token: 'abc123def456',
-        user: {
-            first_name: 'John',
-            last_name: 'Doe',
-            avatar_url: null
-        },
-        created_at: '2024-01-23T12:00:00Z'
-    }
-])
+const emit = defineEmits<{
+  'create-token': []
+}>()
+
+const props = defineProps<{
+  authTokens: AuthTokenResponseDto[]
+}>()
 
 function maskToken(token) {
+    console.log(token)
     return `${token.slice(0, 4)}...${token.slice(-4)}`
 }
 
@@ -141,10 +121,6 @@ function copyToken(token) {
 
 function revokeToken(id) {
     // Implement token revocation
-}
-
-function getUserInitials(user) {
-    return `${user.first_name[0]}${user.last_name[0]}`
 }
 
 function formatDate(date) {
