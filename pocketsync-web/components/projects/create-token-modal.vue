@@ -49,9 +49,9 @@
                                                 <component :is="InformationIcon" class="h-5 w-5 text-blue-400" />
                                             </div>
                                             <div class="ml-3">
-                                                <h3 class="text-sm font-medium text-blue-800">
-                                                    <component :is="InformationIcon" class="h-5 w-5 text-blue-400" />
-                                                    Yay!
+                                                <h3 class="text-sm font-medium text-blue-800 flex items-center gap-x-1">
+                                                    <PhInfo class="h-5 w-5 text-blue-400" />
+                                                    <span>Yay!</span>
                                                 </h3>
                                                 <div class="mt-2 text-sm text-blue-700">
                                                     <p>
@@ -114,7 +114,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { PhKey, PhCopy } from '@phosphor-icons/vue'
+import { PhKey, PhCopy, PhInfo } from '@phosphor-icons/vue'
 import { useProjects } from '~/composables/useProjects'
 import { useToast } from '~/composables/useToast'
 

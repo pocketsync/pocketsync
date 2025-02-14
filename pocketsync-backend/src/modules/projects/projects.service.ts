@@ -216,7 +216,7 @@ export class ProjectsService {
     });
 
     if (tokenCount <= 1) {
-      throw new ForbiddenException('Cannot delete the last authentication token for the project');
+      throw new ForbiddenException('Cannot delete the last authentication token for the project.');
     }
 
     await this.prisma.projectAuthTokens.delete({

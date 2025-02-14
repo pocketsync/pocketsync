@@ -26,6 +26,9 @@
                                         <tr>
                                             <th scope="col"
                                                 class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">
+                                                Name</th>
+                                            <th scope="col"
+                                                class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">
                                                 Token</th>
                                             <th scope="col"
                                                 class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
@@ -37,6 +40,10 @@
                                     </thead>
                                     <tbody class="divide-y divide-gray-200">
                                         <tr v-for="token in authTokens" :key="token.id">
+                                            <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                                {{ token.name }}
+                                            </td>
+
                                             <td class="whitespace-nowrap py-4 pl-4 pr-3 sm:pl-0">
                                                 <div class="flex items-center">
                                                     <div class="flex-shrink-0">
@@ -93,8 +100,8 @@
         <!-- Confirmation Dialog -->
         <ConfirmationDialog v-if="showConfirmDialog" show title="Revoke Authentication Token"
             message="Are you sure you want to revoke this authentication token? This action cannot be undone. Note if you are using this token in your application, this will break sync for all users."
-            confirm-text="Revoke Token" cancel-text="Cancel" @confirm="handleConfirmRevoke"
-            @cancel="handleCancelRevoke" :loading="isRevoking" />
+            confirm-text="Revoke Token" cancel-text="Cancel" @confirm="handleConfirmRevoke" @cancel="handleCancelRevoke"
+            :loading="isRevoking" />
     </div>
 </template>
 

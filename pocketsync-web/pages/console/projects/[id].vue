@@ -33,7 +33,7 @@
                     <OverviewTab v-if="currentTab === 'overview'" :project="project" :recent-changes="recentChanges" />
                     <UsersTab v-if="currentTab === 'users'" :users="users" :is-loading="isLoadingUsers" />
                     <div v-if="currentTab === 'tokens'">
-                        <AuthTokensTab :auth-tokens="authTokens" @create-token="showCreateTokenModal = true" />
+                        <AuthTokensTab :auth-tokens="authTokens" @create-token="showCreateTokenModal = true" @token-revoked="handleTokenRevoked" />
                     </div>
                     <SettingsTab v-if="currentTab === 'settings'" :project="project" />
                 </div>
@@ -122,6 +122,10 @@ const tabs = computed(() => [
 ])
 
 async function handleTokenCreated() {
+    await fetchProjectById(route.params.id as string)
+}
+
+async function handleTokenRevoked() {
     await fetchProjectById(route.params.id as string)
 }
 </script>

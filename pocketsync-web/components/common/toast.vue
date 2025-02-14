@@ -1,5 +1,5 @@
 <template>
-    <div class="fixed top-4 right-4 z-50 space-y-4">
+    <div class="fixed top-4 right-4 z-100 space-y-4">
         <TransitionGroup name="toast" tag="div">
             <div v-for="toast in toasts" :key="toast.id"
                 class="min-w-[320px] max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black/5 overflow-hidden transform transition-all duration-300 ease-in-out hover:shadow-xl"
