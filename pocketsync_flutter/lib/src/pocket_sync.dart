@@ -82,8 +82,7 @@ class PocketSync {
 
   /// Sets up connectivity monitoring
   void _setupConnectivityMonitoring() {
-    _connectivitySubscription =
-        Connectivity().onConnectivityChanged.listen(_handleConnectivityChange);
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen(_handleConnectivityChange);
   }
 
   /// Handles connectivity changes
@@ -151,8 +150,7 @@ class PocketSync {
           changeSet.deletions.changes.isNotEmpty) {
         final processedResponse = await _sendChanges(changeSet);
 
-        if (processedResponse.status == 'success' &&
-            processedResponse.processed) {
+        if (processedResponse.status == 'success' && processedResponse.processed) {
           await _markChangesSynced(changeSet.changeIds);
         }
       }
@@ -164,12 +162,10 @@ class PocketSync {
   }
 
   /// Sends changes to the server
-  Future<ChangeProcessingResponse> _sendChanges(ChangeSet changes) async =>
-      await _networkService.sendChanges(changes);
+  Future<ChangeProcessingResponse> _sendChanges(ChangeSet changes) async => await _networkService.sendChanges(changes);
 
   /// Marks changes as synced
-  Future<void> _markChangesSynced(List<int> changeIds) async =>
-      await _changesProcessor.markChangesSynced(changeIds);
+  Future<void> _markChangesSynced(List<int> changeIds) async => await _changesProcessor.markChangesSynced(changeIds);
 
   /// Cleans up resources
   Future<void> dispose() async {

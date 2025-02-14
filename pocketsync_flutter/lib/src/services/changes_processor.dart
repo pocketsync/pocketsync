@@ -56,11 +56,15 @@ class ChangesProcessor {
               if (rawData is! Map<String, dynamic>) {
                 throw FormatException('Change data must be a JSON object');
               }
-              data = rawData;
+
+              data = rawData.containsKey('new')
+                  ? (rawData['new'] as Map<String, dynamic>)
+                  : rawData.containsKey('old')
+                      ? (rawData['old'] as Map<String, dynamic>)
+                      : rawData;
             } catch (e) {
               log('Error parsing change data for id $id: $e');
-              throw SyncStateError(
-                  'Failed to parse change data: ${e.toString()}');
+              throw SyncStateError('Failed to parse change data: ${e.toString()}');
             }
 
             if (!data.containsKey('id')) {
@@ -68,7 +72,7 @@ class ChangesProcessor {
             }
 
             final row = Row(
-              primaryKey: data['id'] as String,
+              primaryKey: data['id'].toString(),
               timestamp: timestamp,
               data: data,
               version: version,
@@ -105,16 +109,13 @@ class ChangesProcessor {
         version: lastVersion,
         changeIds: changeIds,
         insertions: TableChanges(
-          Map.fromEntries(insertions.entries
-              .map((e) => MapEntry(e.key, TableRows(e.value)))),
+          Map.fromEntries(insertions.entries.map((e) => MapEntry(e.key, TableRows(e.value)))),
         ),
         updates: TableChanges(
-          Map.fromEntries(
-              updates.entries.map((e) => MapEntry(e.key, TableRows(e.value)))),
+          Map.fromEntries(updates.entries.map((e) => MapEntry(e.key, TableRows(e.value)))),
         ),
         deletions: TableChanges(
-          Map.fromEntries(deletions.entries
-              .map((e) => MapEntry(e.key, TableRows(e.value)))),
+          Map.fromEntries(deletions.entries.map((e) => MapEntry(e.key, TableRows(e.value)))),
         ),
       );
     } catch (e) {
@@ -252,12 +253,7 @@ class ChangesProcessor {
           final triggers = await txn.query(
             'sqlite_master',
             where: "type = 'trigger' AND tbl_name = ? AND name IN (?, ?, ?)",
-            whereArgs: [
-              tableName,
-              'after_insert_$tableName',
-              'after_update_$tableName',
-              'after_delete_$tableName'
-            ],
+            whereArgs: [tableName, 'after_insert_$tableName', 'after_update_$tableName', 'after_delete_$tableName'],
           );
 
           // Drop existing triggers
