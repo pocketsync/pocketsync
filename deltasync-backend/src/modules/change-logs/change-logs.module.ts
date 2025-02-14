@@ -7,6 +7,10 @@ import { DevicesService } from '../devices/devices.service';
 import { ChangesGateway } from './changes.gateway';
 import { AppUserMapper } from '../app-users/mappers/app-user.mapper';
 import { DevicesMapper } from '../devices/mappers/devices.mapper';
+import { BatchProcessorService } from './services/batch-processor.service';
+import { ChangeMergerService } from './services/change-merger.service';
+import { DeviceValidatorService } from './services/device-validator.service';
+import { ChangeStatsService } from './services/change-stats.service';
 
 @Module({
   imports: [PrismaModule],
@@ -18,6 +22,10 @@ import { DevicesMapper } from '../devices/mappers/devices.mapper';
     ChangesGateway,
     AppUserMapper,
     DevicesMapper,
+    BatchProcessorService,
+    ChangeMergerService,
+    DeviceValidatorService,
+    ChangeStatsService,
   ],
 })
 export class ChangeLogsModule { }
