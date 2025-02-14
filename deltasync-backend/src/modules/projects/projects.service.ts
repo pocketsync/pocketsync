@@ -49,6 +49,20 @@ export class ProjectsService {
           _count: {
             select: { appUsers: true },
           },
+          appUsers: {
+            include: {
+              _count: {
+                select: { devices: true }
+              },
+              devices: {
+                where: {
+                  lastSeenAt: {
+                    gte: new Date(new Date().setHours(0, 0, 0, 0))
+                  }
+                }
+              }
+            }
+          }
         },
         skip,
         take: limit,
@@ -69,6 +83,20 @@ export class ProjectsService {
         _count: {
           select: { appUsers: true },
         },
+        appUsers: {
+          include: {
+            _count: {
+              select: { devices: true }
+            },
+            devices: {
+              where: {
+                lastSeenAt: {
+                  gte: new Date(new Date().setHours(0, 0, 0, 0))
+                }
+              }
+            }
+          }
+        }
       },
     });
 
