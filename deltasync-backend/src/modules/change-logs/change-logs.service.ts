@@ -5,7 +5,6 @@ import { ChangesGateway } from './changes.gateway';
 import { ChangeLog } from '@prisma/client';
 import { BatchProcessorService } from './services/batch-processor.service';
 import { ChangeMergerService } from './services/change-merger.service';
-import { ChangeStatsService } from './services/change-stats.service';
 import { DeviceValidatorService } from './services/device-validator.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';

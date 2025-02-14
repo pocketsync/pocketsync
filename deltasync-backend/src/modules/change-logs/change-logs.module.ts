@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { CacheModule } from '@nestjs/cache-manager';
 import { ChangeLogsService } from './change-logs.service';
 import { ChangeLogsController } from './change-logs.controller';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -13,7 +14,12 @@ import { DeviceValidatorService } from './services/device-validator.service';
 import { ChangeStatsService } from './services/change-stats.service';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [
+    PrismaModule,
+    CacheModule.register({
+      ttl: 5 * 60 * 1000, // 5 minutes
+    }),
+  ],
   controllers: [ChangeLogsController],
   providers: [
     ChangeLogsService,
