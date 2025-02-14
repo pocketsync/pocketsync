@@ -58,7 +58,7 @@
                                             <td
                                                 class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                                                 <button @click="revokeToken(token.id)"
-                                                    class="text-red-600 hover:text-red-900">Revoke</button>
+                                                    class="text-red-600 hover:text-red-900 cursor-pointer">Revoke</button>
                                             </td>
                                         </tr>
 
@@ -89,6 +89,18 @@
 
         <!-- Create Token Modal -->
         <CreateTokenModal v-if="showCreateTokenModal" @close="showCreateTokenModal = false" />
+
+        <!-- Confirmation Dialog -->
+        <ConfirmationDialog
+            v-if="showConfirmDialog"
+            show
+            title="Revoke Authentication Token"
+            message="Are you sure you want to revoke this authentication token? This action cannot be undone."
+            confirm-text="Revoke Token"
+            cancel-text="Cancel"
+            @confirm="handleConfirmRevoke"
+            @cancel="handleCancelRevoke"
+        />
     </div>
 </template>
 
@@ -96,11 +108,14 @@
 import { ref } from 'vue'
 import { PhKey, PhCopy, PhPlus } from '@phosphor-icons/vue'
 import CreateTokenModal from './create-token-modal.vue'
+import ConfirmationDialog from '../common/confirmation-dialog.vue'
 import { AuthTokenResponseDto } from '~/api-client'
 
 const KeyIcon = PhKey
 const CopyIcon = PhCopy
 const showCreateTokenModal = ref(false)
+const showConfirmDialog = ref(false)
+const tokenToRevoke = ref<string | null>(null)
 
 const emit = defineEmits<{
     'create-token': []
@@ -121,9 +136,23 @@ function copyToken(token) {
     success('Token copied to clipboard')
 }
 
-function revokeToken(id) {
-    // Implement token revocation
-    success('Token revoked successfully')
+function revokeToken(id: string) {
+    tokenToRevoke.value = id
+    showConfirmDialog.value = true
+}
+
+function handleConfirmRevoke() {
+    if (tokenToRevoke.value) {
+        // Implement token revocation
+        success('Token revoked successfully')
+        tokenToRevoke.value = null
+    }
+    showConfirmDialog.value = false
+}
+
+function handleCancelRevoke() {
+    tokenToRevoke.value = null
+    showConfirmDialog.value = false
 }
 
 function formatDate(date) {
