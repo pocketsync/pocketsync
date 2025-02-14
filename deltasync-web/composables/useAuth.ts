@@ -1,9 +1,9 @@
 import { ref } from 'vue'
 import { useCookie } from 'nuxt/app'
 
-import type { LoginDto, RegisterDto, UserResponseDto } from 'web-client'
+import type { LoginDto, RegisterDto, UserResponseDto } from "~/api-client"
 import { useApi } from './useApi'
-import { AuthenticationApi } from 'web-client'
+import { AuthenticationApi } from "~/api-client"
 
 interface AuthError {
     message: string
