@@ -2,6 +2,8 @@ import { ref } from 'vue'
 import type { ProjectResponseDto, CreateProjectDto, UpdateProjectDto } from '~/api-client'
 import { ProjectsApi } from '~/api-client'
 import { useApi } from './useApi'
+import { useToast } from './useToast'
+import { AuthenticationApi } from '~/api-client'
 
 interface ProjectError {
     message: string
@@ -187,6 +189,19 @@ export const useProjects = () => {
         }
     }
 
+    const { success, error: errorToast } = useToast()
+
+    const revokeToken = async (tokenId: string) => {
+        try {
+            await projectsApi.revokeAuthToken(tokenId)
+            success('Token revoked successfully')
+            return true
+        } catch (error: any) {
+            errorToast(error.response?.data?.message || 'Failed to revoke token')
+            return false
+        }
+    }
+
     return {
         projects,
         currentProject,
@@ -197,6 +212,7 @@ export const useProjects = () => {
         createProject,
         updateProject,
         deleteProject,
-        loadMoreProjects
+        loadMoreProjects,
+        revokeToken
     }
 }

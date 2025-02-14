@@ -104,49 +104,53 @@ import { PhKey, PhCopy, PhPlus } from '@phosphor-icons/vue'
 import CreateTokenModal from './create-token-modal.vue'
 import ConfirmationDialog from '../common/confirmation-dialog.vue'
 import { AuthTokenResponseDto } from '~/api-client'
+import { useProjects } from '~/composables/useProjects'
+
+const { revokeToken } = useProjects()
 
 const KeyIcon = PhKey
 const CopyIcon = PhCopy
+
 const showCreateTokenModal = ref(false)
 const showConfirmDialog = ref(false)
 const tokenToRevoke = ref<string | null>(null)
-
-const emit = defineEmits<{
-    'create-token': []
-}>()
 
 const props = defineProps<{
     authTokens: AuthTokenResponseDto[]
 }>()
 
-const { success } = useToast()
+const emit = defineEmits<{
+    'create-token': []
+    'token-revoked': [string]
+}>();
 
-function maskToken(token) {
-    return `${token.slice(0, 4)}...${token.slice(-4)}`
+function maskToken(token: string) {
+    return `${token.slice(0, 8)}...${token.slice(-8)}`
 }
 
-function copyToken(token) {
+function copyToken(token: string) {
     navigator.clipboard.writeText(token)
-    success('Token copied to clipboard')
 }
 
-function revokeToken(id: string) {
+function revokeTokenWithConfirmation(id: string) {
     tokenToRevoke.value = id
     showConfirmDialog.value = true
 }
 
-function handleConfirmRevoke() {
+async function handleConfirmRevoke() {
     if (tokenToRevoke.value) {
-        // Implement token revocation
-        success('Token revoked successfully')
-        tokenToRevoke.value = null
+        const success = await revokeToken(tokenToRevoke.value)
+        if (success) {
+            emit('token-revoked', tokenToRevoke.value)
+        }
     }
     showConfirmDialog.value = false
+    tokenToRevoke.value = null
 }
 
 function handleCancelRevoke() {
-    tokenToRevoke.value = null
     showConfirmDialog.value = false
+    tokenToRevoke.value = null
 }
 
 function formatDate(date) {
