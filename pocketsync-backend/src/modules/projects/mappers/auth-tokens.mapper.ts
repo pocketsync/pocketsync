@@ -11,6 +11,7 @@ export class AuthTokensMapper {
             userId: token.userId,
             token: token.token,
             name: token.name ?? 'Default',
+            createdAt: token.createdAt,
         }));
     }
 }

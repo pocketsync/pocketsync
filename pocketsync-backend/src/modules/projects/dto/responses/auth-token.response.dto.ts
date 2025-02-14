@@ -30,4 +30,10 @@ export class AuthTokenResponseDto {
     example: 'sk_1234567890abcdefghijklmnopqrstuvwxyz'
   })
   token: string;
+
+  @ApiProperty({
+    description: 'The timestamp when the auth token was created',
+    example: '2023-02-15T12:34:56.789Z'
+  })
+  createdAt: Date;
 }

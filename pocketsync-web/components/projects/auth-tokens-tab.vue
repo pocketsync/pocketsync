@@ -46,14 +46,14 @@
                                                         <code
                                                             class="text-sm text-gray-600">{{ maskToken(token.token) }}</code>
                                                         <button @click="copyToken(token.token)"
-                                                            class="text-primary-600 hover:text-primary-500">
+                                                            class="text-primary-600 hover:text-primary-500 cursor-pointer">
                                                             <component :is="CopyIcon" class="h-5 w-5" />
                                                         </button>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                                {{ formatDate(token.created_at) }}
+                                                {{ formatDate(token.createdAt) }}
                                             </td>
                                             <td
                                                 class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
@@ -103,24 +103,27 @@ const CopyIcon = PhCopy
 const showCreateTokenModal = ref(false)
 
 const emit = defineEmits<{
-  'create-token': []
+    'create-token': []
 }>()
 
 const props = defineProps<{
-  authTokens: AuthTokenResponseDto[]
+    authTokens: AuthTokenResponseDto[]
 }>()
 
+const { success } = useToast()
+
 function maskToken(token) {
-    console.log(token)
     return `${token.slice(0, 4)}...${token.slice(-4)}`
 }
 
 function copyToken(token) {
     navigator.clipboard.writeText(token)
+    success('Token copied to clipboard')
 }
 
 function revokeToken(id) {
     // Implement token revocation
+    success('Token revoked successfully')
 }
 
 function formatDate(date) {

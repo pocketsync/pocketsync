@@ -4,8 +4,6 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
-import { PaginatedResponse } from 'src/common/dto/paginated-response.dto';
-import { Project } from '@prisma/client';
 import { ProjectMapper } from './mappers/project.mapper';
 
 @Injectable()
@@ -148,5 +146,26 @@ export class ProjectsService {
     });
 
     return this.projectMapper.toResponse(updatedProject, 0, []);
+  }
+
+  async revokeAuthToken(userId: string, tokenId: string) {
+    const token = await this.prisma.projectAuthTokens.findUnique({
+      where: { id: tokenId },
+      include: { project: true },
+    });
+
+    if (!token) {
+      throw new NotFoundException('Auth token not found');
+    }
+
+    if (token.project.userId !== userId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    await this.prisma.projectAuthTokens.delete({
+      where: { id: tokenId },
+    });
+
+    return { message: 'Auth token revoked successfully' };
   }
 }

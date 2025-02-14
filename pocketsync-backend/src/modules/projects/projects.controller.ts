@@ -67,4 +67,12 @@ export class ProjectsController {
   remove(@Request() req, @Param('id') id: string) {
     return this.projectsService.remove(req.user.id, id);
   }
+
+  @Delete('auth-tokens/:tokenId')
+  @ApiOperation({ summary: 'Revoke a project auth token', operationId: 'revokeAuthToken' })
+  @ApiResponse({ status: 200, description: 'Auth token revoked successfully' })
+  @ApiResponse({ status: 404, description: 'Auth token not found' })
+  async revokeAuthToken(@Request() req, @Param('tokenId') tokenId: string) {
+    return this.projectsService.revokeAuthToken(req.user.id, tokenId);
+  }
 }

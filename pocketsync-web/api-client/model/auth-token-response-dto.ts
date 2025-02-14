@@ -50,5 +50,11 @@ export interface AuthTokenResponseDto {
      * @memberof AuthTokenResponseDto
      */
     'token': string;
+    /**
+     * The timestamp when the auth token was created
+     * @type {string}
+     * @memberof AuthTokenResponseDto
+     */
+    'createdAt': string;
 }
 
