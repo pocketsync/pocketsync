@@ -175,27 +175,6 @@ export const useAuth = () => {
         error.value = null
     }
 
-    const refreshToken = async () => {
-        error.value = null
-        try {
-            const currentRefreshToken = refreshTokenCookie.value
-            if (!currentRefreshToken) {
-                throw new Error('No refresh token available')
-            }
-
-            const response = await authApi.refreshToken({ refreshToken: currentRefreshToken })
-
-            if (response.data) {
-                setTokens(response.data.accessToken, response.data.refreshToken)
-                return response.data
-            }
-        } catch (err: any) {
-            error.value = handleAuthError(err)
-            logout()
-            throw error.value
-        }
-    }
-
     // Social authentication methods
     const loginWithGithub = async () => {
         error.value = null
@@ -225,7 +204,6 @@ export const useAuth = () => {
         login,
         register,
         logout,
-        refreshToken,
         loginWithGithub,
         loginWithGoogle
     }
