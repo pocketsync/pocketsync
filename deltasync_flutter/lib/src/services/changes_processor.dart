@@ -14,51 +14,92 @@ class ChangesProcessor {
       : _conflictResolver = conflictResolver ?? const ConflictResolver();
 
   /// Gets local changes formatted as a ChangeSet
-  Future<ChangeSet> getUnSyncedChanges() async {
-    final changes = await _db.query(
-      '__deltasync_changes',
-      where: 'synced = 0',
-      orderBy: 'version ASC',
-    );
-
+  /// Uses batch processing for better performance with large datasets
+  Future<ChangeSet> getUnSyncedChanges({int batchSize = 1000}) async {
     final insertions = <String, List<Row>>{};
     final updates = <String, List<Row>>{};
     final deletions = <String, List<Row>>{};
+    int lastId = 0;
+    int lastVersion = 0;
+    final changeIds = <int>[];
 
-    for (final change in changes) {
-      final tableName = change['table_name'] as String;
-      final operation = change['operation'] as String;
-      final rawData =
-          jsonDecode(change['data'] as String) as Map<String, dynamic>;
-      final data = operation == 'DELETE'
-          ? rawData['old'] as Map<String, dynamic>
-          : rawData['new'] as Map<String, dynamic>;
-
-      final row = Row(
-        primaryKey: data['id'] as String,
-        timestamp: data['timestamp'] as int,
-        data: data,
-        version: data['version'],
+    while (true) {
+      final changes = await _db.query(
+        '__deltasync_changes',
+        where: 'synced = 0 AND id > ?',
+        whereArgs: [lastId],
+        orderBy: 'id ASC',
+        limit: batchSize,
       );
 
-      switch (operation) {
-        case 'INSERT':
-          insertions.putIfAbsent(tableName, () => []).add(row);
-          break;
-        case 'UPDATE':
-          updates.putIfAbsent(tableName, () => []).add(row);
-          break;
-        case 'DELETE':
-          deletions.putIfAbsent(tableName, () => []).add(row);
-          break;
+      if (changes.isEmpty) break;
+
+      for (final change in changes) {
+        final id = change['id'] as int;
+        final tableName = change['table_name'] as String;
+        final operation = change['operation'] as String;
+        final version = change['version'] as int;
+        final rawData =
+            jsonDecode(change['data'] as String) as Map<String, dynamic>;
+        final data = operation == 'DELETE'
+            ? rawData['old'] as Map<String, dynamic>
+            : rawData['new'] as Map<String, dynamic>;
+
+        final row = Row(
+          primaryKey: data['id'] as String,
+          timestamp: data['timestamp'] as int,
+          data: data,
+          version: data['version'],
+        );
+
+        switch (operation) {
+          case 'INSERT':
+            insertions.putIfAbsent(tableName, () => []).add(row);
+            break;
+          case 'UPDATE':
+            updates.putIfAbsent(tableName, () => []).add(row);
+            break;
+          case 'DELETE':
+            deletions.putIfAbsent(tableName, () => []).add(row);
+            break;
+        }
+
+        changeIds.add(id);
+        lastId = id;
+        lastVersion = version > lastVersion ? version : lastVersion;
+
+        return ChangeSet(
+          timestamp: DateTime.now().millisecondsSinceEpoch,
+          version: changes.isEmpty ? 0 : changes.last['version'] as int,
+          changeIds: changeIds,
+          insertions: TableChanges(
+            Map.fromEntries(
+              insertions.entries.map(
+                (e) => MapEntry(e.key, TableRows(e.value)),
+              ),
+            ),
+          ),
+          updates: TableChanges(
+            Map.fromEntries(
+              updates.entries.map(
+                (e) => MapEntry(e.key, TableRows(e.value)),
+              ),
+            ),
+          ),
+          deletions: TableChanges(
+            Map.fromEntries(
+              deletions.entries.map(
+                (e) => MapEntry(e.key, TableRows(e.value)),
+              ),
+            ),
+          ),
+        );
       }
     }
 
-    final changeIds = changes.map((change) => change['id'] as int).toList();
-
     return ChangeSet(
       timestamp: DateTime.now().millisecondsSinceEpoch,
-      version: changes.isEmpty ? 0 : changes.last['version'] as int,
+      version: lastVersion,
       changeIds: changeIds,
       insertions: TableChanges(
         Map.fromEntries(

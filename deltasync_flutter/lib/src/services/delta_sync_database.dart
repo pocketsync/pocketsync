@@ -42,7 +42,13 @@ class DeltaSyncDatabase {
         data TEXT NOT NULL,
         version INTEGER NOT NULL,
         synced INTEGER DEFAULT 0
-      )
+      );
+
+      -- Create indexes for optimizing queries
+      CREATE INDEX idx_deltasync_changes_synced ON __deltasync_changes(synced);
+      CREATE INDEX idx_deltasync_changes_version ON __deltasync_changes(version);
+      CREATE INDEX idx_deltasync_changes_timestamp ON __deltasync_changes(timestamp);
+      CREATE INDEX idx_deltasync_changes_table_name ON __deltasync_changes(table_name)
     ''');
 
     await db.execute('''
