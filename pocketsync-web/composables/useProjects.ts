@@ -221,6 +221,7 @@ export const useProjects = () => {
         updateProject,
         deleteProject,
         loadMoreProjects,
+        generateAuthToken,
         revokeToken
     }
 }

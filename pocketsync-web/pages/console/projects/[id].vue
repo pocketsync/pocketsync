@@ -121,7 +121,7 @@ const tabs = computed(() => [
     { name: 'Settings', value: 'settings' }
 ])
 
-function handleTokenCreated() {
-
+async function handleTokenCreated() {
+    await fetchProjectById(route.params.id as string)
 }
 </script>
