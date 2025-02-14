@@ -63,7 +63,7 @@
                                         <td
                                             class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
                                             <button @click="showUserDevices(user)"
-                                                class="text-primary-600 hover:text-primary-500">
+                                                class="text-primary-600 hover:text-primary-500 cursor-pointer">
                                                 View devices
                                             </button>
                                         </td>
@@ -76,10 +76,18 @@
             </div>
         </div>
     </div>
+
+    <UserDevicesModal
+        :show="showDevicesModal"
+        :user="selectedUser"
+        @close="closeDevicesModal"
+    />
 </template>
 
 <script setup>
 import { formatDistanceToNow } from 'date-fns'
+import { ref } from 'vue'
+import UserDevicesModal from './user-devices-modal.vue'
 
 defineProps({
     users: {
@@ -92,13 +100,20 @@ defineProps({
     }
 })
 
+const selectedUser = ref(null)
+const showDevicesModal = ref(false)
+
 function formatDate(date) {
     if (!date) return 'Never'
     return formatDistanceToNow(new Date(date), { addSuffix: true })
 }
 
 function showUserDevices(user) {
-    // TODO: Implement user devices modal
-    console.log('Show devices for user:', user)
+    selectedUser.value = user
+    showDevicesModal.value = true
+}
+
+function closeDevicesModal() {
+    showDevicesModal.value = false
 }
 </script>
