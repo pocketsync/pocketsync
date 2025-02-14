@@ -22,6 +22,10 @@ import { DUMMY_BASE_URL, assertParamExists, setApiKeyToObject, setBasicAuthToObj
 // @ts-ignore
 import { BASE_PATH, COLLECTION_FORMATS, type RequestArgs, BaseAPI, RequiredError, operationServerMap } from '../base';
 // @ts-ignore
+import type { AuthTokenResponseDto } from '../model';
+// @ts-ignore
+import type { CreateAuthTokenDto } from '../model';
+// @ts-ignore
 import type { CreateProjectDto } from '../model';
 // @ts-ignore
 import type { ProjectResponseDto } from '../model';
@@ -99,6 +103,42 @@ export const ProjectsApiAxiosParamCreator = function (configuration?: Configurat
             setSearchParams(localVarUrlObj, localVarQueryParameter);
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary Generate a new auth token for a project
+         * @param {CreateAuthTokenDto} createAuthTokenDto 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        generateAuthToken: async (createAuthTokenDto: CreateAuthTokenDto, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'createAuthTokenDto' is not null or undefined
+            assertParamExists('generateAuthToken', 'createAuthTokenDto', createAuthTokenDto)
+            const localVarPath = `/projects/auth-tokens`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(createAuthTokenDto, localVarRequestOptions, configuration)
 
             return {
                 url: toPathString(localVarUrlObj),
@@ -291,6 +331,19 @@ export const ProjectsApiFp = function(configuration?: Configuration) {
         },
         /**
          * 
+         * @summary Generate a new auth token for a project
+         * @param {CreateAuthTokenDto} createAuthTokenDto 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async generateAuthToken(createAuthTokenDto: CreateAuthTokenDto, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AuthTokenResponseDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.generateAuthToken(createAuthTokenDto, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ProjectsApi.generateAuthToken']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
          * @summary Get all projects for the authenticated user
          * @param {number} [page] Page number (starts from 1)
          * @param {number} [limit] Number of items per page
@@ -375,6 +428,16 @@ export const ProjectsApiFactory = function (configuration?: Configuration, baseP
         },
         /**
          * 
+         * @summary Generate a new auth token for a project
+         * @param {CreateAuthTokenDto} createAuthTokenDto 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        generateAuthToken(createAuthTokenDto: CreateAuthTokenDto, options?: RawAxiosRequestConfig): AxiosPromise<AuthTokenResponseDto> {
+            return localVarFp.generateAuthToken(createAuthTokenDto, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
          * @summary Get all projects for the authenticated user
          * @param {number} [page] Page number (starts from 1)
          * @param {number} [limit] Number of items per page
@@ -447,6 +510,18 @@ export class ProjectsApi extends BaseAPI {
      */
     public deleteProject(id: string, options?: RawAxiosRequestConfig) {
         return ProjectsApiFp(this.configuration).deleteProject(id, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary Generate a new auth token for a project
+     * @param {CreateAuthTokenDto} createAuthTokenDto 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ProjectsApi
+     */
+    public generateAuthToken(createAuthTokenDto: CreateAuthTokenDto, options?: RawAxiosRequestConfig) {
+        return ProjectsApiFp(this.configuration).generateAuthToken(createAuthTokenDto, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

@@ -13,6 +13,10 @@ export class ProjectsService {
     private projectMapper: ProjectMapper,
   ) { }
 
+  private generateToken(): string {
+    return `ds_${Buffer.from(uuidv4().replace(/-/g, '')).toString('base64').replace(/[+/]/g, '').slice(0, 60)}`;
+  }
+
   async create(userId: string, createProjectDto: CreateProjectDto) {
     const response = await this.prisma.$transaction(async (prisma) => {
       const project = await prisma.project.create({
@@ -25,7 +29,7 @@ export class ProjectsService {
       const defaultToken = await prisma.projectAuthTokens.create({
         data: {
           projectId: project.id,
-          token: `ds_${Buffer.from(uuidv4().replace(/-/g, '')).toString('base64').replace(/[+/]/g, '').slice(0, 60)}`,
+          token: this.generateToken(),
           userId,
           name: 'Default',
         }
@@ -169,6 +173,27 @@ export class ProjectsService {
     });
 
     return this.projectMapper.toResponse(updatedProject, 0, []);
+  }
+
+  async createAuthToken(userId: string, projectId: string, name: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
+    if (project.userId!== userId) {
+      throw new ForbiddenException('Access denied');
+    }
+    const token = await this.prisma.projectAuthTokens.create({
+      data: {
+        projectId,
+        token: this.generateToken(),
+        userId,
+        name,
+      }
+    });
+    return { token: token.token };
   }
 
   async revokeAuthToken(userId: string, tokenId: string) {

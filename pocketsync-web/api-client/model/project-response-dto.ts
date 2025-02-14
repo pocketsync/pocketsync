@@ -78,6 +78,18 @@ export interface ProjectResponseDto {
      */
     'deviceCount': number;
     /**
+     * Total number of changes in the project
+     * @type {number}
+     * @memberof ProjectResponseDto
+     */
+    'changesCount': number;
+    /**
+     * Number of changes pending synchronization
+     * @type {number}
+     * @memberof ProjectResponseDto
+     */
+    'pendingChangesCount': number;
+    /**
      * Auth tokens for the project
      * @type {Array<AuthTokenResponseDto>}
      * @memberof ProjectResponseDto

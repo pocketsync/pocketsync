@@ -18,6 +18,8 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ProjectResponseDto } from './dto/responses/project.response.dto';
 import { OpenApiPaginationResponse, PaginatedResponse } from 'src/common/dto/paginated-response.dto';
+import { CreateAuthTokenDto } from './dto/create-auth-token.dto';
+import { AuthTokenResponseDto } from './dto/responses/auth-token.response.dto';
 
 @ApiTags('Projects')
 @ApiBearerAuth()
@@ -66,6 +68,15 @@ export class ProjectsController {
   @ApiResponse({ status: 404, description: 'Project not found' })
   remove(@Request() req, @Param('id') id: string) {
     return this.projectsService.remove(req.user.id, id);
+  }
+
+  @Post('auth-tokens')
+  @ApiOperation({ summary: 'Generate a new auth token for a project', operationId: 'generateAuthToken' })
+  @ApiResponse({ status: 201, description: 'Auth token generated successfully', type: AuthTokenResponseDto })
+  @ApiResponse({ status: 404, description: 'Project not found' })
+  @ApiResponse({ status: 403, description: 'Access denied' })
+  async generateAuthToken(@Request() req, @Body() createAuthTokenDto: CreateAuthTokenDto) {
+    return this.projectsService.createAuthToken(req.user.id, createAuthTokenDto.projectId, createAuthTokenDto.name);
   }
 
   @Delete('auth-tokens/:tokenId')
