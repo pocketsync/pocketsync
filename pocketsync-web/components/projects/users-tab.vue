@@ -80,6 +80,8 @@
 </template>
 
 <script setup>
+import { formatDistanceToNow } from 'date-fns'
+
 defineProps({
     users: {
         type: Array,
@@ -100,14 +102,12 @@ function getInitials(name) {
 }
 
 function formatDate(date) {
-    return new Date(date).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-    })
+    if (!date) return 'Never'
+    return formatDistanceToNow(new Date(date), { addSuffix: true })
 }
 
 function showUserDevices(user) {
-    // Implement show user devices functionality
+    // TODO: Implement user devices modal
+    console.log('Show devices for user:', user)
 }
 </script>
