@@ -67,10 +67,12 @@ export const AppUsersApiAxiosParamCreator = function (configuration?: Configurat
          * 
          * @summary Find all app users
          * @param {string} projectId 
+         * @param {number} [page] Page number (starts from 1)
+         * @param {number} [limit] Number of items per page
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        projectUsers: async (projectId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        projectUsers: async (projectId: string, page?: number, limit?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'projectId' is not null or undefined
             assertParamExists('projectUsers', 'projectId', projectId)
             const localVarPath = `/app-users/project/{projectId}`
@@ -85,6 +87,14 @@ export const AppUsersApiAxiosParamCreator = function (configuration?: Configurat
             const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
+
+            if (page !== undefined) {
+                localVarQueryParameter['page'] = page;
+            }
+
+            if (limit !== undefined) {
+                localVarQueryParameter['limit'] = limit;
+            }
 
 
     
@@ -124,11 +134,13 @@ export const AppUsersApiFp = function(configuration?: Configuration) {
          * 
          * @summary Find all app users
          * @param {string} projectId 
+         * @param {number} [page] Page number (starts from 1)
+         * @param {number} [limit] Number of items per page
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async projectUsers(projectId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AppUserResponseList>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.projectUsers(projectId, options);
+        async projectUsers(projectId: string, page?: number, limit?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AppUserResponseList>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.projectUsers(projectId, page, limit, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['AppUsersApi.projectUsers']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -157,11 +169,13 @@ export const AppUsersApiFactory = function (configuration?: Configuration, baseP
          * 
          * @summary Find all app users
          * @param {string} projectId 
+         * @param {number} [page] Page number (starts from 1)
+         * @param {number} [limit] Number of items per page
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        projectUsers(projectId: string, options?: RawAxiosRequestConfig): AxiosPromise<AppUserResponseList> {
-            return localVarFp.projectUsers(projectId, options).then((request) => request(axios, basePath));
+        projectUsers(projectId: string, page?: number, limit?: number, options?: RawAxiosRequestConfig): AxiosPromise<AppUserResponseList> {
+            return localVarFp.projectUsers(projectId, page, limit, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -189,12 +203,14 @@ export class AppUsersApi extends BaseAPI {
      * 
      * @summary Find all app users
      * @param {string} projectId 
+     * @param {number} [page] Page number (starts from 1)
+     * @param {number} [limit] Number of items per page
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof AppUsersApi
      */
-    public projectUsers(projectId: string, options?: RawAxiosRequestConfig) {
-        return AppUsersApiFp(this.configuration).projectUsers(projectId, options).then((request) => request(this.axios, this.basePath));
+    public projectUsers(projectId: string, page?: number, limit?: number, options?: RawAxiosRequestConfig) {
+        return AppUsersApiFp(this.configuration).projectUsers(projectId, page, limit, options).then((request) => request(this.axios, this.basePath));
     }
 }
 

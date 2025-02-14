@@ -108,10 +108,12 @@ export const ProjectsApiAxiosParamCreator = function (configuration?: Configurat
         /**
          * 
          * @summary Get all projects for the authenticated user
+         * @param {number} [page] Page number (starts from 1)
+         * @param {number} [limit] Number of items per page
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getAllProjects: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        getAllProjects: async (page?: number, limit?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/projects`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -123,6 +125,14 @@ export const ProjectsApiAxiosParamCreator = function (configuration?: Configurat
             const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
+
+            if (page !== undefined) {
+                localVarQueryParameter['page'] = page;
+            }
+
+            if (limit !== undefined) {
+                localVarQueryParameter['limit'] = limit;
+            }
 
 
     
@@ -248,11 +258,13 @@ export const ProjectsApiFp = function(configuration?: Configuration) {
         /**
          * 
          * @summary Get all projects for the authenticated user
+         * @param {number} [page] Page number (starts from 1)
+         * @param {number} [limit] Number of items per page
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getAllProjects(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ProjectResponseList>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getAllProjects(options);
+        async getAllProjects(page?: number, limit?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ProjectResponseList>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getAllProjects(page, limit, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ProjectsApi.getAllProjects']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -317,11 +329,13 @@ export const ProjectsApiFactory = function (configuration?: Configuration, baseP
         /**
          * 
          * @summary Get all projects for the authenticated user
+         * @param {number} [page] Page number (starts from 1)
+         * @param {number} [limit] Number of items per page
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getAllProjects(options?: RawAxiosRequestConfig): AxiosPromise<ProjectResponseList> {
-            return localVarFp.getAllProjects(options).then((request) => request(axios, basePath));
+        getAllProjects(page?: number, limit?: number, options?: RawAxiosRequestConfig): AxiosPromise<ProjectResponseList> {
+            return localVarFp.getAllProjects(page, limit, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -381,12 +395,14 @@ export class ProjectsApi extends BaseAPI {
     /**
      * 
      * @summary Get all projects for the authenticated user
+     * @param {number} [page] Page number (starts from 1)
+     * @param {number} [limit] Number of items per page
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof ProjectsApi
      */
-    public getAllProjects(options?: RawAxiosRequestConfig) {
-        return ProjectsApiFp(this.configuration).getAllProjects(options).then((request) => request(this.axios, this.basePath));
+    public getAllProjects(page?: number, limit?: number, options?: RawAxiosRequestConfig) {
+        return ProjectsApiFp(this.configuration).getAllProjects(page, limit, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

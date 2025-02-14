@@ -27,6 +27,7 @@ export const OpenApiPaginationResponse = (model: any) => {
                     },
                     data: {
                         type: 'array',
+                        nullable: false,
                         items: { $ref: getSchemaPath(model) }
                     }
                 }
