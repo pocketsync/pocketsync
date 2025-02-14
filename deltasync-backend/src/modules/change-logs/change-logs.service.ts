@@ -2,10 +2,13 @@ import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common
 import { PrismaService } from '../prisma/prisma.service';
 import { ChangeSetDto } from './dto/change-set.dto';
 import { ChangesGateway } from './changes.gateway';
+import { ChangeLog } from '@prisma/client';
 
 @Injectable()
 export class ChangeLogsService {
   private readonly logger = new Logger(ChangeLogsService.name);
+  private readonly MAX_CHANGES_PER_BATCH = 1000;
+  private readonly MAX_BATCH_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
   constructor(
     private prisma: PrismaService,
@@ -15,13 +18,20 @@ export class ChangeLogsService {
   async processChange(userIdentifier: string, deviceId: string, changeSets: ChangeSetDto[]) {
     this.logger.log(`Processing change for user ${userIdentifier} from device ${deviceId}`);
     try {
-      const changeLog = await this.createChangLog(userIdentifier, deviceId, changeSets);
-      this.logger.log(`Change log ${changeLog.id} ${changeLog.processedAt ? 'already exists' : 'created'}`);
+      // Split large change sets into batches
+      const batches = this.splitIntoBatches(changeSets);
+      const processedLogs: ChangeLog[] = [];
 
-      // Notify other devices through the gateway
-      this.changesGateway.notifyChanges(deviceId, changeLog);
+      for (const batch of batches) {
+        const changeLog = await this.createChangLog(userIdentifier, deviceId, batch);
+        this.logger.log(`Change log ${changeLog.id} ${changeLog.processedAt ? 'already exists' : 'created'} (Batch size: ${batch.length})`);
 
-      return changeLog;
+        // Notify other devices through the gateway
+        this.changesGateway.notifyChanges(deviceId, changeLog);
+        processedLogs.push(changeLog);
+      }
+
+      return processedLogs.length === 1 ? processedLogs[0] : processedLogs;
     } catch (error) {
       this.logger.error('Error processing change', {
         error: error.message,
@@ -31,6 +41,51 @@ export class ChangeLogsService {
       });
       throw new InternalServerErrorException('Error processing change');
     }
+  }
+
+  private splitIntoBatches(changeSets: ChangeSetDto[]): ChangeSetDto[][] {
+    const batches: ChangeSetDto[][] = [];
+    let currentBatch: ChangeSetDto[] = [];
+    let currentBatchSize = 0;
+    let currentChangeCount = 0;
+
+    for (const changeSet of changeSets) {
+      const changeSetSize = this.estimateChangeSetSize(changeSet);
+      const changeCount = this.countChanges(changeSet);
+
+      if (currentBatch.length > 0 &&
+        (currentBatchSize + changeSetSize > this.MAX_BATCH_SIZE_BYTES ||
+          currentChangeCount + changeCount > this.MAX_CHANGES_PER_BATCH)) {
+        batches.push(currentBatch);
+        currentBatch = [];
+        currentBatchSize = 0;
+        currentChangeCount = 0;
+      }
+
+      currentBatch.push(changeSet);
+      currentBatchSize += changeSetSize;
+      currentChangeCount += changeCount;
+    }
+
+    if (currentBatch.length > 0) {
+      batches.push(currentBatch);
+    }
+
+    return batches;
+  }
+
+  private estimateChangeSetSize(changeSet: ChangeSetDto): number {
+    return Buffer.byteLength(JSON.stringify(changeSet));
+  }
+
+  private countChanges(changeSet: ChangeSetDto): number {
+    let count = 0;
+    for (const changeType of ['insertions', 'updates', 'deletions'] as const) {
+      for (const tableChanges of Object.values(changeSet[changeType])) {
+        count += tableChanges.rows.length;
+      }
+    }
+    return count;
   }
 
   private async createChangLog(userIdentifier: string, deviceId: string, changeSets: ChangeSetDto[]) {
@@ -74,8 +129,8 @@ export class ChangeLogsService {
     };
 
     // Track the latest version of each record by primary key
-    const latestVersions: Record<string, Record<string, { 
-      row: any; 
+    const latestVersions: Record<string, Record<string, {
+      row: any;
       timestamp: number;
       version: number;
       changeType: 'insertions' | 'updates' | 'deletions';
@@ -102,21 +157,21 @@ export class ChangeLogsService {
             const version = row.version || changeSet.version;
 
             // Skip if we already have a newer version of this record
-            if (latestVersions[tableName][primaryKey] && 
-                version <= latestVersions[tableName][primaryKey].version) {
+            if (latestVersions[tableName][primaryKey] &&
+              version <= latestVersions[tableName][primaryKey].version) {
               continue;
             }
 
             // Apply last-write-wins strategy based on timestamp and version
             if (!latestVersions[tableName][primaryKey] ||
-                timestamp > latestVersions[tableName][primaryKey].timestamp ||
-                (timestamp === latestVersions[tableName][primaryKey].timestamp && 
-                 version > latestVersions[tableName][primaryKey].version)) {
-              latestVersions[tableName][primaryKey] = { 
-                row, 
+              timestamp > latestVersions[tableName][primaryKey].timestamp ||
+              (timestamp === latestVersions[tableName][primaryKey].timestamp &&
+                version > latestVersions[tableName][primaryKey].version)) {
+              latestVersions[tableName][primaryKey] = {
+                row,
                 timestamp,
                 version,
-                changeType 
+                changeType
               };
             }
           }
