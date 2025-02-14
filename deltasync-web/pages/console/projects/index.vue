@@ -49,7 +49,11 @@
         </div>
 
         <!-- Create Project Modal -->
-        <CreateProjectModal :show="showCreateProjectModal" @close="showCreateProjectModal = false" />
+        <CreateProjectModal
+            :show="showCreateProjectModal" 
+            @close="showCreateProjectModal = false"
+            @project-created="projects.push($event)"
+        />
     </div>
 </template>
 

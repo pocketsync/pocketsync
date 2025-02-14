@@ -47,6 +47,20 @@ export class ProjectResponseDto {
   userCount: number;
 
   @ApiProperty({
+    description: 'Number of active users today',
+    example: 150,
+    default: 0
+  })
+  activeUsersTodayCount: number;
+
+  @ApiProperty({
+    description: 'Total number of devices registered in the project',
+    example: 1000,
+    default: 0
+  })
+  deviceCount: number;
+
+  @ApiProperty({
     description: 'Auth tokens for the project',
     type: () => AuthTokenResponseDto,
     isArray: true

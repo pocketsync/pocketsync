@@ -36,10 +36,12 @@
                                             required maxlength="255" @blur="validateForm"
                                             :aria-invalid="errors.name ? 'true' : 'false'"
                                             :aria-describedby="errors.name ? 'project-name-error' : undefined" />
+                                        <p v-if="errors.name" id="project-name-error" class="mt-2 text-sm text-red-600">
+                                            {{ errors.name.join('\n') }}</p>
                                         <p class="mt-2 text-sm text-gray-500">Choose a name that represents your
                                             application.
                                             This will help you identify your project later.</p>
-                                        <p v-if="errors.name" id="project-name-error" class="mt-2 text-sm text-red-600">{{ errors.name.join('\n') }}</p>
+
                                     </div>
                                 </div>
                             </div>
@@ -80,19 +82,15 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['close'])
+const emit = defineEmits(['close', 'project-created'])
 
 const projectName = ref('')
 const isLoading = ref(false)
-const error = ref('')
 
-const { createProject: createProjectApi } = useProjects()
+const { createProject: createProjectApi, error } = useProjects()
 const { validate, rules, errors } = useValidation()
 
 async function createProject() {
-    errors.value = { name: '', submit: '' } // Reset errors before validation
-    error.value = '' // Reset API error
-    
     const isValid = validateForm()
 
     if (!isValid) {
@@ -106,7 +104,6 @@ async function createProject() {
         emit('project-created', project)
         closeModal()
     } catch (err) {
-        error.value = err.message || 'Failed to create project'
     } finally {
         isLoading.value = false
     }
@@ -129,7 +126,6 @@ function validateForm() {
 
 function closeModal() {
     projectName.value = ''
-    errors.value = {}
     emit('close')
 }
 </script>
