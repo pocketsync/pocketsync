@@ -91,16 +91,10 @@
         <CreateTokenModal v-if="showCreateTokenModal" @close="showCreateTokenModal = false" />
 
         <!-- Confirmation Dialog -->
-        <ConfirmationDialog
-            v-if="showConfirmDialog"
-            show
-            title="Revoke Authentication Token"
-            message="Are you sure you want to revoke this authentication token? This action cannot be undone."
-            confirm-text="Revoke Token"
-            cancel-text="Cancel"
-            @confirm="handleConfirmRevoke"
-            @cancel="handleCancelRevoke"
-        />
+        <ConfirmationDialog v-if="showConfirmDialog" show title="Revoke Authentication Token"
+            message="Are you sure you want to revoke this authentication token? This action cannot be undone. Note if you are using this token in your application, this will break sync for all users."
+            confirm-text="Revoke Token" cancel-text="Cancel" @confirm="handleConfirmRevoke"
+            @cancel="handleCancelRevoke" />
     </div>
 </template>
 
