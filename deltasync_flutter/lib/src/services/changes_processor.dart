@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:deltasync_flutter/deltasync_flutter.dart';
+import 'package:deltasync_flutter/src/errors/sync_error.dart';
 import 'package:deltasync_flutter/src/models/change_log.dart';
 import 'package:deltasync_flutter/src/models/change_set.dart';
 import 'package:sqflite/sqflite.dart';
@@ -16,113 +17,111 @@ class ChangesProcessor {
   /// Gets local changes formatted as a ChangeSet
   /// Uses batch processing for better performance with large datasets
   Future<ChangeSet> getUnSyncedChanges({int batchSize = 1000}) async {
-    final insertions = <String, List<Row>>{};
-    final updates = <String, List<Row>>{};
-    final deletions = <String, List<Row>>{};
-    int lastId = 0;
-    int lastVersion = 0;
-    final changeIds = <int>[];
+    try {
+      final insertions = <String, List<Row>>{};
+      final updates = <String, List<Row>>{};
+      final deletions = <String, List<Row>>{};
+      int lastId = 0;
+      int lastVersion = 0;
+      final changeIds = <int>[];
 
-    while (true) {
-      final changes = await _db.query(
-        '__deltasync_changes',
-        where: 'synced = 0 AND id > ?',
-        whereArgs: [lastId],
-        orderBy: 'id ASC',
-        limit: batchSize,
-      );
-
-      if (changes.isEmpty) break;
-
-      for (final change in changes) {
-        final id = change['id'] as int;
-        final tableName = change['table_name'] as String;
-        final operation = change['operation'] as String;
-        final version = change['version'] as int;
-        final rawData =
-            jsonDecode(change['data'] as String) as Map<String, dynamic>;
-        final data = operation == 'DELETE'
-            ? rawData['old'] as Map<String, dynamic>
-            : rawData['new'] as Map<String, dynamic>;
-
-        final row = Row(
-          primaryKey: data['id'] as String,
-          timestamp: data['timestamp'] as int,
-          data: data,
-          version: data['version'],
-        );
-
-        switch (operation) {
-          case 'INSERT':
-            insertions.putIfAbsent(tableName, () => []).add(row);
-            break;
-          case 'UPDATE':
-            updates.putIfAbsent(tableName, () => []).add(row);
-            break;
-          case 'DELETE':
-            deletions.putIfAbsent(tableName, () => []).add(row);
-            break;
+      while (true) {
+        List<Map<String, dynamic>> changes;
+        try {
+          changes = await _db.query(
+            '__deltasync_changes',
+            where: 'synced = 0 AND id > ?',
+            whereArgs: [lastId],
+            orderBy: 'id ASC',
+            limit: batchSize,
+          );
+        } catch (e) {
+          log('Error querying changes: $e');
+          throw SyncStateError('Failed to query changes: ${e.toString()}');
         }
 
-        changeIds.add(id);
-        lastId = id;
-        lastVersion = version > lastVersion ? version : lastVersion;
+        if (changes.isEmpty) break;
 
-        return ChangeSet(
-          timestamp: DateTime.now().millisecondsSinceEpoch,
-          version: changes.isEmpty ? 0 : changes.last['version'] as int,
-          changeIds: changeIds,
-          insertions: TableChanges(
-            Map.fromEntries(
-              insertions.entries.map(
-                (e) => MapEntry(e.key, TableRows(e.value)),
-              ),
-            ),
-          ),
-          updates: TableChanges(
-            Map.fromEntries(
-              updates.entries.map(
-                (e) => MapEntry(e.key, TableRows(e.value)),
-              ),
-            ),
-          ),
-          deletions: TableChanges(
-            Map.fromEntries(
-              deletions.entries.map(
-                (e) => MapEntry(e.key, TableRows(e.value)),
-              ),
-            ),
-          ),
-        );
+        for (final change in changes) {
+          try {
+            final id = change['id'] as int;
+            final tableName = change['table_name'] as String;
+            final operation = change['operation'] as String;
+            final version = change['version'] as int;
+            final timestamp = change['timestamp'] as int;
+
+            Map<String, dynamic> data;
+            try {
+              final rawData = jsonDecode(change['data'] as String);
+              if (rawData is! Map<String, dynamic>) {
+                throw FormatException('Change data must be a JSON object');
+              }
+              data = rawData;
+            } catch (e) {
+              log('Error parsing change data for id $id: $e');
+              throw SyncStateError(
+                  'Failed to parse change data: ${e.toString()}');
+            }
+
+            if (!data.containsKey('id')) {
+              throw SyncStateError('Change data missing required "id" field');
+            }
+
+            final row = Row(
+              primaryKey: data['id'] as String,
+              timestamp: timestamp,
+              data: data,
+              version: version,
+            );
+
+            switch (operation) {
+              case 'INSERT':
+                insertions.putIfAbsent(tableName, () => []).add(row);
+                break;
+              case 'UPDATE':
+                updates.putIfAbsent(tableName, () => []).add(row);
+                break;
+              case 'DELETE':
+                deletions.putIfAbsent(tableName, () => []).add(row);
+                break;
+              default:
+                log('Invalid operation type: $operation');
+                throw SyncStateError('Invalid operation type: $operation');
+            }
+
+            changeIds.add(id);
+            lastId = id;
+            if (version > lastVersion) lastVersion = version;
+          } catch (e) {
+            if (e is SyncError) rethrow;
+            log('Error processing change: $e');
+            throw SyncStateError('Failed to process change: ${e.toString()}');
+          }
+        }
       }
-    }
 
-    return ChangeSet(
-      timestamp: DateTime.now().millisecondsSinceEpoch,
-      version: lastVersion,
-      changeIds: changeIds,
-      insertions: TableChanges(
-        Map.fromEntries(
-          insertions.entries.map(
-            (e) => MapEntry(e.key, TableRows(e.value)),
-          ),
+      return ChangeSet(
+        timestamp: DateTime.now().millisecondsSinceEpoch,
+        version: lastVersion,
+        changeIds: changeIds,
+        insertions: TableChanges(
+          Map.fromEntries(insertions.entries
+              .map((e) => MapEntry(e.key, TableRows(e.value)))),
         ),
-      ),
-      updates: TableChanges(
-        Map.fromEntries(
-          updates.entries.map(
-            (e) => MapEntry(e.key, TableRows(e.value)),
-          ),
+        updates: TableChanges(
+          Map.fromEntries(
+              updates.entries.map((e) => MapEntry(e.key, TableRows(e.value)))),
         ),
-      ),
-      deletions: TableChanges(
-        Map.fromEntries(
-          deletions.entries.map(
-            (e) => MapEntry(e.key, TableRows(e.value)),
-          ),
+        deletions: TableChanges(
+          Map.fromEntries(deletions.entries
+              .map((e) => MapEntry(e.key, TableRows(e.value)))),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      if (e is SyncError) rethrow;
+      log('Unexpected error in getUnSyncedChanges: $e');
+      throw SyncStateError('Failed to get unsynced changes: ${e.toString()}');
+    }
   }
 
   /// Marks changes as synced

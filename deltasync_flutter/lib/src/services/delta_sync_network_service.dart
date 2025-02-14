@@ -26,7 +26,8 @@ class DeltaSyncNetworkService {
     required String projectId,
     required String authToken,
     String? deviceId,
-  })  : _dio = Dio(),
+    Dio? dio
+  })  : _dio = dio ?? Dio(),
         _serverUrl = serverUrl,
         _projectId = projectId,
         _authToken = authToken,
@@ -76,6 +77,13 @@ class DeltaSyncNetworkService {
   }
 
   Future<ChangeProcessingResponse> sendChanges(ChangeSet changes) async {
+    if (_userId == null) {
+      throw InitializationError('User ID not set');
+    }
+    if (_deviceId == null) {
+      throw InitializationError('Device ID not set');
+    }
+
     final url = '$_serverUrl/sdk/changes';
     try {
       final response = await _dio.post(

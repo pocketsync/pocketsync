@@ -14,10 +14,10 @@ class Row {
   });
 
   Map<String, dynamic> toJson() => {
-    'primaryKey': primaryKey,
-    'timestamp': timestamp,
-    'data': data,
-  };
+        'primaryKey': primaryKey,
+        'timestamp': timestamp,
+        'data': data,
+      };
 
   factory Row.fromJson(Map<String, dynamic> json) {
     return Row(
@@ -35,15 +35,14 @@ class TableRows {
   TableRows(this.rows);
 
   Map<String, dynamic> toJson() => {
-    'rows': rows.map((row) => row.toJson()).toList(),
-  };
+        'rows': rows.map((row) => row.toJson()).toList(),
+      };
 
   factory TableRows.fromJson(Map<String, dynamic> json) {
     return TableRows(
       List<Row>.from(
-        (json['rows'] as List).map((row) => 
-          Row.fromJson(row is String ? jsonDecode(row) : row as Map<String, dynamic>)
-        ),
+        (json['rows'] as List).map((row) => Row.fromJson(
+            row is String ? jsonDecode(row) : row as Map<String, dynamic>)),
       ),
     );
   }
@@ -54,8 +53,8 @@ class TableChanges {
 
   TableChanges(this.changes);
 
-  Map<String, dynamic> toJson() => 
-    changes.map((key, value) => MapEntry(key, value.toJson()));
+  Map<String, dynamic> toJson() =>
+      changes.map((key, value) => MapEntry(key, value.toJson()));
 
   factory TableChanges.fromJson(Map<String, dynamic> json) {
     return TableChanges(
@@ -87,6 +86,17 @@ class ChangeSet {
     required this.deletions,
     this.changeIds = const [],
   });
+
+  factory ChangeSet.empty() {
+    return ChangeSet(
+      timestamp: 0,
+      version: 0,
+      insertions: TableChanges({}),
+      updates: TableChanges({}),
+      deletions: TableChanges({}),
+      changeIds: [],
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'timestamp': timestamp,
