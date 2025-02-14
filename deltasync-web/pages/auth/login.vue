@@ -155,7 +155,7 @@ async function handleLogin() {
             router.push({ name: 'console' })
         }
     } catch (error) {
-        console.error('Login error:', error)
+        // Error is already handled by useAuth composable
     } finally {
         isLoading.value = false
     }
@@ -167,8 +167,7 @@ async function handleGithubLogin() {
         await loginWithGithub()
         await router.push('/console')
     } catch (error) {
-        console.error('GitHub login error:', error)
-        errorMessage.value = 'Failed to login with GitHub. Please try again.'
+        // Error is already handled by useAuth composable
     } finally {
         isLoading.value = false
     }
@@ -180,8 +179,7 @@ async function handleGoogleLogin() {
         await loginWithGoogle()
         await router.push('/console')
     } catch (error) {
-        console.error('Google login error:', error)
-        errorMessage.value = 'Failed to login with Google. Please try again.'
+        // Error is already handled by useAuth composable
     } finally {
         isLoading.value = false
     }

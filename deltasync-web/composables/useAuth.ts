@@ -29,19 +29,8 @@ export const useAuth = () => {
     const error = ref<AuthError | null>(null)
 
     // Initialize API client using the shared configuration
-    const { config } = useApi()
-    const authApi = new AuthenticationApi(config)
-
-    // Initialize authentication state
-    const initAuth = () => {
-        const token = useCookie('access_token').value
-        if (token) {
-            isAuthenticated.value = true
-        }
-    }
-    
-    // Call initAuth when the composable is created
-    initAuth()
+    const { config, axiosInstance } = useApi()
+    const authApi = new AuthenticationApi(config, undefined, axiosInstance)
 
     // Cookie options
     const cookieOptions = {
@@ -123,6 +112,28 @@ export const useAuth = () => {
         }
     }
 
+    // User profile management
+    const fetchUserProfile = async () => {
+        if (!isAuthenticated.value) return
+
+        try {
+            isLoading.value = true
+            const response = await authApi.getCurrentUser()
+            if (response.data) {
+                user.value = response.data
+            }
+        } catch (err: any) {
+            const authError = handleAuthError(err)
+            error.value = authError
+            if (authError.code === 'TOKEN_EXPIRED' || authError.code === 'INVALID_CREDENTIALS') {
+                logout()
+            }
+            throw authError
+        } finally {
+            isLoading.value = false
+        }
+    }
+
     // Authentication methods
     const login = async (email: string, password: string) => {
         error.value = null
@@ -133,8 +144,9 @@ export const useAuth = () => {
 
             if (response.data) {
                 setTokens(response.data.accessToken, response.data.refreshToken)
-                user.value = response.data.user
                 isAuthenticated.value = true
+                user.value = response.data.user
+                await fetchUserProfile()
             }
 
             return response.data
@@ -196,6 +208,23 @@ export const useAuth = () => {
         }
     }
 
+    // Initialize authentication state
+    const initAuth = async () => {
+        const token = useCookie('access_token').value
+        if (token) {
+            isAuthenticated.value = true
+            try {
+                await fetchUserProfile()
+            } catch (err) {
+                // Handle initialization errors silently
+                console.error('Failed to initialize auth:', err)
+            }
+        }
+    }
+    
+    // Call initAuth when the composable is created
+    initAuth()
+
     return {
         user,
         isAuthenticated,
@@ -205,6 +234,7 @@ export const useAuth = () => {
         register,
         logout,
         loginWithGithub,
-        loginWithGoogle
+        loginWithGoogle,
+        fetchUserProfile
     }
 }

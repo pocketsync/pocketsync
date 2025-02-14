@@ -1,5 +1,7 @@
 import { Configuration } from "~/api-client"
 import { useCookie } from "nuxt/app"
+import axios from 'axios'
+import type { AxiosInstance } from 'axios'
 
 export const useApi = () => {
     let isRefreshing = false
@@ -19,88 +21,100 @@ export const useApi = () => {
         failedQueue = []
     }
 
-    // Initialize API client configuration
-    const config = new Configuration({
-        basePath: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:3000',
-        baseOptions: {
-            onBeforeRequest: async (config: any) => {
-                const accessToken = useCookie('access_token').value
-                if (accessToken) {
-                    config.headers = config.headers || {}
-                    config.headers['Authorization'] = `Bearer ${accessToken}`
-                }
-                return config
-            },
-            onError: async (error: any) => {
-                const originalRequest = error.config
-
-                // If error is not 401 or request already retried, reject
-                if (error.response?.status !== 401 || originalRequest._retry) {
-                    return Promise.reject(error)
-                }
-
-                if (isRefreshing) {
-                    try {
-                        const token = await new Promise<string>((resolve, reject) => {
-                            failedQueue.push({ resolve, reject })
-                        })
-                        originalRequest.headers['Authorization'] = `Bearer ${token}`
-                        return originalRequest
-                    } catch (err) {
-                        return Promise.reject(err)
-                    }
-                }
-
-                originalRequest._retry = true
-                isRefreshing = true
-
-                try {
-                    const refreshTokenValue = useCookie('refresh_token').value
-                    if (!refreshTokenValue) {
-                        throw new Error('No refresh token available')
-                    }
-
-                    const refreshApi = new Configuration({
-                        basePath: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
-                    })
-
-                    const response = await fetch(`${refreshApi.basePath}/auth/token/refresh`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ refreshToken: refreshTokenValue })
-                    })
-
-                    if (!response.ok) {
-                        throw new Error('Failed to refresh token')
-                    }
-
-                    const data = await response.json()
-                    const newToken = data.accessToken
-                    
-                    if (newToken) {
-                        // Update the access token cookie
-                        useCookie('access_token').value = newToken
-                        if (data.refreshToken) {
-                            useCookie('refresh_token').value = data.refreshToken
-                        }
-                        
-                        originalRequest.headers['Authorization'] = `Bearer ${newToken}`
-                        processQueue(null, newToken)
-                        return originalRequest
-                    }
-                } catch (refreshError) {
-                    processQueue(refreshError, null)
-                    return Promise.reject(refreshError)
-                } finally {
-                    isRefreshing = false
-                }
-            }
+    // Create axios instance
+    const axiosInstance: AxiosInstance = axios.create({
+        baseURL: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:3000',
+        timeout: 10000,
+        headers: {
+            'Content-Type': 'application/json'
         }
     })
 
+    // Request interceptor for token injection
+    axiosInstance.interceptors.request.use(
+        (config) => {
+            const accessToken = useCookie('access_token').value
+            if (accessToken) {
+                config.headers['Authorization'] = `Bearer ${accessToken}`
+            }
+            return config
+        },
+        (error) => {
+            return Promise.reject(error)
+        }
+    )
+
+    // Response interceptor for token refresh
+    axiosInstance.interceptors.response.use(
+        (response) => response,
+        async (error) => {
+            const originalRequest = error.config
+
+            // If error is not 401 or request already retried, reject
+            if (error.response?.status !== 401 || originalRequest._retry) {
+                return Promise.reject(error)
+            }
+
+            if (isRefreshing) {
+                try {
+                    const token = await new Promise<string>((resolve, reject) => {
+                        failedQueue.push({ resolve, reject })
+                    })
+                    originalRequest.headers['Authorization'] = `Bearer ${token}`
+                    return originalRequest
+                } catch (err) {
+                    return Promise.reject(err)
+                }
+            }
+
+            originalRequest._retry = true
+            isRefreshing = true
+
+            try {
+                const refreshTokenValue = useCookie('refresh_token').value
+                if (!refreshTokenValue) {
+                    throw new Error('No refresh token available')
+                }
+
+                const response = await axios.post(
+                    '/auth/token/refresh',
+                    { refreshToken: refreshTokenValue },
+                    {
+                        baseURL: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:3000',
+                        headers: { 'Content-Type': 'application/json' }
+                    }
+                )
+
+                const { data } = response
+                const newToken = data.accessToken
+
+                if (newToken) {
+                    // Update the access token cookie
+                    useCookie('access_token').value = newToken
+                    if (data.refreshToken) {
+                        useCookie('refresh_token').value = data.refreshToken
+                    }
+
+                    originalRequest.headers['Authorization'] = `Bearer ${newToken}`
+                    processQueue(null, newToken)
+                    return originalRequest
+                }
+            } catch (refreshError) {
+                processQueue(refreshError, null)
+                return Promise.reject(refreshError)
+            } finally {
+                isRefreshing = false
+            }
+        }
+    )
+
+    // Initialize API client configuration
+    const config = new Configuration({
+        basePath: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
+    })
+
     return {
-        config
+        config,
+        axiosInstance
     }
 }
