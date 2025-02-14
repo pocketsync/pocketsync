@@ -57,11 +57,11 @@ class DeltaSyncNetworkService {
 
   Options _getRequestOptions() {
     if (_userId == null) {
-      throw SyncError('User ID not set');
+      throw InitializationError('User ID not set');
     }
 
     if (_deviceId == null) {
-      throw SyncError('Device ID set');
+      throw InitializationError('Device ID not set');
     }
 
     return Options(
@@ -88,11 +88,11 @@ class DeltaSyncNetworkService {
 
       return ChangeProcessingResponse.fromJson(response.data);
     } on DioException catch (e) {
-      log('Request failed', error: e.response);
-      rethrow;
+      final statusCode = e.response?.statusCode;
+      final message = e.response?.statusMessage ?? 'Network request failed';
+      throw NetworkError(message, statusCode: statusCode, cause: e);
     } catch (e) {
-      log('Request failed', error: e);
-      rethrow;
+      throw NetworkError('Failed to send changes', cause: e);
     }
   }
 
@@ -141,7 +141,7 @@ class DeltaSyncNetworkService {
 
       _socket!.connect();
     } catch (e) {
-      log('Socket.IO connection failed: $e');
+      throw NetworkError('WebSocket connection failed', cause: e);
     }
   }
 

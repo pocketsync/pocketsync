@@ -156,8 +156,8 @@ class DeltaSync {
           await _markChangesSynced(changeSet.changeIds);
         }
       }
-    } on Exception catch (e) {
-      throw SyncError('Sync failed: $e', innerError: e);
+    } on SyncError {
+      rethrow;
     } finally {
       _isSyncing = false;
     }
