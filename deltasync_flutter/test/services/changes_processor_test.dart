@@ -1,11 +1,8 @@
 import 'dart:convert';
 
-import 'package:deltasync_flutter/src/models/change_set.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:deltasync_flutter/src/services/changes_processor.dart';
-import 'package:deltasync_flutter/src/models/change_log.dart';
-import 'package:deltasync_flutter/src/errors/sync_error.dart';
 import 'package:sqflite/sqflite.dart';
 import '../helpers/test_helpers.dart';
 

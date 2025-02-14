@@ -222,7 +222,7 @@ export class AuthService {
     return safeProfile;
   }
 
-  async validateUser(payload: any) {
+  async getCurrentUser(payload: any) {
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
     });

@@ -8,6 +8,8 @@ import { LoginDto } from './dto/login.dto';
 import { AuthenticatedResponseDto } from './dto/responses/authenticated.response.dto';
 import { RefreshTokenResponseDto } from './dto/responses/refresh-token.response.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { UserResponseDto } from './dto/responses/user.response.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -150,4 +152,26 @@ export class AuthController {
   async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
     return this.authService.refreshAccessToken(refreshTokenDto.refreshToken);
   }
+
+  
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Get current user',
+    description: 'Get the currently authenticated user\'s information',
+    operationId: 'getCurrentUser'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Current user information',
+    type: UserResponseDto
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized'
+  })
+  async getCurrentUser(@Req() req) {
+    return this.authService.getCurrentUser({ sub: req.user.id });
+  }
+
 }
