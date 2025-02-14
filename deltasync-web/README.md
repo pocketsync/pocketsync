@@ -1,1 +1,0 @@
-# DeltaSync Front

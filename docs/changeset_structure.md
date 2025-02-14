@@ -1,4 +1,4 @@
-# DeltaSync Changeset Structure
+# PocketSync Changeset Structure
 
 A changeset represents a collection of changes made to the database tables. It includes insertions, updates, and deletions across multiple tables.
 

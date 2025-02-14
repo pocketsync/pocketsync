@@ -2,10 +2,10 @@
 
 1. Database Initialization:
 When the sync engine starts, it sets up the following system tables:
-- `__deltasync_changes`: Records all database modifications
-- `__deltasync_version`: Tracks version numbers for each table
-- `__deltasync_device_state`: Stores device-specific sync information
-- `__deltasync_processed_changes`: Tracks which changes have been processed
+- `__pocketsync_changes`: Records all database modifications
+- `__pocketsync_version`: Tracks version numbers for each table
+- `__pocketsync_device_state`: Stores device-specific sync information
+- `__pocketsync_processed_changes`: Tracks which changes have been processed
 
 2. Change Detection:
 The system uses SQLite triggers to automatically detect and record changes:
@@ -23,7 +23,7 @@ When a change occurs, the trigger automatically:
 
 4. Delta Extraction:
 The system builds change sets by:
-- Querying the `__deltasync_changes` table
+- Querying the `__pocketsync_changes` table
 - Grouping changes by table and operation type
 - Including all necessary data for each change
 - Tracking change IDs for synchronization

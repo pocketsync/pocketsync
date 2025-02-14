@@ -1,6 +1,6 @@
-# DeltaSync
+# PocketSync
 
-DeltaSync is a robust, real-time database synchronization solution designed for Flutter applications that require seamless offline-first data synchronization capabilities. It enables automatic change tracking, conflict resolution, and efficient data synchronization between multiple devices through a centralized server.
+PocketSync is a robust, real-time database synchronization solution designed for Flutter applications that require seamless offline-first data synchronization capabilities. It enables automatic change tracking, conflict resolution, and efficient data synchronization between multiple devices through a centralized server.
 
 ## Features
 
@@ -13,19 +13,19 @@ DeltaSync is a robust, real-time database synchronization solution designed for 
 
 ## Architecture
 
-DeltaSync consists of three main components:
+PocketSync consists of three main components:
 
-1. **Flutter Client Library** (`deltasync_flutter`)
+1. **Flutter Client Library** (`pocketsync_flutter`)
    - Handles local database operations
    - Tracks changes using SQLite triggers
    - Manages synchronization with the server
 
-2. **Backend Server** (`deltasync-backend`)
+2. **Backend Server** (`pocketsync-backend`)
    - Processes and distributes changes between devices
    - Handles conflict resolution
    - Manages device state and synchronization
 
-3. **Web Interface** (`deltasync-web`)
+3. **Web Interface** (`pocketsync-web`)
    - Provides a web-based management interface
    - Monitors synchronization status
    - Manages user accounts and permissions
@@ -55,13 +55,13 @@ DeltaSync consists of three main components:
 1. Add the package to your `pubspec.yaml`:
 ```yaml
 dependencies:
-  deltasync_flutter: ^1.0.0
+  pocketsync_flutter: ^1.0.0
 ```
 
-2. Initialize DeltaSync in your Flutter app:
+2. Initialize PocketSync in your Flutter app:
 ```dart
-final deltasync = await DeltaSync.initialize(
-  options: DeltaSyncOptions(
+final pocketSync = await PocketSync.initialize(
+  options: PocketSyncOptions(
     serverUrl: 'your-server-url',
     projectId: 'your-project-id',
     authToken: 'your-auth-token',

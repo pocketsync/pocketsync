@@ -1,0 +1,180 @@
+import 'dart:async';
+import 'dart:developer';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:pocketsync_flutter/src/errors/sync_error.dart';
+import 'package:pocketsync_flutter/src/models/change_set.dart';
+import 'models/pocket_sync_options.dart';
+import 'models/change_processing_response.dart';
+import 'services/pocket_sync_network_service.dart';
+import 'services/changes_processor.dart';
+import 'services/pocket_sync_database.dart';
+
+class PocketSync {
+  static final PocketSync instance = PocketSync._internal();
+  PocketSync._internal();
+
+  late PocketSyncDatabase _database;
+  String? _userId;
+
+  late PocketSyncNetworkService _networkService;
+  late ChangesProcessor _changesProcessor;
+  bool _isSyncing = false;
+  bool _isInitialized = false;
+  bool _isPaused = false;
+  bool _isManuallyPaused = false;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+
+  /// Returns the database instance
+  /// Throws [StateError] if PocketSync is not initialized
+  PocketSyncDatabase get database => _runGuarded(() => _database);
+
+  T _runGuarded<T>(T Function() callaback) {
+    if (!_isInitialized) {
+      throw StateError(
+        'You should call PocketSync.instance.initialize before any other call.',
+      );
+    }
+
+    return callaback();
+  }
+
+  /// Initializes PocketSync with the given configuration
+  Future<void> initialize({
+    required String dbPath,
+    required PocketSyncOptions options,
+    required DatabaseOptions databaseOptions,
+  }) async {
+    if (_isInitialized) return;
+
+    _networkService = PocketSyncNetworkService(
+      serverUrl: options.serverUrl,
+      projectId: options.projectId,
+      authToken: options.authToken,
+    );
+
+    _database = PocketSyncDatabase();
+    final db = await _database.initialize(
+      dbPath: dbPath,
+      options: databaseOptions,
+    );
+
+    // Set device ID in network service
+    final deviceState = await db.query('__pocketsync_device_state', limit: 1);
+    if (deviceState.isNotEmpty) {
+      final deviceId = deviceState.first['device_id'] as String;
+      _networkService.setDeviceId(deviceId);
+    }
+
+    _changesProcessor = ChangesProcessor(
+      _database,
+      conflictResolver: options.conflictResolver,
+    );
+
+    _networkService.onChangesReceived = _changesProcessor.applyRemoteChanges;
+
+    // Set up real-time change notification
+    _database.onChangesAdded = (_) => _sync();
+
+    // Initialize connectivity monitoring
+    _setupConnectivityMonitoring();
+    _isInitialized = true;
+  }
+
+  /// Sets up connectivity monitoring
+  void _setupConnectivityMonitoring() {
+    _connectivitySubscription =
+        Connectivity().onConnectivityChanged.listen(_handleConnectivityChange);
+  }
+
+  /// Handles connectivity changes
+  Future<void> _handleConnectivityChange(
+    List<ConnectivityResult> result,
+  ) async {
+    if (result.contains(ConnectivityResult.none) || result.isEmpty) {
+      _isPaused = true;
+      _networkService.disconnect();
+    } else if (!_isManuallyPaused) {
+      _isPaused = false;
+      _networkService.reconnect();
+      await _sync();
+    }
+  }
+
+  /// Sets the user ID for synchronization
+  Future<void> setUserId({required String userId}) async {
+    _runGuarded(() {
+      _userId = userId;
+      _networkService.setUserId(userId);
+    });
+  }
+
+  /// Starts the synchronization process
+  Future<void> startSync() async {
+    if (_userId == null) throw Exception('User ID not set');
+    _isPaused = false;
+    _isManuallyPaused = false;
+    // Perform initial sync
+    await _sync();
+  }
+
+  /// Pauses synchronization
+  Future<void> pauseSync() async {
+    _runGuarded(() {
+      _isPaused = true;
+      _isManuallyPaused = true;
+      _networkService.disconnect();
+    });
+  }
+
+  /// Resumes synchronization
+  Future<void> resumeSync() async {
+    _runGuarded(() async {
+      _isPaused = false;
+      _isManuallyPaused = false;
+      _networkService.reconnect();
+      await _sync();
+    });
+  }
+
+  /// Internal sync method
+  Future<void> _sync() async {
+    if (_isSyncing || _userId == null || _isPaused) {
+      log('Sync already in progress, user ID not set, or sync is paused');
+      return;
+    }
+    _isSyncing = true;
+
+    try {
+      final changeSet = await _changesProcessor.getUnSyncedChanges();
+      if (changeSet.insertions.changes.isNotEmpty ||
+          changeSet.updates.changes.isNotEmpty ||
+          changeSet.deletions.changes.isNotEmpty) {
+        final processedResponse = await _sendChanges(changeSet);
+
+        if (processedResponse.status == 'success' &&
+            processedResponse.processed) {
+          await _markChangesSynced(changeSet.changeIds);
+        }
+      }
+    } on SyncError {
+      rethrow;
+    } finally {
+      _isSyncing = false;
+    }
+  }
+
+  /// Sends changes to the server
+  Future<ChangeProcessingResponse> _sendChanges(ChangeSet changes) async =>
+      await _networkService.sendChanges(changes);
+
+  /// Marks changes as synced
+  Future<void> _markChangesSynced(List<int> changeIds) async =>
+      await _changesProcessor.markChangesSynced(changeIds);
+
+  /// Cleans up resources
+  Future<void> dispose() async {
+    await _connectivitySubscription?.cancel();
+    await _database.close();
+    _networkService.dispose();
+  }
+}
