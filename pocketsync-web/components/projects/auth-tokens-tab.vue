@@ -57,7 +57,7 @@
                                             </td>
                                             <td
                                                 class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                                                <button @click="revokeToken(token.id)"
+                                                <button @click="revokeTokenWithConfirmation(token.id)"
                                                     class="text-red-600 hover:text-red-900 cursor-pointer">Revoke</button>
                                             </td>
                                         </tr>
@@ -94,7 +94,7 @@
         <ConfirmationDialog v-if="showConfirmDialog" show title="Revoke Authentication Token"
             message="Are you sure you want to revoke this authentication token? This action cannot be undone. Note if you are using this token in your application, this will break sync for all users."
             confirm-text="Revoke Token" cancel-text="Cancel" @confirm="handleConfirmRevoke"
-            @cancel="handleCancelRevoke" />
+            @cancel="handleCancelRevoke" :loading="isRevoking" />
     </div>
 </template>
 
@@ -114,6 +114,7 @@ const CopyIcon = PhCopy
 const showCreateTokenModal = ref(false)
 const showConfirmDialog = ref(false)
 const tokenToRevoke = ref<string | null>(null)
+const isRevoking = ref(false)
 
 const props = defineProps<{
     authTokens: AuthTokenResponseDto[]
@@ -139,9 +140,14 @@ function revokeTokenWithConfirmation(id: string) {
 
 async function handleConfirmRevoke() {
     if (tokenToRevoke.value) {
-        const success = await revokeToken(tokenToRevoke.value)
-        if (success) {
-            emit('token-revoked', tokenToRevoke.value)
+        isRevoking.value = true
+        try {
+            const success = await revokeToken(tokenToRevoke.value)
+            if (success) {
+                emit('token-revoked', tokenToRevoke.value)
+            }
+        } finally {
+            isRevoking.value = false
         }
     }
     showConfirmDialog.value = false
