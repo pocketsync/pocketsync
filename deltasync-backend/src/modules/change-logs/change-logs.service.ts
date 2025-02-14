@@ -58,6 +58,12 @@ export class ChangeLogsService {
     });
   }
 
+  private isValidTimestamp(timestamp: number): boolean {
+    const now = Date.now();
+    const MAX_TIMESTAMP_DRIFT = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+    return timestamp <= now && timestamp > now - MAX_TIMESTAMP_DRIFT;
+  }
+
   private mergeChangeSets(changeSets: ChangeSetDto[]): ChangeSetDto {
     const mergedChangeSet: ChangeSetDto = {
       insertions: {},
@@ -68,41 +74,63 @@ export class ChangeLogsService {
     };
 
     // Track the latest version of each record by primary key
-    const latestVersions: Record<string, Record<string, { row: any; timestamp: number }>> = {};
+    const latestVersions: Record<string, Record<string, { 
+      row: any; 
+      timestamp: number;
+      version: number;
+      changeType: 'insertions' | 'updates' | 'deletions';
+    }>> = {};
 
+    // First pass: determine the latest version of each record
     for (const changeSet of changeSets) {
-      for (const changeType of ['insertions', 'updates', 'deletions'] as const) {
+      // Validate timestamp
+      if (!this.isValidTimestamp(changeSet.timestamp)) {
+        this.logger.warn(`Skipping change set with invalid timestamp: ${changeSet.timestamp}`);
+        continue;
+      }
+
+      // Process deletions first, then updates, then insertions
+      for (const changeType of ['deletions', 'updates', 'insertions'] as const) {
         for (const [tableName, tableChanges] of Object.entries(changeSet[changeType])) {
-          if (!mergedChangeSet[changeType][tableName]) {
-            mergedChangeSet[changeType][tableName] = { rows: [] };
-          }
           if (!latestVersions[tableName]) {
             latestVersions[tableName] = {};
           }
 
-          // Process each row using the Row class structure
           for (const row of tableChanges.rows) {
             const primaryKey = row.primaryKey;
             const timestamp = row.timestamp || changeSet.timestamp;
+            const version = row.version || changeSet.version;
 
-            // Apply last-write-wins strategy based on timestamp
+            // Skip if we already have a newer version of this record
+            if (latestVersions[tableName][primaryKey] && 
+                version <= latestVersions[tableName][primaryKey].version) {
+              continue;
+            }
+
+            // Apply last-write-wins strategy based on timestamp and version
             if (!latestVersions[tableName][primaryKey] ||
-              timestamp > latestVersions[tableName][primaryKey].timestamp) {
-              latestVersions[tableName][primaryKey] = { row, timestamp };
+                timestamp > latestVersions[tableName][primaryKey].timestamp ||
+                (timestamp === latestVersions[tableName][primaryKey].timestamp && 
+                 version > latestVersions[tableName][primaryKey].version)) {
+              latestVersions[tableName][primaryKey] = { 
+                row, 
+                timestamp,
+                version,
+                changeType 
+              };
             }
           }
         }
       }
     }
 
-    // Populate the merged change set with the latest versions
-    for (const changeType of ['insertions', 'updates', 'deletions'] as const) {
-      for (const [tableName, versions] of Object.entries(latestVersions)) {
-        if (Object.keys(versions).length > 0) {
-          mergedChangeSet[changeType][tableName] = {
-            rows: Object.values(versions).map(v => v.row)
-          };
+    // Second pass: organize changes by type
+    for (const [tableName, versions] of Object.entries(latestVersions)) {
+      for (const { row, changeType } of Object.values(versions)) {
+        if (!mergedChangeSet[changeType][tableName]) {
+          mergedChangeSet[changeType][tableName] = { rows: [] };
         }
+        mergedChangeSet[changeType][tableName].rows.push(row);
       }
     }
 

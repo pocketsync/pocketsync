@@ -6,6 +6,9 @@ class RowChange {
     primaryKey: string;
 
     @IsNumber()
+    version: number;
+
+    @IsNumber()
     timestamp: number;
 
     @IsObject()

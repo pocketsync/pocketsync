@@ -38,6 +38,7 @@ class ChangesProcessor {
         primaryKey: data['id'] as String,
         timestamp: data['timestamp'] as int,
         data: data,
+        version: data['version'],
       );
 
       switch (operation) {
@@ -112,6 +113,7 @@ class ChangesProcessor {
                   primaryKey: row.primaryKey,
                   timestamp: row.timestamp,
                   data: row.data,
+                  version: row.version,
                 ),
               ),
             );
@@ -125,6 +127,7 @@ class ChangesProcessor {
                   primaryKey: row.primaryKey,
                   timestamp: row.timestamp,
                   data: row.data,
+                  version: row.version,
                 ),
               ),
             );
@@ -138,6 +141,7 @@ class ChangesProcessor {
                   primaryKey: row.primaryKey,
                   timestamp: row.timestamp,
                   data: row.data,
+                  version: row.version,
                 ),
               ),
             );

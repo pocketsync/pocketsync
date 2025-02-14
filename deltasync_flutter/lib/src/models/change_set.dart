@@ -3,11 +3,13 @@ import 'dart:convert';
 class Row {
   final String primaryKey;
   final int timestamp;
+  final int version;
   final Map<String, dynamic> data;
 
   Row({
     required this.primaryKey,
     required this.timestamp,
+    required this.version,
     required this.data,
   });
 
@@ -21,6 +23,7 @@ class Row {
     return Row(
       primaryKey: json['primaryKey'] as String,
       timestamp: json['timestamp'] as int,
+      version: json['version'] as int,
       data: json['data'] as Map<String, dynamic>,
     );
   }
