@@ -36,7 +36,7 @@ export class ProjectsService {
         }
       });
 
-      return this.projectMapper.toResponse(project, 0, [defaultToken]);
+      return this.projectMapper.toResponse(project, [defaultToken], 0);
     });
 
     return response
@@ -84,7 +84,7 @@ export class ProjectsService {
 
   async findOne(userId: string, id: string) {
     const project = await this.prisma.project.findFirst({
-      where: { 
+      where: {
         id,
         deletedAt: null
       },
@@ -112,6 +112,10 @@ export class ProjectsService {
       },
     });
 
+    const pendingChangeLogs = await this.prisma.changeLog.count({
+      where: { projectId: id, processedAt: null },
+    });
+
     if (!project) {
       throw new NotFoundException('Project not found');
     }
@@ -126,7 +130,7 @@ export class ProjectsService {
 
     const userCount = project._count.appUsers;
 
-    return this.projectMapper.toResponse(project, userCount, authTokens);
+    return this.projectMapper.toResponse(project, authTokens, pendingChangeLogs);
   }
 
   async update(userId: string, id: string, updateProjectDto: UpdateProjectDto) {
@@ -163,9 +167,11 @@ export class ProjectsService {
       where: { projectId: id },
     });
 
-    const userCount = updatedProject._count.appUsers;
+    const pendingChangeLogs = await this.prisma.changeLog.count({
+      where: { projectId: id, processedAt: null },
+    });
 
-    return this.projectMapper.toResponse(updatedProject, userCount, authTokens);
+    return this.projectMapper.toResponse(updatedProject, authTokens, pendingChangeLogs);
   }
 
   async remove(userId: string, id: string) {
@@ -176,7 +182,7 @@ export class ProjectsService {
       data: { deletedAt: new Date() },
     });
 
-    return this.projectMapper.toResponse(updatedProject, 0, []);
+    return this.projectMapper.toResponse(updatedProject, [], 0);
   }
 
   async createAuthToken(userId: string, projectId: string, data: CreateAuthTokenDto) {

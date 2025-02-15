@@ -22,12 +22,6 @@ export class ProjectResponseDto {
   userId: string;
 
   @ApiProperty({
-    description: 'Number of app users in this project',
-    example: 42
-  })
-  appUsersCount?: number;
-
-  @ApiProperty({
     description: 'When the project was created',
     example: '2024-02-12T19:32:03.000Z'
   })

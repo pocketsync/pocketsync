@@ -45,12 +45,6 @@ export interface ProjectResponseDto {
      */
     'userId': string;
     /**
-     * Number of app users in this project
-     * @type {number}
-     * @memberof ProjectResponseDto
-     */
-    'appUsersCount': number;
-    /**
      * When the project was created
      * @type {string}
      * @memberof ProjectResponseDto
@@ -62,36 +56,6 @@ export interface ProjectResponseDto {
      * @memberof ProjectResponseDto
      */
     'updatedAt': string;
-    /**
-     * When the project was deleted
-     * @type {number}
-     * @memberof ProjectResponseDto
-     */
-    'userCount': number;
-    /**
-     * Number of active users today
-     * @type {number}
-     * @memberof ProjectResponseDto
-     */
-    'activeUsersTodayCount': number;
-    /**
-     * Total number of devices registered in the project
-     * @type {number}
-     * @memberof ProjectResponseDto
-     */
-    'deviceCount': number;
-    /**
-     * Total number of changes in the project
-     * @type {number}
-     * @memberof ProjectResponseDto
-     */
-    'changesCount': number;
-    /**
-     * Number of changes pending synchronization
-     * @type {number}
-     * @memberof ProjectResponseDto
-     */
-    'pendingChangesCount': number;
     /**
      * Auth tokens for the project
      * @type {Array<AuthTokenResponseDto>}

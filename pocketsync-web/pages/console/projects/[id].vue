@@ -33,9 +33,11 @@
                     <IntegrationTab v-if="currentTab === 'integration'" :project="project" :tokens="authTokens" />
                     <UsersTab v-if="currentTab === 'users'" :users="users" :is-loading="isLoadingUsers" />
                     <div v-if="currentTab === 'tokens'">
-                        <AuthTokensTab :auth-tokens="authTokens" @create-token="showCreateTokenModal = true" @token-revoked="handleTokenRevoked" />
+                        <AuthTokensTab :auth-tokens="authTokens" @create-token="showCreateTokenModal = true"
+                            @token-revoked="handleTokenRevoked" />
                     </div>
-                    <SettingsTab v-if="currentTab === 'settings'" :project="project" @project-updated="handleProjectUpdated" />
+                    <SettingsTab v-if="currentTab === 'settings'" :project="project"
+                        @project-updated="handleProjectUpdated" />
                 </div>
             </div>
         </div>
@@ -86,13 +88,13 @@ const project = computed(() => currentProject.value || { id: '', name: '' })
 const authTokens = computed(() => currentProject.value?.authTokens || [])
 
 const stats = computed(() => {
-    return {
-        totalUsers: currentProject.value?.usersCount,
-        activeUsers: currentProject.value?.activeUsersTodayCount,
-        totalDevices: currentProject.value?.devicesCount,
-        activeDevices: currentProject.value?.activeDevicesCount || 0,
-        changesCount: currentProject.value?.changesCount || 0,
-        pendingChanges: currentProject.value?.pendingChangesCount || 0
+    return currentProject.value?.stats || {
+        totalUsers: 0,
+        activeUsers: 0,
+        totalDevices: 0,
+        activeDevices: 0,
+        totalChangeLogs: 0,
+        pendingChanges: 0
     }
 })
 

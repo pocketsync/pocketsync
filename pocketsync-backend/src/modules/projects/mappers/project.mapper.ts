@@ -9,10 +9,9 @@ export class ProjectMapper {
 
     constructor(private authTokensMapper: AuthTokensMapper) { }
 
-    toResponse(project: Project & { appUsers?: (AppUser & { _count?: { devices: number }, devices?: Device[] })[], _count?: { changeLogs?: number, pendingChangeLogs?: number } }, userCount: number, authTokens: ProjectAuthTokens[]): ProjectResponseDto {
+    toResponse(project: Project & { appUsers?: (AppUser & { _count?: { devices: number }, devices?: Device[] })[], _count?: { changeLogs?: number, pendingChangeLogs?: number } }, authTokens: ProjectAuthTokens[], pendingChangesCount: number): ProjectResponseDto {
         const deviceCount = project.appUsers?.reduce((sum, user) => sum + (user._count?.devices || 0), 0) || 0;
         const activeUsersTodayCount = project.appUsers?.filter(user => user.devices && user.devices.length > 0).length || 0;
-        const pendingChangesCount = project._count?.pendingChangeLogs || 0;
         const changesCount = project._count?.changeLogs || 0;
         const onlineDevices = project.appUsers?.reduce((sum, user) => {
             return sum + (user.devices?.filter(device => {
@@ -29,7 +28,7 @@ export class ProjectMapper {
             updatedAt: project.updatedAt,
             authTokens: this.authTokensMapper.mapToResponse(authTokens),
             stats: {
-                totalUsers: userCount,
+                totalUsers: project.appUsers?.length || 0,
                 activeUsersToday: activeUsersTodayCount,
                 totalDevices: deviceCount,
                 onlineDevices: onlineDevices,
@@ -42,13 +41,11 @@ export class ProjectMapper {
     mapToPaginatedResponse(data: (Project & { _count?: { appUsers: number, changeLogs?: number, pendingChangeLogs?: number }, appUsers?: (AppUser & { _count?: { devices: number }, devices?: Device[] })[] })[], total: number, page: number, limit: number): PaginatedResponse<ProjectResponseDto> {
         return {
             data: data.map((project) => {
-                const userCount = project._count?.appUsers || 0;
-                return this.toResponse(project, userCount, []);
+                return this.toResponse(project, [], project._count?.pendingChangeLogs || 0);
             }),
             total,
             currentPage: page,
             totalPages: Math.ceil(total / limit),
         };
     }
-
 }
