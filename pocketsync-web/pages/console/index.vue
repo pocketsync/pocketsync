@@ -2,12 +2,12 @@
     <div class="py-6">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
             <AlphaStageWarningCard class="mb-8" />
-            <h1 class="text-2xl font-semibold text-gray-900">Getting Started with PocketSync</h1>
+            <h1 class="text-xl font-semibold text-gray-900">Getting Started with PocketSync</h1>
         </div>
         <div class="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
             <div class="py-4">
                 <div class="prose max-w-none">
-                    <p class="text-lg text-gray-500">
+                    <p class="text-md text-gray-500">
                         Follow these steps to integrate PocketSync into your mobile application. PocketSync provides a
                         simple
                         yet powerful way to sync data between your app and your backend.
@@ -126,7 +126,7 @@ PocketSync.instance.startSync();
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { PhPlus } from '@phosphor-icons/vue'
 import AlphaStageWarningCard from '~/components/layout/dashboard/alpha-stage-warning-card.vue'
 

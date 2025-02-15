@@ -35,3 +35,7 @@
     --color-cool-gray-800: #1F2937;
     --color-cool-gray-900: #111827;
 }
+
+button {
+    cursor: pointer;
+}

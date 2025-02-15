@@ -32,7 +32,7 @@
                                     class="h-full w-full rounded-full" />
                                 <div v-else
                                     class="inline-flex h-full w-full items-center justify-center rounded-full bg-primary-100">
-                                    <span class="text-sm font-medium text-primary-600">{{ getUserInitials()
+                                    <span class="text-sm font-medium text-primary-600">{{ getUserInitials(user)
                                         }}</span>
                                 </div>
                             </div>
@@ -42,7 +42,7 @@
                                 {{ `${user?.firstName ?? ''} ${user?.lastName ?? ''}` }}
                             </p>
                             <button @click="handleSignOut"
-                                class="text-xs font-medium text-gray-500 group-hover:text-gray-700">Sign out</button>
+                                class="text-xs font-medium text-gray-500 group-hover:text-gray-700 cursor-pointer">Sign out</button>
                         </div>
                     </div>
                 </div>
@@ -58,10 +58,12 @@ import {
     PhHouse,
 } from '@phosphor-icons/vue'
 import { useAuth } from '~/composables/useAuth'
+import { useUtils } from '~/composables/useUtils'
 import type { UserResponseDto } from '~/api-client'
 
 const route = useRoute()
 const { user: authUser, logout, ensureUserProfile } = useAuth()
+const { getUserInitials } = useUtils()
 
 const user = ref<UserResponseDto | null>(null)
 
@@ -77,15 +79,6 @@ function isActive(href: string): boolean {
     return route.path.startsWith(href)
 }
 
-function getUserInitials(): string {
-    if (!user.value?.firstName) return ''
-    return `${user.value?.firstName ?? ''} ${user.value?.lastName ?? ''}`
-        .split(' ')
-        .map(word => word[0])
-        .join('')
-        .toUpperCase()
-}
-
 async function handleSignOut() {
     await logout()
     navigateTo('/auth/login')
@@ -95,7 +88,6 @@ onMounted(async () => {
     await ensureUserProfile()
 })
 
-// Watch for changes in authUser and update local user ref
 watch(() => authUser.value, (newUser) => {
     user.value = newUser
 }, { immediate: true })
