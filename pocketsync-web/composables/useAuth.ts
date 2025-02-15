@@ -20,6 +20,7 @@ type AuthErrorCode =
     | 'INVALID_TOKEN'
     | 'TOKEN_EXPIRED'
     | 'SOCIAL_AUTH_ERROR'
+    | 'USER_NOT_FOUND'
     | 'UNKNOWN_ERROR'
 
 export const useAuth = () => {
@@ -61,10 +62,10 @@ export const useAuth = () => {
                 code: 'NETWORK_ERROR'
             }
         }
-
+    
         const status = err.response.status
         const data = err.response.data
-
+    
         switch (status) {
             case 400:
                 return {
@@ -77,6 +78,12 @@ export const useAuth = () => {
                     return {
                         message: 'Your session has expired. Please log in again.',
                         code: 'TOKEN_EXPIRED'
+                    }
+                }
+                if (data.code === 'USER_NOT_FOUND') {
+                    return {
+                        message: 'Account not found. Please check your email or register a new account.',
+                        code: 'USER_NOT_FOUND'
                     }
                 }
                 return {

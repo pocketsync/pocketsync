@@ -50,6 +50,11 @@ export const useApi = () => {
         async (error) => {
             const originalRequest = error.config
 
+            // Skip token refresh for auth endpoints
+            if (originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/register')) {
+                return Promise.reject(error)
+            }
+
             // If request already retried or error is not 401, reject
             if (originalRequest._retry || error.response?.status !== 401) {
                 return Promise.reject(error)
