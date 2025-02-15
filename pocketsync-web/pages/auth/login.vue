@@ -117,71 +117,62 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { useAuth } from '~/composables/useAuth'
 import { useValidation } from '~/composables/useValidation'
 import { useRouter } from '#app'
 import ErrorAlert from '~/components/common/error-alert'
 
-definePageMeta({
-    layout: 'auth'
-})
-
-const { login, loginWithGoogle, loginWithGithub, error } = useAuth()
-const { validate, rules, errors: validationErrors } = useValidation()
-const router = useRouter()
+const { login, loginWithGithub, loginWithGoogle, error: authError, isLoading } = useAuth()
 
 const form = ref({
     email: '',
     password: '',
     rememberMe: false
 })
-const isLoading = ref(false)
+
+const error = ref('')
+const validationErrors = ref(null)
+
+definePageMeta({
+    layout: 'auth'
+})
 
 async function handleLogin() {
+    error.value = ''
+    validationErrors.value = null
+
     try {
-        // Validate form data
-        const validationRules = {
-            email: [rules.required(), rules.email()],
-            password: [rules.required(), rules.minLength(8)]
+        await login(form.value.email, form.value.password)
+        navigateTo('/console')
+    } catch (err) {
+        if (err.code === 'VALIDATION_ERROR' && err.details) {
+            validationErrors.value = err.details
+        } else {
+            error.value = err.message
         }
-
-        if (!validate(form.value, validationRules)) {
-            return
-        }
-
-        isLoading.value = true
-        const data = await login(form.value.email, form.value.password)
-        if (data) {
-            router.push({ name: 'console' })
-        }
-    } catch (error) {
-        // Error is already handled by useAuth composable
-    } finally {
-        isLoading.value = false
     }
 }
 
 async function handleGithubLogin() {
+    error.value = ''
+    validationErrors.value = null
+
     try {
-        isLoading.value = true
         await loginWithGithub()
-        await router.push('/console')
-    } catch (error) {
-        // Error is already handled by useAuth composable
-    } finally {
-        isLoading.value = false
+    } catch (err) {
+        error.value = err.message
     }
 }
 
 async function handleGoogleLogin() {
+    error.value = ''
+    validationErrors.value = null
+
     try {
-        isLoading.value = true
         await loginWithGoogle()
-        await router.push('/console')
-    } catch (error) {
-        // Error is already handled by useAuth composable
-    } finally {
-        isLoading.value = false
+    } catch (err) {
+        error.value = err.message
     }
 }
 </script>
