@@ -47,7 +47,7 @@ export class ProjectsService {
 
     const [data, total] = await Promise.all([
       this.prisma.project.findMany({
-        where: { userId },
+        where: { userId, deletedAt: null },
         include: {
           _count: {
             select: {
@@ -83,8 +83,11 @@ export class ProjectsService {
   }
 
   async findOne(userId: string, id: string) {
-    const project = await this.prisma.project.findUnique({
-      where: { id },
+    const project = await this.prisma.project.findFirst({
+      where: { 
+        id,
+        deletedAt: null
+      },
       include: {
         _count: {
           select: {
@@ -130,7 +133,7 @@ export class ProjectsService {
     await this.findOne(userId, id); // Check ownership
 
     const updatedProject = await this.prisma.project.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: updateProjectDto,
       include: {
         _count: {
@@ -183,7 +186,7 @@ export class ProjectsService {
     if (!project) {
       throw new NotFoundException('Project not found');
     }
-    if (project.userId!== userId) {
+    if (project.userId !== userId) {
       throw new ForbiddenException('Access denied');
     }
     const token = await this.prisma.projectAuthTokens.create({

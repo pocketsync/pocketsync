@@ -59,6 +59,10 @@ export const useProjects = () => {
                     code: 'ACCESS_DENIED'
                 }
             case 404:
+                // Redirect to project list if project not found
+                projects.value = []
+                currentProject.value = null
+                navigateTo('/console/projects')
                 return {
                     message: 'Project not found.',
                     code: 'NOT_FOUND'

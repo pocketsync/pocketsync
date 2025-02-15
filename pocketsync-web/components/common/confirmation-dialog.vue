@@ -12,18 +12,28 @@
                             </h3>
                             <div class="mt-2">
                                 <p class="text-sm text-gray-500">{{ message }}</p>
+                                <div v-if="verificationText" class="mt-4">
+                                    <label for="verification" class="block text-sm font-medium text-gray-900">Please type "{{ verificationText }}" to confirm</label>
+                                    <div class="mt-2">
+                                        <input type="text" id="verification" v-model="userInput"
+                                            class="block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6"
+                                            :class="{ 'ring-red-300': showError }"
+                                            @input="validateInput"
+                                            :disabled="loading" />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
-                        <button type="button" @click="$emit('confirm')"
-                            class="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto"
-                            :disabled="loading">
+                        <button type="button" @click="handleConfirm()"
+                            class="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto cursor-pointer"
+                            :disabled="loading || (props.verificationText && userInput !== props.verificationText)">
                             <PhSpinner v-if="loading" :size="20" class="animate-spin" />
                             {{ confirmText }}
                         </button>
                         <button type="button" @click="$emit('cancel')"
-                            class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                            class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto cursor-pointer"
                             :disabled="loading">
                             {{ cancelText }}
                         </button>
@@ -36,7 +46,9 @@
 
 <script setup lang="ts">
 import { PhSpinner } from '@phosphor-icons/vue'
-defineProps({
+import { ref, watch } from 'vue'
+
+const props = defineProps({
     show: {
         type: Boolean,
         required: true
@@ -60,8 +72,31 @@ defineProps({
     loading: {
         type: Boolean,
         default: false
+    },
+    verificationText: {
+        type: String,
+        default: ''
     }
 })
+const emit = defineEmits(['confirm', 'cancel'])
 
-defineEmits(['confirm', 'cancel'])
+const userInput = ref('')
+const showError = ref(false)
+
+function validateInput() {
+    showError.value = userInput.value.length > 0 && userInput.value !== props.verificationText
+}
+
+function handleConfirm() {
+    if (!props.verificationText || userInput.value === props.verificationText) {
+        emit('confirm')
+    }
+}
+
+watch(() => props.show, (newValue) => {
+    if (!newValue) {
+        userInput.value = ''
+        showError.value = false
+    }
+})
 </script>
