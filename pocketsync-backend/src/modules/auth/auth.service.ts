@@ -178,6 +178,15 @@ export class AuthService {
       throw new UnauthorizedException('No provider user ID in OAuth profile');
     }
 
+    // Update user's avatar URL if logging in with GitHub
+
+    if (profile.avatarUrl) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { avatarUrl: profile.avatarUrl }
+      });
+    }
+
     try {
       const existingConnection = await this.prisma.userSocialConnection.findFirst({
         where: {

@@ -11,7 +11,7 @@ interface AuthError {
     details?: Record<string, string[]>
 }
 
-type AuthErrorCode = 
+type AuthErrorCode =
     | 'NETWORK_ERROR'
     | 'INVALID_CREDENTIALS'
     | 'ACCESS_DENIED'
@@ -191,7 +191,7 @@ export const useAuth = () => {
     const loginWithGithub = async () => {
         error.value = null
         try {
-            await authApi.initiateGithubAuth()
+            window.location.href = `${config.basePath}/auth/github`
         } catch (err: any) {
             error.value = handleAuthError(err)
             throw error.value
@@ -201,7 +201,7 @@ export const useAuth = () => {
     const loginWithGoogle = async () => {
         error.value = null
         try {
-            await authApi.initiateGoogleAuth()
+            window.location.href = `${config.basePath}/auth/google`
         } catch (err: any) {
             error.value = handleAuthError(err)
             throw error.value
@@ -237,6 +237,7 @@ export const useAuth = () => {
         loginWithGithub,
         loginWithGoogle,
         fetchUserProfile,
-        ensureUserProfile
+        ensureUserProfile,
+        setTokens,
     }
 }
