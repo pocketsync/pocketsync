@@ -25,17 +25,22 @@
             <div class="flex flex-shrink-0 border-t border-gray-200 p-4">
                 <div class="group block w-full flex-shrink-0">
                     <div class="flex items-center">
+
                         <div>
-                            <div v-if="user.avatar_url" class="inline-block h-9 w-9 rounded-full">
-                                <img :src="user.avatar_url" :alt="user.name" class="h-full w-full rounded-full" />
-                            </div>
-                            <div v-else
-                                class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary-100">
-                                <span class="text-sm font-medium text-primary-600">{{ getUserInitials(user) }}</span>
+                            <div class="inline-block h-9 w-9 rounded-full">
+                                <img v-if="user?.avatar_url" :src="user.avatar_url" :alt="user?.name"
+                                    class="h-full w-full rounded-full" />
+                                <div v-else
+                                    class="inline-flex h-full w-full items-center justify-center rounded-full bg-primary-100">
+                                    <span class="text-sm font-medium text-primary-600">{{ getUserInitials()
+                                        }}</span>
+                                </div>
                             </div>
                         </div>
                         <div class="ml-3">
-                            <p class="text-sm font-medium text-gray-700 group-hover:text-gray-900">{{ user.name }}</p>
+                            <p class="text-sm font-medium text-gray-700 group-hover:text-gray-900">
+                                {{ `${user?.firstName ?? ''} ${user?.lastName ?? ''}` }}
+                            </p>
                             <button @click="handleSignOut"
                                 class="text-xs font-medium text-gray-500 group-hover:text-gray-700">Sign out</button>
                         </div>
@@ -46,39 +51,35 @@
     </div>
 </template>
 
-<script setup>
-import { ref } from 'vue'
+<script setup lang="ts">
 import { useRoute } from 'vue-router'
 import {
     PhBook,
     PhHouse,
 } from '@phosphor-icons/vue'
+import { useAuth } from '~/composables/useAuth'
+import type { UserResponseDto } from '~/api-client'
 
 const route = useRoute()
+const { user: authUser, logout, ensureUserProfile } = useAuth()
+
+const user = ref<UserResponseDto | null>(null)
 
 const navigation = [
     { name: 'Dashboard', href: '/console', icon: PhHouse },
     { name: 'Projects', href: '/console/projects', icon: PhBook },
 ]
 
-// Sample user data - replace with actual user data from your auth system
-const user = ref({
-    name: 'John Doe',
-    email: 'john@example.com',
-    avatar_url: null
-})
-
-function isActive(href) {
+function isActive(href: string): boolean {
     if (href === '/console') {
-        // Dashboard should only be active when exactly on /console
         return route.path === href
     }
-    // For other routes, check if the current path starts with the href
     return route.path.startsWith(href)
 }
 
-function getUserInitials(user) {
-    return user.name
+function getUserInitials(): string {
+    if (!user.value?.firstName) return ''
+    return `${user.value?.firstName ?? ''} ${user.value?.lastName ?? ''}`
         .split(' ')
         .map(word => word[0])
         .join('')
@@ -86,7 +87,16 @@ function getUserInitials(user) {
 }
 
 async function handleSignOut() {
-    // Implement your sign out logic here
-    console.log('Signing out...')
+    await logout()
+    navigateTo('/auth/login')
 }
+
+onMounted(async () => {
+    await ensureUserProfile()
+})
+
+// Watch for changes in authUser and update local user ref
+watch(() => authUser.value, (newUser) => {
+    user.value = newUser
+}, { immediate: true })
 </script>

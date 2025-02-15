@@ -135,8 +135,8 @@ definePageMeta({
 })
 
 const createProject = () => {
-    // TODO: Implement project creation logic
-    console.log('Create project clicked')
+    const router = useRouter()
+    router.push('/console/projects')
 }
 
 const copyCode = (section) => {
