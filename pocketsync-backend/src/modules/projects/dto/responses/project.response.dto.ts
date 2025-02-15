@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { AuthTokenResponseDto } from './auth-token.response.dto';
+import { ProjectStatsResponseDto } from './project-stats.response.dto';
 
 export class ProjectResponseDto {
   @ApiProperty({
@@ -39,45 +40,15 @@ export class ProjectResponseDto {
   updatedAt: Date;
 
   @ApiProperty({
-    description: 'When the project was deleted',
-    example: '2024-02-12T19:32:03.000Z',
-    nullable: false,
-    default: 0,
-  })
-  userCount: number;
-
-  @ApiProperty({
-    description: 'Number of active users today',
-    example: 150,
-    default: 0
-  })
-  activeUsersTodayCount: number;
-
-  @ApiProperty({
-    description: 'Total number of devices registered in the project',
-    example: 1000,
-    default: 0
-  })
-  deviceCount: number;
-
-  @ApiProperty({
-    description: 'Total number of changes in the project',
-    example: 500,
-    default: 0
-  })
-  changesCount: number;
-
-  @ApiProperty({
-    description: 'Number of changes pending synchronization',
-    example: 25,
-    default: 0
-  })
-  pendingChangesCount: number;
-
-  @ApiProperty({
     description: 'Auth tokens for the project',
     type: () => AuthTokenResponseDto,
     isArray: true
   })
   authTokens: AuthTokenResponseDto[];
+
+  @ApiProperty({
+    description: 'Project statistics including user counts, device counts, and change logs',
+    type: () => ProjectStatsResponseDto
+  })
+  stats: ProjectStatsResponseDto;
 }

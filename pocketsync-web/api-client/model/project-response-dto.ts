@@ -16,6 +16,9 @@
 // May contain unused imports in some cases
 // @ts-ignore
 import type { AuthTokenResponseDto } from './auth-token-response-dto';
+// May contain unused imports in some cases
+// @ts-ignore
+import type { ProjectStatsResponseDto } from './project-stats-response-dto';
 
 /**
  * 
@@ -95,5 +98,11 @@ export interface ProjectResponseDto {
      * @memberof ProjectResponseDto
      */
     'authTokens': Array<AuthTokenResponseDto>;
+    /**
+     * Project statistics including user counts, device counts, and change logs
+     * @type {ProjectStatsResponseDto}
+     * @memberof ProjectResponseDto
+     */
+    'stats': ProjectStatsResponseDto;
 }
 

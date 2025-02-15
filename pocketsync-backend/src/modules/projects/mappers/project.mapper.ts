@@ -8,25 +8,34 @@ import { Injectable } from '@nestjs/common';
 export class ProjectMapper {
 
     constructor(private authTokensMapper: AuthTokensMapper) { }
-    
+
     toResponse(project: Project & { appUsers?: (AppUser & { _count?: { devices: number }, devices?: Device[] })[], _count?: { changeLogs?: number, pendingChangeLogs?: number } }, userCount: number, authTokens: ProjectAuthTokens[]): ProjectResponseDto {
         const deviceCount = project.appUsers?.reduce((sum, user) => sum + (user._count?.devices || 0), 0) || 0;
         const activeUsersTodayCount = project.appUsers?.filter(user => user.devices && user.devices.length > 0).length || 0;
         const pendingChangesCount = project._count?.pendingChangeLogs || 0;
         const changesCount = project._count?.changeLogs || 0;
+        const onlineDevices = project.appUsers?.reduce((sum, user) => {
+            return sum + (user.devices?.filter(device => {
+                const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+                return device.lastSeenAt && device.lastSeenAt > fiveMinutesAgo;
+            }).length || 0);
+        }, 0) || 0;
 
         return {
             id: project.id,
             name: project.name,
             userId: project.userId,
-            userCount: userCount,
-            deviceCount: deviceCount,
-            activeUsersTodayCount: activeUsersTodayCount,
             createdAt: project.createdAt,
             updatedAt: project.updatedAt,
-            changesCount: changesCount,
-            pendingChangesCount: pendingChangesCount,
             authTokens: this.authTokensMapper.mapToResponse(authTokens),
+            stats: {
+                totalUsers: userCount,
+                activeUsersToday: activeUsersTodayCount,
+                totalDevices: deviceCount,
+                onlineDevices: onlineDevices,
+                totalChangeLogs: changesCount,
+                pendingChanges: pendingChangesCount
+            }
         };
     }
 
