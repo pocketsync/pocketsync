@@ -11,7 +11,7 @@
                             <span class="sr-only">Open user menu</span>
                             <div
                                 class="h-8 w-8 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center text-primary-600 font-medium transform transition-all duration-200 hover:scale-105 hover:shadow-sm">
-                                {{  getUserInitials(user)   }}
+                                {{ user ? getUserInitials(user) : '' }}
                             </div>
                         </button>
                     </div>
@@ -19,9 +19,9 @@
                         class="absolute right-0 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none transform transition-all duration-200 ease-out">
                         <div class="px-4 py-2 border-b border-gray-100">
                             <p class="text-sm font-medium text-gray-900">
-                                {{ `${user.firstName ?? ''} ${user.lastName ?? ''}` }}
+                                {{ user ? `${user.firstName ?? ''} ${user.lastName ?? ''}` : '' }}
                             </p>
-                            <p class="text-xs text-gray-500">{{ user.email }}</p>
+                            <p class="text-xs text-gray-500">{{ user?.email ?? '' }}</p>
                         </div>
                         <NuxtLink to="/console/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                             Your profile
@@ -56,10 +56,14 @@ onMounted(async () => {
 
 watch(() => authUser.value, (newUser) => {
     user.value = newUser
+    if (!newUser) {
+        userMenuOpen.value = false
+    }
 }, { immediate: true })
 
 async function handleSignOut() {
+    userMenuOpen.value = false
     await logout()
-    navigateTo('/auth/login')
+    await navigateTo('/auth/login')
 }
 </script>
