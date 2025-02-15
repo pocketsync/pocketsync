@@ -30,7 +30,7 @@
 
                 <!-- Tab Panels -->
                 <div class="mt-8">
-                    <OverviewTab v-if="currentTab === 'overview'" :project="project" :recent-changes="recentChanges" />
+                    <IntegrationTab v-if="currentTab === 'integration'" :project="project" :tokens="authTokens" />
                     <UsersTab v-if="currentTab === 'users'" :users="users" :is-loading="isLoadingUsers" />
                     <div v-if="currentTab === 'tokens'">
                         <AuthTokensTab :auth-tokens="authTokens" @create-token="showCreateTokenModal = true" @token-revoked="handleTokenRevoked" />
@@ -49,7 +49,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import OverviewTab from '~/components/projects/overview-tab.vue'
+import IntegrationTab from '~/components/projects/integration-tab.vue'
 import UsersTab from '~/components/projects/users-tab.vue'
 import AuthTokensTab from '~/components/projects/auth-tokens-tab.vue'
 import SettingsTab from '~/components/projects/settings-tab.vue'
@@ -96,26 +96,10 @@ const stats = computed(() => {
     }
 })
 
-const recentChanges = ref([
-    {
-        id: 1,
-        device_id: 'iphone13-xyz',
-        user_identifier: 'user123',
-        received_at: new Date(Date.now() - 1000 * 60 * 5),
-        processed_at: new Date(Date.now() - 1000 * 60 * 4)
-    },
-    {
-        id: 2,
-        device_id: 'pixel6-abc',
-        user_identifier: 'user456',
-        received_at: new Date(Date.now() - 1000 * 60 * 15),
-        processed_at: null
-    }
-])
 
-const currentTab = ref('overview')
+const currentTab = ref('integration')
 const tabs = computed(() => [
-    { name: 'Overview', value: 'overview' },
+    { name: 'Integration', value: 'integration' },
     { name: 'Users', value: 'users', count: users.value?.length || 0 },
     { name: 'Auth Tokens', value: 'tokens', count: authTokens.value?.length || 0 },
     { name: 'Settings', value: 'settings' }

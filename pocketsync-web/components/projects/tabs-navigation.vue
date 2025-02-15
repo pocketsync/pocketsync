@@ -14,7 +14,7 @@
                         selectedTab === tab.value
                             ? 'border-primary-500 text-primary-600'
                             : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700',
-                        'whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium'
+                        'whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium cursor-pointer'
                     ]">
                         {{ tab.name }}
                         <span v-if="tab.count !== undefined" :class="[
