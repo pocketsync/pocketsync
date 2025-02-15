@@ -35,7 +35,11 @@
                                     <div class="mt-2">
                                         <input type="text" id="token-name" v-model="tokenName"
                                             class="block w-full rounded-md border-0 px-3 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6"
+                                            :class="{ 'ring-red-300 ring-2': showError }"
                                             placeholder="e.g., Production API Token" />
+                                        <p v-if="errors.tokenName" class="mt-2 text-sm text-red-600">
+                                            {{ errors.tokenName.join(', ') }}
+                                        </p>
                                     </div>
                                     <p class="mt-2 text-sm text-gray-500">A descriptive name to help you identify this
                                         token later.
@@ -45,9 +49,6 @@
                                 <div v-if="createdToken">
                                     <div class="rounded-md bg-blue-50 p-4">
                                         <div class="flex">
-                                            <div class="flex-shrink-0">
-                                                <component :is="InformationIcon" class="h-5 w-5 text-blue-400" />
-                                            </div>
                                             <div class="ml-3">
                                                 <h3 class="text-sm font-medium text-blue-800 flex items-center gap-x-1">
                                                     <PhInfo class="h-5 w-5 text-blue-400" />
@@ -84,9 +85,8 @@
                     </div>
 
                     <div class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
-                        <button v-if="!createdToken" type="button" @click="createToken"
-                            class="inline-flex w-full justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 sm:col-start-2"
-                            :disabled="!tokenName || isLoading">
+                        <button v-if="!createdToken" type="button" @click.prevent="createToken"
+                            class="inline-flex w-full justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 sm:col-start-2">
                             <span v-if="isLoading" class="inline-flex items-center">
                                 <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
                                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -100,6 +100,7 @@
                             </span>
                             <span v-else>Create Token</span>
                         </button>
+
                         <button type="button" @click="closeModal"
                             class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0"
                             :disabled="isLoading">
@@ -117,6 +118,7 @@ import { ref } from 'vue'
 import { PhKey, PhCopy, PhInfo } from '@phosphor-icons/vue'
 import { useProjects } from '~/composables/useProjects'
 import { useToast } from '~/composables/useToast'
+import { useValidation } from '~/composables/useValidation'
 
 const props = defineProps({
     show: {
@@ -132,31 +134,46 @@ const props = defineProps({
 const emit = defineEmits(['close', 'token-created'])
 const { generateAuthToken } = useProjects()
 const { success } = useToast()
+const { validate, rules, errors, clearErrors } = useValidation()
 
 const tokenName = ref('')
 const createdToken = ref('')
 const isLoading = ref(false)
+const showError = ref(false)
 
 function closeModal() {
     emit('close')
     // Reset the form
     tokenName.value = ''
     createdToken.value = ''
+    showError.value = false
+    clearErrors()
 }
 
 async function createToken() {
-    if (!tokenName.value) return
+    clearErrors()
+
+    const isValid = validate(
+        { tokenName: tokenName.value },
+        { tokenName: [rules.required('Please enter a token name')] }
+    )
+
+    if (!isValid || errors.value.tokenName) {
+        showError.value = true
+        console.log('Validation failed, showing error message')
+        return
+    }
 
     isLoading.value = true
     try {
         const response = await generateAuthToken(props.projectId, { name: tokenName.value })
+
         if (response) {
             createdToken.value = response.token
             emit('token-created')
             success('Token created successfully')
         }
     } catch (error) {
-        console.error('Failed to create token:', error)
     } finally {
         isLoading.value = false
     }

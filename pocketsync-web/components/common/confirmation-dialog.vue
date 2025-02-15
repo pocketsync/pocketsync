@@ -13,12 +13,12 @@
                             <div class="mt-2">
                                 <p class="text-sm text-gray-500">{{ message }}</p>
                                 <div v-if="verificationText" class="mt-4">
-                                    <label for="verification" class="block text-sm font-medium text-gray-900">Please type "{{ verificationText }}" to confirm</label>
+                                    <label for="verification" class="block text-sm font-medium text-gray-900">Please
+                                        type "{{ verificationText }}" to confirm</label>
                                     <div class="mt-2">
                                         <input type="text" id="verification" v-model="userInput"
                                             class="block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6"
-                                            :class="{ 'ring-red-300': showError }"
-                                            @input="validateInput"
+                                            :class="{ 'ring-red-300': showError }" @input="validateInput"
                                             :disabled="loading" />
                                     </div>
                                 </div>
@@ -28,7 +28,7 @@
                     <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
                         <button type="button" @click="handleConfirm()"
                             class="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto cursor-pointer"
-                            :disabled="loading || (props.verificationText && userInput !== props.verificationText)">
+                            :disabled="loading || (verificationText ? userInput !== verificationText : false)">
                             <PhSpinner v-if="loading" :size="20" class="animate-spin" />
                             {{ confirmText }}
                         </button>
