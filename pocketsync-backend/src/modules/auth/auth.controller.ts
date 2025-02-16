@@ -21,7 +21,7 @@ export class AuthController {
   constructor(
     private authService: AuthService,
     private configService: ConfigService,
-  ) {}
+  ) { }
 
   @Post('register')
   @ApiOperation({
@@ -181,7 +181,7 @@ export class AuthController {
     return { message: 'Password changed successfully' };
   }
 
-  
+
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
@@ -222,4 +222,37 @@ export class AuthController {
     return this.authService.updateProfile(req.user.id, updateProfileDto);
   }
 
+  @Post('request-password-reset')
+  @ApiOperation({
+    summary: 'Request password reset',
+    description: 'Request a password reset email',
+    operationId: 'requestPasswordReset'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Password reset email sent successfully'
+  })
+  async requestPasswordReset(@Body() requestPasswordResetDto: RequestPasswordResetDto) {
+    await this.authService.requestPasswordReset(requestPasswordResetDto.email);
+    return { message: 'Password reset email sent successfully' };
+  }
+  
+  @Post('reset-password')
+  @ApiOperation({
+    summary: 'Reset password',
+    description: 'Reset user password using a valid reset token',
+    operationId: 'resetPassword'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Password reset successfully'
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid or expired reset token'
+  })
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    await this.authService.resetPassword(resetPasswordDto.token, resetPasswordDto.newPassword);
+    return { message: 'Password reset successfully' };
+  }
 }

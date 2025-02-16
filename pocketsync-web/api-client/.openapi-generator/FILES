@@ -30,6 +30,8 @@ model/project-stats-response-dto.ts
 model/refresh-token-dto.ts
 model/refresh-token-response-dto.ts
 model/register-dto.ts
+model/request-password-reset-dto.ts
+model/reset-password-dto.ts
 model/update-profile-dto.ts
 model/update-project-dto.ts
 model/user-response-dto.ts
