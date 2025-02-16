@@ -119,6 +119,10 @@
 <script setup>
 import { ref } from 'vue'
 import { useAuth } from '~/composables/useAuth'
+
+useHead({
+    title: 'Sign In - PocketSync'
+})
 import { useValidation } from '~/composables/useValidation'
 import { useRouter } from '#app'
 import ErrorAlert from '~/components/common/error-alert'

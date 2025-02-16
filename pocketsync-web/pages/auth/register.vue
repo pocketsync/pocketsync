@@ -131,6 +131,10 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useAuth } from '~/composables/useAuth'
+
+useHead({
+    title: 'Create Account - PocketSync'
+})
 import { useRouter } from '#app'
 import { useValidation } from '~/composables/useValidation'
 import ErrorAlert from '~/components/common/error-alert'

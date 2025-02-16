@@ -1,15 +1,17 @@
 import { useAuth } from '~/composables/useAuth'
 
 export default defineNuxtRouteMiddleware((to) => {
-    // Skip auth check for public routes
-    if (['/', '/auth/login', '/auth/register', '/auth/callback'].includes(to.path)) {
+    if (!to.path.startsWith('/console')) {
         return
     }
 
     const { isAuthenticated } = useAuth()
 
-    // Only check for authentication status, no API calls
-    if (!isAuthenticated.value) {
+    if (isAuthenticated.value && to.path.startsWith('/auth')) {
+        return navigateTo('/console')
+    }
+
+    if (!isAuthenticated.value && to.path.startsWith('/console')) {
         return navigateTo('/auth/login')
     }
 })

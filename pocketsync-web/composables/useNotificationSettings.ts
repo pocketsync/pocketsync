@@ -73,7 +73,10 @@ export const useNotificationSettings = () => {
         error.value = null
         try {
             isLoading.value = true
-            const response = await notificationApi.updateNotificationSettings(settingsData)
+            const response = await notificationApi.updateNotificationSettings({
+                emailEnabled: settingsData.emailEnabled,
+                marketingEnabled: settingsData.marketingEnabled
+            })
             settings.value = response.data
             success('Notification settings updated successfully')
             return response.data

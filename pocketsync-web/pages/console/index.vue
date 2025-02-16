@@ -134,6 +134,10 @@ definePageMeta({
     layout: 'dashboard'
 })
 
+useHead({
+    title: 'Dashboard - PocketSync'
+})
+
 const createProject = () => {
     const router = useRouter()
     router.push('/console/projects')

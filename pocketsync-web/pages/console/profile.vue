@@ -48,9 +48,6 @@
 
             <!-- Password section -->
             <ChangePasswordForm />
-
-            <!-- Notification Settings section -->
-            <NotificationSettings />
         </div>
     </div>
 </template>
@@ -59,8 +56,11 @@
 import { ref, watch } from 'vue'
 import { useAuth } from '~/composables/useAuth'
 import { useUtils } from '~/composables/useUtils'
+
+useHead({
+    title: 'Profile Settings - PocketSync'
+})
 import ChangePasswordForm from '~/components/profile/change-password-form.vue'
-import NotificationSettings from '~/components/profile/notification-settings.vue'
 
 definePageMeta({
     layout: 'dashboard'
@@ -75,10 +75,6 @@ const user = ref(null)
 const currentPassword = ref('')
 const newPassword = ref('')
 const confirmPassword = ref('')
-
-// Preferences
-const emailNotifications = ref(true)
-const marketingEmails = ref(false)
 
 onMounted(async () => {
     await ensureUserProfile()
