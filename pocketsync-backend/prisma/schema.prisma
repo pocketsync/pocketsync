@@ -85,6 +85,17 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
+model EmailVerificationToken {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  token     String   @unique @db.VarChar(255)
+  userId    String   @map("user_id") @db.Uuid
+  expiresAt DateTime @map("expires_at") @db.Timestamp()
+  used      Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("email_verification_tokens")
+}
+
 model User {
   id                  String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email               String?                @unique @db.VarChar(255)
@@ -101,6 +112,7 @@ model User {
   projectAuthTokens   ProjectAuthTokens[]
   notificationSettings NotificationSettings?
   passwordResetTokens PasswordResetToken[]
+  emailVerifications  EmailVerificationToken[]
 
   @@map("users")
 }

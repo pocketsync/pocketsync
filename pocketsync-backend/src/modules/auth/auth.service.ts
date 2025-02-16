@@ -2,8 +2,6 @@ import { Injectable, UnauthorizedException, BadRequestException, ConflictExcepti
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { JwtService } from '@nestjs/jwt';
-import { User } from '@prisma/client';
-import { compare, hash } from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import * as bcrypt from 'bcrypt';
 import { add } from 'date-fns';
@@ -42,6 +40,25 @@ export class AuthService {
       },
     });
 
+    // Generate email verification token
+    const verificationToken = uuidv4();
+    await this.prisma.emailVerificationToken.create({
+      data: {
+        token: verificationToken,
+        userId: user.id,
+        expiresAt: add(new Date(), { hours: 24 }),
+      },
+    });
+
+    // Send verification email
+    const verificationUrl = `${this.configService.get('FRONTEND_URL')}/verify-email?token=${verificationToken}`;
+    await this.emailService.sendTemplatedEmail(
+      user.email!,
+      'Verify your email address',
+      'email-verification',
+      { firstName: user.firstName, verificationUrl }
+    );
+
     const tokens = await this.generateTokens(user.id, user.email!);
     return {
       user: this.userMapper.toResponse(user),
@@ -79,7 +96,7 @@ export class AuthService {
       throw new BadRequestException('Invalid or expired reset token');
     }
 
-    const hashedPassword = await hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     await this.prisma.$transaction([
       this.prisma.user.update({
@@ -347,5 +364,27 @@ export class AuthService {
     });
 
     return updatedUser;
+  }
+
+  async verifyEmail(token: string): Promise<void> {
+    const verificationToken = await this.prisma.emailVerificationToken.findUnique({
+      where: { token },
+      include: { user: true },
+    });
+
+    if (!verificationToken || verificationToken.used || verificationToken.expiresAt < new Date()) {
+      throw new BadRequestException('Invalid or expired verification token');
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: verificationToken.userId },
+        data: { isEmailVerified: true },
+      }),
+      this.prisma.emailVerificationToken.update({
+        where: { id: verificationToken.id },
+        data: { used: true },
+      }),
+    ]);
   }
 }

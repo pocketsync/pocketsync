@@ -255,4 +255,23 @@ export class AuthController {
     await this.authService.resetPassword(resetPasswordDto.token, resetPasswordDto.newPassword);
     return { message: 'Password reset successfully' };
   }
+
+  @Post('verify-email')
+  @ApiOperation({
+    summary: 'Verify email address',
+    description: 'Verify user email address using the verification token',
+    operationId: 'verifyEmail'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Email verified successfully'
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid or expired verification token'
+  })
+  async verifyEmail(@Body('token') token: string) {
+    await this.authService.verifyEmail(token);
+    return { message: 'Email verified successfully' };
+  }
 }
