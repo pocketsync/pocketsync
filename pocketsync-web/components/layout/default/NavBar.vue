@@ -4,8 +4,9 @@
             <div class="flex justify-between h-16">
                 <div class="flex">
                     <div class="flex-shrink-0 flex items-center">
-                        <NuxtLink to="/" class="text-xl font-bold text-gray-900">
-                            PocketSync
+                        <NuxtLink to="/" class="flex items-center">
+                            <img src="/images/logo_full.svg" alt="PocketSync" class="hidden sm:block h-4" />
+                            <img src="/images/logo_icon.svg" alt="PocketSync" class="block sm:hidden h-8" />
                         </NuxtLink>
                     </div>
                     <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
