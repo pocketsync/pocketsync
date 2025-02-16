@@ -2,6 +2,7 @@ export * from './app-user-response-dto';
 export * from './app-user-response-list';
 export * from './auth-token-response-dto';
 export * from './authenticated-response-dto';
+export * from './change-password-dto';
 export * from './create-app-user-dto';
 export * from './create-auth-token-dto';
 export * from './create-project-dto';

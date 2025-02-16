@@ -16,6 +16,7 @@ model/app-user-response-dto.ts
 model/app-user-response-list.ts
 model/auth-token-response-dto.ts
 model/authenticated-response-dto.ts
+model/change-password-dto.ts
 model/create-app-user-dto.ts
 model/create-auth-token-dto.ts
 model/create-project-dto.ts

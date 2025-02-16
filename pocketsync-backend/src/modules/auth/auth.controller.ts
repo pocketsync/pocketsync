@@ -1,4 +1,4 @@
-import { Controller, Get, Post, UseGuards, Req, Res, Body, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Req, Res, Body, HttpStatus, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { ConfigService } from '@nestjs/config';
@@ -10,6 +10,7 @@ import { RefreshTokenResponseDto } from './dto/responses/refresh-token.response.
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { UserResponseDto } from './dto/responses/user.response.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -151,6 +152,30 @@ export class AuthController {
   })
   async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
     return this.authService.refreshAccessToken(refreshTokenDto.refreshToken);
+  }
+
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Change password',
+    description: 'Change user password with current password verification',
+    operationId: 'changePassword'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Password changed successfully'
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Current password is incorrect'
+  })
+  async changePassword(@Request() req, @Body() changePasswordDto: ChangePasswordDto) {
+    await this.authService.changePassword(
+      req.user.id,
+      changePasswordDto.currentPassword,
+      changePasswordDto.newPassword
+    );
+    return { message: 'Password changed successfully' };
   }
 
   
