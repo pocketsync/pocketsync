@@ -74,6 +74,17 @@ model NotificationSettings {
   @@map("notification_settings")
 }
 
+model PasswordResetToken {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  token     String   @unique @db.VarChar(255)
+  userId    String   @map("user_id") @db.Uuid
+  expiresAt DateTime @map("expires_at") @db.Timestamp()
+  user      User     @relation(fields: [userId], references: [id])
+  used      Boolean  @default(false)
+
+  @@map("password_reset_tokens")
+}
+
 model User {
   id                  String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email               String?                @unique @db.VarChar(255)
@@ -89,6 +100,7 @@ model User {
   refreshTokens       RefreshToken[]
   projectAuthTokens   ProjectAuthTokens[]
   notificationSettings NotificationSettings?
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
 }

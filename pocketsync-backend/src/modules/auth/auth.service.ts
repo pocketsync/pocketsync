@@ -1,15 +1,19 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { Injectable, UnauthorizedException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ConfigService } from '@nestjs/config';
+import { EmailService } from '../email/email.service';
+import { JwtService } from '@nestjs/jwt';
+import { User } from '@prisma/client';
+import { compare, hash } from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import * as bcrypt from 'bcrypt';
-import { RegisterDto } from './dto/register.dto';
+import { add } from 'date-fns';
 import { LoginDto } from './dto/login.dto';
-import { UserMapper } from './mappers/user.mapper';
 import { AuthenticatedResponseDto } from './dto/responses/authenticated.response.dto';
-import { RefreshTokenResponseDto } from './dto/responses/refresh-token.response.dto';
+import { ConfigService } from '@nestjs/config';
+import { UserMapper } from './mappers/user.mapper';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { RefreshTokenResponseDto } from './dto/responses/refresh-token.response.dto';
+import { RegisterDto } from './dto/register.dto';
 
 @Injectable()
 export class AuthService {
@@ -18,6 +22,7 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private userMapper: UserMapper,
+    private emailService: EmailService,
   ) { }
 
   async register(registerDto: RegisterDto): Promise<AuthenticatedResponseDto> {
@@ -42,6 +47,57 @@ export class AuthService {
       user: this.userMapper.toResponse(user),
       ...tokens,
     };
+  }
+
+  async requestPasswordReset(email: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      // Return void to prevent email enumeration
+      return;
+    }
+
+    const token = uuidv4();
+    const expiresAt = add(new Date(), { hours: 24 });
+
+    await this.prisma.passwordResetToken.create({
+      data: {
+        token,
+        userId: user.id,
+        expiresAt,
+      },
+    });
+
+    await this.emailService.sendPasswordResetEmail(user.email, token);
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    const resetToken = await this.prisma.passwordResetToken.findUnique({
+      where: { token },
+      include: { user: true },
+    });
+
+    if (!resetToken || resetToken.used || resetToken.expiresAt < new Date()) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    const hashedPassword = await hash(newPassword, 10);
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: resetToken.userId },
+        data: { passwordHash: hashedPassword },
+      }),
+      this.prisma.passwordResetToken.update({
+        where: { id: resetToken.id },
+        data: { used: true },
+      }),
+    ]);
+
+    // Optionally invalidate all refresh tokens for this user
+    await this.prisma.refreshToken.updateMany({
+      where: { userId: resetToken.userId },
+      data: { revoked: true },
+    });
   }
 
   async login(loginDto: LoginDto): Promise<AuthenticatedResponseDto> {
