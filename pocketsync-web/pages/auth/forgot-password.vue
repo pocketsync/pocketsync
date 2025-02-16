@@ -16,6 +16,9 @@
                     <input id="email" v-model="email" name="email" type="email" autocomplete="email" required
                         class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
                 </div>
+                <p v-if="errors.email?.length" class="mt-2 text-sm text-red-600">
+                    {{ errors.email[0] }}
+                </p>
             </div>
 
             <div v-if="emailSent" class="rounded-md bg-green-50 p-4">
@@ -80,30 +83,39 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
+import { useAuth } from '~/composables/useAuth'
+import { useValidation } from '~/composables/useValidation'
+
 definePageMeta({
     layout: 'auth'
 })
 
+useHead({
+    title: 'Reset Password - PocketSync'
+})
+
 const email = ref('')
-const isLoading = ref(false)
 const emailSent = ref(false)
-const error = ref('')
+
+const { requestPasswordReset, isLoading, error } = useAuth()
+const { validate, errors, rules } = useValidation()
 
 async function handleSubmit() {
-    error.value = ''
-    
+    emailSent.value = false
+
+    const isValid = validate(
+        { email: email.value },
+        { email: [rules.required('Email is required'), rules.email('Please enter a valid email address')] }
+    )
+
+    if (!isValid) return
+
     try {
-        isLoading.value = true
-        // TODO: Implement password reset request logic here
-        await new Promise(resolve => setTimeout(resolve, 1000)) // Simulated delay
-        
-        console.log('Password reset requested for:', email.value)
+        await requestPasswordReset(email.value)
         emailSent.value = true
+        email.value = ''
     } catch (err) {
-        error.value = 'Failed to send reset instructions. Please try again.'
-        console.error('Password reset request error:', err)
-    } finally {
-        isLoading.value = false
     }
 }
 </script>

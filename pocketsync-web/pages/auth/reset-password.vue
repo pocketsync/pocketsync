@@ -105,6 +105,10 @@ definePageMeta({
     layout: 'auth'
 })
 
+useHead({
+    title: 'Reset Password - PocketSync'
+})
+
 const route = useRoute()
 const router = useRouter()
 
@@ -135,12 +139,10 @@ const validatePassword = (pass) => {
     return ''
 }
 
-// Watch for password changes to validate in real-time
 watch(password, (newValue) => {
     passwordError.value = validatePassword(newValue)
 })
 
-// Watch confirm password to check match
 watch(confirmPassword, (newValue) => {
     if (newValue && newValue !== password.value) {
         confirmPasswordError.value = 'Passwords do not match'
@@ -149,7 +151,6 @@ watch(confirmPassword, (newValue) => {
     }
 })
 
-// Handle form submission
 async function handleSubmit() {
     error.value = ''
     passwordError.value = validatePassword(password.value)
@@ -181,13 +182,11 @@ async function handleSubmit() {
         resetComplete.value = true
     } catch (err) {
         error.value = 'Failed to reset password. Please try again.'
-        console.error('Password reset error:', err)
     } finally {
         isLoading.value = false
     }
 }
 
-// Redirect if no token is present
 onMounted(() => {
     if (!token.value) {
         router.push('/auth/forgot-password')

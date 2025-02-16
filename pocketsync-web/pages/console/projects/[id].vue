@@ -71,20 +71,16 @@ const route = useRoute()
 const { fetchProjectById, currentProject, isLoading, error } = useProjects()
 const { users, isLoading: isLoadingUsers, error: usersError, fetchProjectUsers } = useAppUsers()
 
-// Fetch project data when component mounts
 onMounted(async () => {
     try {
         await fetchProjectById(route.params.id as string)
         await fetchProjectUsers(route.params.id as string)
     } catch (err) {
-        console.error('Failed to fetch project:', err)
     }
 })
 
-// Use the currentProject from the composable
 const project = computed(() => currentProject.value || { id: '', name: '' })
 
-// Define authTokens as a computed property that derives from project data
 const authTokens = computed(() => currentProject.value?.authTokens || [])
 
 const stats = computed(() => {

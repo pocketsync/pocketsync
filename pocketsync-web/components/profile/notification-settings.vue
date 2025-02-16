@@ -16,7 +16,6 @@ const initializeSettings = async () => {
   }
 }
 
-// Handle settings update
 const handleSettingsUpdate = async (field: string, value: boolean) => {
   if (isLoading.value || !settings.value) return
 
@@ -28,8 +27,6 @@ const handleSettingsUpdate = async (field: string, value: boolean) => {
   try {
     await updateSettings(updatedSettings)
   } catch (err) {
-    // Error is already handled by the composable
-    console.error('Failed to update notification settings:', err)
   }
 }
 </script>

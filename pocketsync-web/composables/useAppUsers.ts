@@ -28,7 +28,6 @@ export const useAppUsers = () => {
             currentPage.value = page
         } catch (err: any) {
             error.value = err.message || 'Failed to fetch users'
-            console.error('Error fetching project users:', err)
         } finally {
             isLoading.value = false
         }
@@ -39,12 +38,10 @@ export const useAppUsers = () => {
 
         try {
             await appUsersApi.deleteAppUser(userId)
-            // Remove the deleted user from the local state
             users.value = users.value.filter(user => user.userIdentifier !== userId)
             totalUsers.value--
         } catch (err: any) {
             error.value = err.message || 'Failed to delete user'
-            console.error('Error deleting user:', err)
             throw err
         }
     }

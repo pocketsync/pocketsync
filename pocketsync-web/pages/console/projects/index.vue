@@ -72,16 +72,12 @@ definePageMeta({
 const FolderIcon = PhFolder
 const showCreateProjectModal = ref(false)
 
-// Initialize projects composable
 const { projects, isLoading, error, fetchProjects } = useProjects()
 
-// Load projects on component mount
 onMounted(async () => {
     try {
         await fetchProjects()
     } catch (err) {
-        // Error is handled by the composable
-        console.error('Failed to fetch projects:', err)
     }
 })
 </script>

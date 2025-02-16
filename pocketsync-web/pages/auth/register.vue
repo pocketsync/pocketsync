@@ -217,7 +217,6 @@ async function handleGithubRegister() {
         await loginWithGithub()
         await router.push('/console')
     } catch (error) {
-        console.error('GitHub registration error:', error)
         errorMessage.value = 'Failed to register with GitHub. Please try again.'
     } finally {
         isLoading.value = false
@@ -230,7 +229,6 @@ async function handleGoogleRegister() {
         await loginWithGoogle()
         await router.push('/console')
     } catch (error) {
-        console.error('Google registration error:', error)
         errorMessage.value = 'Failed to register with Google. Please try again.'
     } finally {
         isLoading.value = false
