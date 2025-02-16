@@ -34,6 +34,8 @@ import type { RefreshTokenResponseDto } from '../model';
 // @ts-ignore
 import type { RegisterDto } from '../model';
 // @ts-ignore
+import type { UpdateProfileDto } from '../model';
+// @ts-ignore
 import type { UserResponseDto } from '../model';
 /**
  * AuthenticationApi - axios parameter creator
@@ -275,6 +277,42 @@ export const AuthenticationApiAxiosParamCreator = function (configuration?: Conf
                 options: localVarRequestOptions,
             };
         },
+        /**
+         * Update user\'s profile information
+         * @summary Update user profile
+         * @param {UpdateProfileDto} updateProfileDto 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateProfile: async (updateProfileDto: UpdateProfileDto, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'updateProfileDto' is not null or undefined
+            assertParamExists('updateProfile', 'updateProfileDto', updateProfileDto)
+            const localVarPath = `/auth/profile`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PUT', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(updateProfileDto, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
     }
 };
 
@@ -373,6 +411,19 @@ export const AuthenticationApiFp = function(configuration?: Configuration) {
             const localVarOperationServerBasePath = operationServerMap['AuthenticationApi.registerUser']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
+        /**
+         * Update user\'s profile information
+         * @summary Update user profile
+         * @param {UpdateProfileDto} updateProfileDto 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async updateProfile(updateProfileDto: UpdateProfileDto, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<UserResponseDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.updateProfile(updateProfileDto, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AuthenticationApi.updateProfile']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
     }
 };
 
@@ -449,6 +500,16 @@ export const AuthenticationApiFactory = function (configuration?: Configuration,
          */
         registerUser(registerDto: RegisterDto, options?: RawAxiosRequestConfig): AxiosPromise<AuthenticatedResponseDto> {
             return localVarFp.registerUser(registerDto, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Update user\'s profile information
+         * @summary Update user profile
+         * @param {UpdateProfileDto} updateProfileDto 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        updateProfile(updateProfileDto: UpdateProfileDto, options?: RawAxiosRequestConfig): AxiosPromise<UserResponseDto> {
+            return localVarFp.updateProfile(updateProfileDto, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -539,6 +600,18 @@ export class AuthenticationApi extends BaseAPI {
      */
     public registerUser(registerDto: RegisterDto, options?: RawAxiosRequestConfig) {
         return AuthenticationApiFp(this.configuration).registerUser(registerDto, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Update user\'s profile information
+     * @summary Update user profile
+     * @param {UpdateProfileDto} updateProfileDto 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof AuthenticationApi
+     */
+    public updateProfile(updateProfileDto: UpdateProfileDto, options?: RawAxiosRequestConfig) {
+        return AuthenticationApiFp(this.configuration).updateProfile(updateProfileDto, options).then((request) => request(this.axios, this.basePath));
     }
 }
 

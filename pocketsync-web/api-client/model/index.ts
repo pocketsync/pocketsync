@@ -14,5 +14,6 @@ export * from './project-stats-response-dto';
 export * from './refresh-token-dto';
 export * from './refresh-token-response-dto';
 export * from './register-dto';
+export * from './update-profile-dto';
 export * from './update-project-dto';
 export * from './user-response-dto';

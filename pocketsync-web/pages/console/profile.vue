@@ -6,18 +6,6 @@
                 <div class="px-4 py-5 sm:p-6">
                     <h3 class="text-lg font-medium leading-6 text-gray-900">Profile Information</h3>
                     <div class="mt-5 space-y-6">
-                        <div class="flex items-center space-x-4">
-                            <div v-if="user?.avatarUrl" class="h-14 w-14 rounded-full overflow-hidden">
-                                <img :src="user.avatarUrl" :alt="user.name" class="h-full w-full object-cover" />
-                            </div>
-                            <div v-else class="h-14 w-14 rounded-full bg-primary-100 flex items-center justify-center">
-                                <span class="text-lg font-medium text-primary-600">{{ getUserInitials(user) }}</span>
-                            </div>
-                            <button class="text-sm text-primary-600 hover:text-primary-500 font-medium">
-                                Change avatar
-                            </button>
-                        </div>
-
                         <div v-if="user" class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                             <div>
                                 <label for="firstName" class="block text-sm font-medium text-gray-700">First
@@ -70,11 +58,6 @@ const { user: authUser, ensureUserProfile } = useAuth()
 const { getUserInitials } = useUtils()
 
 const user = ref(null)
-
-// Password change form
-const currentPassword = ref('')
-const newPassword = ref('')
-const confirmPassword = ref('')
 
 onMounted(async () => {
     await ensureUserProfile()

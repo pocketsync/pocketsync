@@ -9,6 +9,7 @@ import { LoginDto } from './dto/login.dto';
 import { UserMapper } from './mappers/user.mapper';
 import { AuthenticatedResponseDto } from './dto/responses/authenticated.response.dto';
 import { RefreshTokenResponseDto } from './dto/responses/refresh-token.response.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Injectable()
 export class AuthService {
@@ -271,5 +272,25 @@ export class AuthService {
     });
 
     return true;
+  }
+
+  async updateProfile(userId: string, updateProfileDto: UpdateProfileDto) {
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        firstName: updateProfileDto.firstName,
+        lastName: updateProfileDto.lastName
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    return updatedUser;
   }
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, UseGuards, Req, Res, Body, HttpStatus, Request } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Req, Res, Body, HttpStatus, Request, Put } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { ConfigService } from '@nestjs/config';
@@ -11,6 +11,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { UserResponseDto } from './dto/responses/user.response.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -197,6 +198,26 @@ export class AuthController {
   })
   async getCurrentUser(@Req() req) {
     return this.authService.getCurrentUser({ sub: req.user.id });
+  }
+
+  @Put('profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Update user profile',
+    description: 'Update user\'s profile information',
+    operationId: 'updateProfile'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile updated successfully',
+    type: UserResponseDto
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized'
+  })
+  async updateProfile(@Request() req, @Body() updateProfileDto: UpdateProfileDto) {
+    return this.authService.updateProfile(req.user.id, updateProfileDto);
   }
 
 }
