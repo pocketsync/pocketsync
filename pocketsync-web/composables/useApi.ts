@@ -64,6 +64,9 @@ export const useApi = () => {
             if (originalRequest.url === '/auth/token/refresh') {
                 useCookie('access_token').value = null
                 useCookie('refresh_token').value = null
+                if (import.meta.client) {
+                    window.location.reload()
+                }
                 return Promise.reject({
                     message: 'Session expired. Please login again.'
                 })
