@@ -35,7 +35,7 @@ export const NotificationSettingsApiAxiosParamCreator = function (configuration?
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        notificationSettingsControllerGetSettings: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        getNotificationSettings: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/notification-settings`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -66,9 +66,9 @@ export const NotificationSettingsApiAxiosParamCreator = function (configuration?
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        notificationSettingsControllerUpdateSettings: async (notificationSettingsDto: NotificationSettingsDto, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        updateNotificationSettings: async (notificationSettingsDto: NotificationSettingsDto, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'notificationSettingsDto' is not null or undefined
-            assertParamExists('notificationSettingsControllerUpdateSettings', 'notificationSettingsDto', notificationSettingsDto)
+            assertParamExists('updateNotificationSettings', 'notificationSettingsDto', notificationSettingsDto)
             const localVarPath = `/notification-settings`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -111,10 +111,10 @@ export const NotificationSettingsApiFp = function(configuration?: Configuration)
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async notificationSettingsControllerGetSettings(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<NotificationSettingsDto>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.notificationSettingsControllerGetSettings(options);
+        async getNotificationSettings(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<NotificationSettingsDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getNotificationSettings(options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['NotificationSettingsApi.notificationSettingsControllerGetSettings']?.[localVarOperationServerIndex]?.url;
+            const localVarOperationServerBasePath = operationServerMap['NotificationSettingsApi.getNotificationSettings']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -124,10 +124,10 @@ export const NotificationSettingsApiFp = function(configuration?: Configuration)
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async notificationSettingsControllerUpdateSettings(notificationSettingsDto: NotificationSettingsDto, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<NotificationSettingsDto>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.notificationSettingsControllerUpdateSettings(notificationSettingsDto, options);
+        async updateNotificationSettings(notificationSettingsDto: NotificationSettingsDto, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<NotificationSettingsDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.updateNotificationSettings(notificationSettingsDto, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['NotificationSettingsApi.notificationSettingsControllerUpdateSettings']?.[localVarOperationServerIndex]?.url;
+            const localVarOperationServerBasePath = operationServerMap['NotificationSettingsApi.updateNotificationSettings']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
@@ -146,8 +146,8 @@ export const NotificationSettingsApiFactory = function (configuration?: Configur
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        notificationSettingsControllerGetSettings(options?: RawAxiosRequestConfig): AxiosPromise<NotificationSettingsDto> {
-            return localVarFp.notificationSettingsControllerGetSettings(options).then((request) => request(axios, basePath));
+        getNotificationSettings(options?: RawAxiosRequestConfig): AxiosPromise<NotificationSettingsDto> {
+            return localVarFp.getNotificationSettings(options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -156,8 +156,8 @@ export const NotificationSettingsApiFactory = function (configuration?: Configur
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        notificationSettingsControllerUpdateSettings(notificationSettingsDto: NotificationSettingsDto, options?: RawAxiosRequestConfig): AxiosPromise<NotificationSettingsDto> {
-            return localVarFp.notificationSettingsControllerUpdateSettings(notificationSettingsDto, options).then((request) => request(axios, basePath));
+        updateNotificationSettings(notificationSettingsDto: NotificationSettingsDto, options?: RawAxiosRequestConfig): AxiosPromise<NotificationSettingsDto> {
+            return localVarFp.updateNotificationSettings(notificationSettingsDto, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -176,8 +176,8 @@ export class NotificationSettingsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof NotificationSettingsApi
      */
-    public notificationSettingsControllerGetSettings(options?: RawAxiosRequestConfig) {
-        return NotificationSettingsApiFp(this.configuration).notificationSettingsControllerGetSettings(options).then((request) => request(this.axios, this.basePath));
+    public getNotificationSettings(options?: RawAxiosRequestConfig) {
+        return NotificationSettingsApiFp(this.configuration).getNotificationSettings(options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -188,8 +188,8 @@ export class NotificationSettingsApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof NotificationSettingsApi
      */
-    public notificationSettingsControllerUpdateSettings(notificationSettingsDto: NotificationSettingsDto, options?: RawAxiosRequestConfig) {
-        return NotificationSettingsApiFp(this.configuration).notificationSettingsControllerUpdateSettings(notificationSettingsDto, options).then((request) => request(this.axios, this.basePath));
+    public updateNotificationSettings(notificationSettingsDto: NotificationSettingsDto, options?: RawAxiosRequestConfig) {
+        return NotificationSettingsApiFp(this.configuration).updateNotificationSettings(notificationSettingsDto, options).then((request) => request(this.axios, this.basePath));
     }
 }
 

@@ -10,22 +10,22 @@ import { User } from '../decorators/user.decorator';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class NotificationSettingsController {
-  constructor(private readonly notificationSettingsService: NotificationSettingsService) {}
+    constructor(private readonly notificationSettingsService: NotificationSettingsService) { }
 
-  @Get()
-  @ApiOperation({ summary: 'Get user notification settings' })
-  @ApiResponse({ status: 200, type: NotificationSettingsDto })
-  async getSettings(@User('id') userId: string) {
-    return this.notificationSettingsService.getNotificationSettings(userId);
-  }
+    @Get()
+    @ApiOperation({ summary: 'Get user notification settings', operationId: 'getNotificationSettings' })
+    @ApiResponse({ status: 200, type: NotificationSettingsDto })
+    async getSettings(@User('id') userId: string) {
+        return this.notificationSettingsService.getNotificationSettings(userId);
+    }
 
-  @Put()
-  @ApiOperation({ summary: 'Update user notification settings' })
-  @ApiResponse({ status: 200, type: NotificationSettingsDto })
-  async updateSettings(
-    @User('id') userId: string,
-    @Body() dto: NotificationSettingsDto,
-  ) {
-    return this.notificationSettingsService.updateNotificationSettings(userId, dto);
-  }
+    @Put()
+    @ApiOperation({ summary: 'Update user notification settings', operationId: 'updateNotificationSettings' })
+    @ApiResponse({ status: 200, type: NotificationSettingsDto })
+    async updateSettings(
+        @User('id') userId: string,
+        @Body() dto: NotificationSettingsDto,
+    ) {
+        return this.notificationSettingsService.updateNotificationSettings(userId, dto);
+    }
 }
