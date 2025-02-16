@@ -29,18 +29,15 @@ export const useAuth = () => {
     const isLoading = ref(false)
     const error = ref<AuthError | null>(null)
 
-    // Initialize API client using the shared configuration
     const { config, axiosInstance } = useApi()
     const authApi = new AuthenticationApi(config, undefined, axiosInstance)
 
-    // Cookie options
     const cookieOptions = {
         maxAge: 7 * 24 * 60 * 60, // 7 days
         secure: process.env.NODE_ENV === 'production',
         sameSite: true
     }
 
-    // Token management
     const accessTokenCookie = useCookie('access_token', cookieOptions)
     const refreshTokenCookie = useCookie('refresh_token', cookieOptions)
 
@@ -55,7 +52,6 @@ export const useAuth = () => {
     }
 
     const handleAuthError = (err: any): AuthError => {
-        // Network or connection errors
         if (!err.response || err.code === 'ECONNABORTED') {
             return {
                 message: 'Network error. Please check your connection and try again.',
@@ -119,7 +115,6 @@ export const useAuth = () => {
         }
     }
 
-    // User profile management
     const fetchUserProfile = async () => {
         if (!isAuthenticated.value) return
 
@@ -141,7 +136,6 @@ export const useAuth = () => {
         }
     }
 
-    // Authentication methods
     const login = async (email: string, password: string) => {
         error.value = null
         try {
@@ -194,7 +188,6 @@ export const useAuth = () => {
         error.value = null
     }
 
-    // Social authentication methods
     const loginWithGithub = async () => {
         error.value = null
         try {
@@ -223,10 +216,8 @@ export const useAuth = () => {
         }
     }
 
-    // Initialize auth state but don't fetch profile yet
     initAuth()
 
-    // Lazy profile loading
     const ensureUserProfile = async () => {
         if (isAuthenticated.value && !user.value && !isLoading.value) {
             console.log("fetching profile")
@@ -304,6 +295,19 @@ export const useAuth = () => {
         }
     }
 
+    const resendEmailVerification = async () => {
+        error.value = null
+        try {
+            isLoading.value = true
+            await authApi.resendEmailVerification()
+        } catch (err: any) {
+            error.value = handleAuthError(err)
+            throw error.value
+        } finally {
+            isLoading.value = false
+        }
+    }
+
     return {
         user,
         isAuthenticated,
@@ -319,6 +323,7 @@ export const useAuth = () => {
         setTokens,
         changePassword,
         updateProfile,
+        resendEmailVerification,
         requestPasswordReset,
         resetPassword,
         verifyEmail,

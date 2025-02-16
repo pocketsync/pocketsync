@@ -387,4 +387,47 @@ export class AuthService {
       }),
     ]);
   }
+
+  async resendEmailVerification(userId: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    if (user.isEmailVerified) {
+      throw new BadRequestException('Email is already verified');
+    }
+
+    // Invalidate existing unused tokens
+    await this.prisma.emailVerificationToken.updateMany({
+      where: {
+        userId,
+        used: false,
+        expiresAt: { gt: new Date() }
+      },
+      data: { used: true }
+    });
+
+    // Generate new verification token
+    const verificationToken = uuidv4();
+    await this.prisma.emailVerificationToken.create({
+      data: {
+        token: verificationToken,
+        userId: user.id,
+        expiresAt: add(new Date(), { hours: 24 }),
+      },
+    });
+
+    // Send verification email
+    const verificationUrl = `${this.configService.get('FRONTEND_URL')}/auth/verify-email?token=${verificationToken}`;
+    await this.emailService.sendTemplatedEmail(
+      user.email!,
+      'Verify your email address',
+      'email-verification',
+      { firstName: user.firstName, verificationUrl }
+    );
+  }
 }

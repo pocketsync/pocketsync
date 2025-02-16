@@ -26,7 +26,7 @@ import { useAuth } from '~/composables/useAuth'
 import { useToast } from '~/composables/useToast'
 
 const { user, resendEmailVerification } = useAuth()
-const { showToast } = useToast()
+const { success: successToast, error: errorToast } = useToast()
 
 const isLoading = ref(false)
 const cooldownSeconds = ref(0)
@@ -48,10 +48,10 @@ const resendVerification = async () => {
     try {
         isLoading.value = true
         await resendEmailVerification()
-        showToast('Verification email sent successfully', 'success')
+        successToast('Verification email sent successfully')
         startCooldown()
     } catch (error) {
-        showToast(error.message || 'Failed to send verification email', 'error')
+        errorToast(error.message || 'Failed to send verification email')
     } finally {
         isLoading.value = false
     }

@@ -38,7 +38,10 @@
             <h3 class="text-lg font-medium text-gray-900">Verification failed</h3>
             <p class="text-sm text-gray-600">The verification link appears to be invalid or has expired. Please try again or request a new verification email.</p>
             <div class="pt-4">
-                <NuxtLink to="/auth/login" class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transform transition-all duration-200">
+                <button v-if="isAuthenticated" @click="redirectToConsole" class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transform transition-all duration-200">
+                    Return to Dashboard
+                </button>
+                <NuxtLink v-else to="/auth/login" class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transform transition-all duration-200">
                     Return to Login
                 </NuxtLink>
             </div>
@@ -62,7 +65,7 @@ definePageMeta({
 
 const route = useRoute()
 const router = useRouter()
-const { verifyEmail, error: authError } = useAuth()
+const { verifyEmail, error: authError, isAuthenticated } = useAuth()
 
 const isLoading = ref(true)
 const verified = ref(false)

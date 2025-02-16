@@ -275,4 +275,28 @@ export class AuthController {
     await this.authService.verifyEmail(verifyEmailDto.token);
     return { message: 'Email verified successfully' };
   }
+
+  @Post('resend-email-verification')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Resend email verification',
+    description: 'Resend email verification link to user\'s email address',
+    operationId: 'resendEmailVerification'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification email sent successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Email is already verified'
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized'
+  })
+  async resendEmailVerification(@Request() req) {
+    await this.authService.resendEmailVerification(req.user.id);
+    return { message: 'Verification email sent successfully' };
+  }
 }

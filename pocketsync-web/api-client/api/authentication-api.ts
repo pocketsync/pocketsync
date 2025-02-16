@@ -320,6 +320,36 @@ export const AuthenticationApiAxiosParamCreator = function (configuration?: Conf
             };
         },
         /**
+         * Resend email verification link to user\'s email address
+         * @summary Resend email verification
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        resendEmailVerification: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/auth/resend-email-verification`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
          * Reset user password using a valid reset token
          * @summary Reset password
          * @param {ResetPasswordDto} resetPasswordDto 
@@ -539,6 +569,18 @@ export const AuthenticationApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
+         * Resend email verification link to user\'s email address
+         * @summary Resend email verification
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async resendEmailVerification(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.resendEmailVerification(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['AuthenticationApi.resendEmailVerification']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
          * Reset user password using a valid reset token
          * @summary Reset password
          * @param {ResetPasswordDto} resetPasswordDto 
@@ -663,6 +705,15 @@ export const AuthenticationApiFactory = function (configuration?: Configuration,
          */
         requestPasswordReset(requestPasswordResetDto: RequestPasswordResetDto, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.requestPasswordReset(requestPasswordResetDto, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Resend email verification link to user\'s email address
+         * @summary Resend email verification
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        resendEmailVerification(options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.resendEmailVerification(options).then((request) => request(axios, basePath));
         },
         /**
          * Reset user password using a valid reset token
@@ -795,6 +846,17 @@ export class AuthenticationApi extends BaseAPI {
      */
     public requestPasswordReset(requestPasswordResetDto: RequestPasswordResetDto, options?: RawAxiosRequestConfig) {
         return AuthenticationApiFp(this.configuration).requestPasswordReset(requestPasswordResetDto, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Resend email verification link to user\'s email address
+     * @summary Resend email verification
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof AuthenticationApi
+     */
+    public resendEmailVerification(options?: RawAxiosRequestConfig) {
+        return AuthenticationApiFp(this.configuration).resendEmailVerification(options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
