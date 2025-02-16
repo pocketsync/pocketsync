@@ -178,8 +178,6 @@ export class AuthService {
       throw new UnauthorizedException('No provider user ID in OAuth profile');
     }
 
-    // Update user's avatar URL if logging in with GitHub
-
     if (profile.avatarUrl) {
       await this.prisma.user.update({
         where: { id: userId },
@@ -226,7 +224,6 @@ export class AuthService {
   }
 
   private sanitizeProviderData(profile: any) {
-    // Remove sensitive data and ensure the object is JSON-serializable
     const { accessToken, refreshToken, ...safeProfile } = profile;
     return safeProfile;
   }
@@ -243,18 +240,23 @@ export class AuthService {
     return user;
   }
 
-  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+  async changePassword(userId: string, currentPassword: string | null, newPassword: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
 
-    if (!user || !user.passwordHash) {
-      throw new UnauthorizedException('User not found or invalid authentication method');
+    if (!user) {
+      throw new UnauthorizedException('User not found');
     }
 
-    const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Current password is incorrect');
+    if (user.passwordHash) {
+      if (!currentPassword) {
+        throw new UnauthorizedException('Current password is required');
+      }
+      const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('Current password is incorrect');
+      }
     }
 
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
@@ -263,7 +265,6 @@ export class AuthService {
       data: { passwordHash: hashedNewPassword },
     });
 
-    // Revoke all refresh tokens for security
     await this.prisma.refreshToken.updateMany({
       where: { userId },
       data: { revoked: true },

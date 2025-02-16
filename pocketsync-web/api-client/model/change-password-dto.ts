@@ -25,7 +25,7 @@ export interface ChangePasswordDto {
      * @type {string}
      * @memberof ChangePasswordDto
      */
-    'currentPassword': string;
+    'currentPassword': string | null;
     /**
      * New password to set (minimum 8 characters)
      * @type {string}

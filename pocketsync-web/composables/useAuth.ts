@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { useCookie } from 'nuxt/app'
 
-import type { LoginDto, RegisterDto, UserResponseDto } from "~/api-client"
+import type { LoginDto, RegisterDto, UserResponseDto, ChangePasswordDto } from "~/api-client"
 import { useApi } from './useApi'
 import { AuthenticationApi } from "~/api-client"
 
@@ -233,6 +233,20 @@ export const useAuth = () => {
         }
     }
 
+    const changePassword = async (currentPassword: string | null, newPassword: string) => {
+        error.value = null
+        try {
+            isLoading.value = true
+            const changePasswordData: ChangePasswordDto = { currentPassword, newPassword }
+            await authApi.changePassword(changePasswordData)
+        } catch (err: any) {
+            error.value = handleAuthError(err)
+            throw error.value
+        } finally {
+            isLoading.value = false
+        }
+    }
+
     return {
         user,
         isAuthenticated,
@@ -246,5 +260,6 @@ export const useAuth = () => {
         fetchUserProfile,
         ensureUserProfile,
         setTokens,
+        changePassword,
     }
 }
