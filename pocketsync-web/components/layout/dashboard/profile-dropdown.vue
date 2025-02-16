@@ -22,10 +22,10 @@
                 </p>
                 <p class="text-xs text-gray-500">{{ user?.email ?? '' }}</p>
             </div>
-            <NuxtLink to="/console/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+            <NuxtLink to="/console/profile" @click="userMenuOpen = false" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                 Your profile
             </NuxtLink>
-            <NuxtLink to="/console/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</NuxtLink>
+            <NuxtLink to="/console/settings" @click="userMenuOpen = false" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</NuxtLink>
             <button @click="handleSignOut"
                 class="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">Sign
                 out</button>
