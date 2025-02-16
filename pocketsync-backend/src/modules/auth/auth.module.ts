@@ -9,6 +9,8 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { UserMapper } from './mappers/user.mapper';
+import { NotificationSettingsController } from './controllers/notification-settings.controller';
+import { NotificationSettingsService } from './services/notification-settings.service';
 
 @Module({
   imports: [
@@ -24,8 +26,8 @@ import { UserMapper } from './mappers/user.mapper';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, GoogleStrategy, GithubStrategy, UserMapper],
+  controllers: [AuthController, NotificationSettingsController],
+  providers: [AuthService, JwtStrategy, GoogleStrategy, GithubStrategy, UserMapper, NotificationSettingsService],
   exports: [JwtModule, AuthService],
 })
 export class AuthModule {}

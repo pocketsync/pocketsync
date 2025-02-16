@@ -62,20 +62,33 @@ model ChangeLog {
   @@map("change_logs")
 }
 
+model NotificationSettings {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String   @unique @map("user_id") @db.Uuid
+  marketingEnabled  Boolean  @default(true) @map("marketing_enabled")
+  emailEnabled      Boolean  @default(true) @map("email_enabled")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt         DateTime @default(now()) @map("updated_at") @db.Timestamp()
+  user              User     @relation(fields: [userId], references: [id])
+
+  @@map("notification_settings")
+}
+
 model User {
-  id                String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email             String?                @unique @db.VarChar(255)
-  passwordHash      String?                @map("password_hash") @db.VarChar(255)
-  firstName         String?                @map("first_name") @db.VarChar(255)
-  lastName          String?                @map("last_name") @db.VarChar(255)
-  avatarUrl         String?                @map("avatar_url") @db.Text
-  isEmailVerified   Boolean                @default(false) @map("is_email_verified")
-  createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamp()
-  updatedAt         DateTime               @default(now()) @map("updated_at") @db.Timestamp()
-  projects          Project[]
-  socialConnections UserSocialConnection[]
-  refreshTokens     RefreshToken[]
-  projectAuthTokens ProjectAuthTokens[]
+  id                  String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email               String?                @unique @db.VarChar(255)
+  passwordHash        String?                @map("password_hash") @db.VarChar(255)
+  firstName           String?                @map("first_name") @db.VarChar(255)
+  lastName            String?                @map("last_name") @db.VarChar(255)
+  avatarUrl           String?                @map("avatar_url") @db.Text
+  isEmailVerified     Boolean                @default(false) @map("is_email_verified")
+  createdAt           DateTime               @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt           DateTime               @default(now()) @map("updated_at") @db.Timestamp()
+  projects            Project[]
+  socialConnections   UserSocialConnection[]
+  refreshTokens       RefreshToken[]
+  projectAuthTokens   ProjectAuthTokens[]
+  notificationSettings NotificationSettings?
 
   @@map("users")
 }
