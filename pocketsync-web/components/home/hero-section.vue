@@ -34,19 +34,27 @@
                     <div class="rounded-xl bg-white/5 p-2 ring-1 ring-inset ring-white/10">
                         <div class="rounded-md bg-gray-900 p-4">
                             <pre class="text-sm leading-6 text-gray-300"><code>// Initialize PocketSync
-await PocketSync.instance.initialize({
-  serverUrl: 'https://api.pocketsync.dev',
-  projectId: 'your-project-id'
-});
+await PocketSync.instance.initialize(
+  dbPath: path,
+  options: PocketSyncOptions(
+    projectId: 'your-project-id',
+    authToken: 'your-auth-token',
+    serverUrl: 'https://api.pocketsync.dev',
+  ),
+  databaseOptions: DatabaseOptions(
+    onCreate: (db, version) async {
+      await db.execute(
+        'CREATE TABLE todos(id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, isCompleted INTEGER)',
+      );
+    },
+  ),
+);
 
-// Regular database operations are tracked
-await PocketSync.instance.database.insert('users', {
-  name: 'John Doe',
-  email: 'john@example.com'
-});
+// Set user ID - In a real app, this would come from your auth system
+await PocketSync.instance.setUserId(userId: 'your-user-id');
 
-// Changes sync automatically when online
-PocketSync.instance.startSync();
+// Start syncing
+await PocketSync.instance.startSync();
 </code></pre>
                         </div>
                     </div>

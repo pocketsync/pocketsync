@@ -1,5 +1,5 @@
 <template>
-    <div v-if="!user?.isEmailVerified" class="bg-yellow-50 p-4 border-b border-yellow-100">
+    <div v-if="user != null && user?.isEmailVerified" class="bg-yellow-50 p-4 border-b border-yellow-100">
         <div class="flex items-center justify-between">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
@@ -20,17 +20,27 @@
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useAuth } from '~/composables/useAuth'
 import { useToast } from '~/composables/useToast'
+import type { UserResponseDto } from '~/api-client'
 
-const { user, resendEmailVerification } = useAuth()
+const { user: authUser, resendEmailVerification, ensureUserProfile } = useAuth()
 const { success: successToast, error: errorToast } = useToast()
 
 const isLoading = ref(false)
 const cooldownSeconds = ref(0)
+const user = ref<UserResponseDto | null>(null)
 const cooldownActive = computed(() => cooldownSeconds.value > 0)
+
+watch(() => authUser.value, (newUser) => {
+    user.value = newUser
+}, { immediate: true })
+
+onMounted(async () => {
+    await ensureUserProfile()
+})
 
 const startCooldown = () => {
     cooldownSeconds.value = 60

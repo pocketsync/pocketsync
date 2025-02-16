@@ -3,6 +3,7 @@ import { UserResponseDto } from '../dto/responses/user.response.dto';
 
 export class UserMapper {
     toResponse(user: User): UserResponseDto {
+        console.log(user.isEmailVerified);
         return {
             id: user.id,
             email: user.email!,

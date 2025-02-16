@@ -310,7 +310,7 @@ export class AuthService {
       throw new UnauthorizedException();
     }
 
-    return user;
+    return this.userMapper.toResponse(user);
   }
 
   async changePassword(userId: string, currentPassword: string | null, newPassword: string) {
@@ -353,17 +353,9 @@ export class AuthService {
         firstName: updateProfileDto.firstName,
         lastName: updateProfileDto.lastName
       },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        createdAt: true,
-        updatedAt: true
-      }
     });
 
-    return updatedUser;
+    return this.userMapper.toResponse(updatedUser);
   }
 
   async verifyEmail(token: string): Promise<void> {

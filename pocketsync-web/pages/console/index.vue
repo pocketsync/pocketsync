@@ -1,6 +1,8 @@
 <template>
     <div class="py-6">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
+            <EmailVerificationBanner />
+            
             <AlphaStageWarningCard class="mb-8" />
             <h1 class="text-xl font-semibold text-gray-900">Getting Started with PocketSync</h1>
         </div>
@@ -66,21 +68,26 @@
                                 <div class="mt-4">
                                     <div class="relative">
                                         <pre class="language-dart rounded-lg bg-gray-800 p-4"><code class="text-sm text-white">final pocketSync = await PocketSync.initialize(
+  dbPath: path,
   options: PocketSyncOptions(
-    serverUrl: 'https://api.pocketsync.dev',
     projectId: 'your-project-id',
     authToken: 'your-auth-token',
+    serverUrl: 'https://api.pocketsync.dev',
+  ),
+  databaseOptions: DatabaseOptions(
+    onCreate: (db, version) async {
+      await db.execute(
+        'CREATE TABLE todos(id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, isCompleted INTEGER)',
+      );
+    },
   ),
 );
 
-// Regular SQLite operations are automatically tracked
-await database.insert('users', {
-  'name': 'John Doe',
-  'email': 'john@example.com'
-});
+// Set user ID - In a real app, this would come from your auth system
+await PocketSync.instance.setUserId(userId: 'your-user-id');
 
-// Start syncing changes when online
-PocketSync.instance.startSync();
+// Start syncing
+await PocketSync.instance.startSync();
 </code></pre>
                                         <button @click="copyCode('flutter-init')"
                                             class="absolute right-2 top-2 rounded-md bg-white/10 p-2 text-white hover:bg-white/20">
@@ -129,6 +136,7 @@ PocketSync.instance.startSync();
 <script setup lang="ts">
 import { PhPlus } from '@phosphor-icons/vue'
 import AlphaStageWarningCard from '~/components/layout/dashboard/alpha-stage-warning-card.vue'
+import EmailVerificationBanner from '~/components/layout/dashboard/email-verification-banner.vue'
 
 definePageMeta({
     layout: 'dashboard'
