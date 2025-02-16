@@ -69,13 +69,12 @@ const { verifyEmail, error: authError, isAuthenticated } = useAuth()
 
 const isLoading = ref(true)
 const verified = ref(false)
-const error = ref('')
 
 onMounted(async () => {
     const token = route.query.token
 
     if (!token) {
-        error.value = 'Verification token is missing'
+        authError.value = 'Verification token is missing'
         isLoading.value = false
         return
     }
@@ -84,13 +83,17 @@ onMounted(async () => {
         await verifyEmail(token.toString())
         verified.value = true
     } catch (err) {
-        error.value = err.message
+        // Error is already handled by the composable
     } finally {
         isLoading.value = false
     }
 })
 
 const redirectToConsole = () => {
-    router.push('/console')
+    if (isAuthenticated.value) {
+        router.push('/console')
+    } else {
+        router.push('/auth/login')
+    }
 }
 </script>
