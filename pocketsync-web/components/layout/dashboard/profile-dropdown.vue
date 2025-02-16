@@ -15,7 +15,7 @@
             </button>
         </div>
         <div v-if="userMenuOpen"
-            class="absolute right-0 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none transform transition-all duration-200 ease-out">
+            class="absolute right-0 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none transform transition-all duration-200 ease-out z-50">
             <div class="px-4 py-2 border-b border-gray-100">
                 <p class="text-sm font-medium text-gray-900">
                     {{ user ? `${user.firstName ?? ''} ${user.lastName ?? ''}` : '' }}
