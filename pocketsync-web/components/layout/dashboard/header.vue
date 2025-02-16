@@ -16,15 +16,11 @@ import { useUtils } from '~/composables/useUtils'
 import type { UserResponseDto } from '~/api-client'
 import ProfileDropdown from './profile-dropdown.vue'
 
-const { user: authUser, logout, ensureUserProfile } = useAuth()
+const { user: authUser, logout } = useAuth()
 const { getUserInitials } = useUtils()
 
-const user = ref<UserResponseDto | null>(null)
+const user = computed(() => authUser.value as UserResponseDto)
 const userMenuOpen = ref(false)
-
-onMounted(async () => {
-    await ensureUserProfile()
-})
 
 watch(() => authUser.value, (newUser) => {
     user.value = newUser

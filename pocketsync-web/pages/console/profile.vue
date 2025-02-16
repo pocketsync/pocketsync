@@ -44,7 +44,7 @@
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useAuth } from '~/composables/useAuth'
 import { useUtils } from '~/composables/useUtils'
@@ -66,16 +66,8 @@ const { getUserInitials } = useUtils()
 const { success } = useToast()
 const { validate, rules, errors, clearErrors } = useValidation()
 
-const user = ref(null)
+const user = computed(() => authUser.value as UserResponseDto)
 const error = ref(null)
-
-onMounted(async () => {
-    await ensureUserProfile()
-})
-
-watch(() => authUser.value, (newUser) => {
-    user.value = newUser
-}, { immediate: true })
 
 const validationRules = {
     firstName: [rules.required('First name is required'), rules.maxLength(50, 'First name must not exceed 50 characters')],

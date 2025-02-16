@@ -1,8 +1,6 @@
 <template>
     <div class="py-6">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
-            <EmailVerificationBanner />
-            
             <AlphaStageWarningCard class="mb-8" />
             <h1 class="text-xl font-semibold text-gray-900">Getting Started with PocketSync</h1>
         </div>
@@ -136,7 +134,6 @@ await PocketSync.instance.startSync();
 <script setup lang="ts">
 import { PhPlus } from '@phosphor-icons/vue'
 import AlphaStageWarningCard from '~/components/layout/dashboard/alpha-stage-warning-card.vue'
-import EmailVerificationBanner from '~/components/layout/dashboard/email-verification-banner.vue'
 
 definePageMeta({
     layout: 'dashboard'

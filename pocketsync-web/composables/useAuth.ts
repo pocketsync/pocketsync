@@ -24,8 +24,8 @@ type AuthErrorCode =
     | 'UNKNOWN_ERROR'
 
 export const useAuth = () => {
-    const user = ref<UserResponseDto | null>(null)
-    const isAuthenticated = ref(false)
+    const user = useState<UserResponseDto | null>('authenticated_user', () => null)
+    const isAuthenticated = useState<boolean>('is_authenticated', () => false)
     const isLoading = ref(false)
     const error = ref<AuthError | null>(null)
 

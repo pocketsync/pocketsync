@@ -51,6 +51,7 @@
                 </button>
             </div>
 
+            <EmailVerificationBanner />
             <!-- Header -->
             <DashboardHeader />
 
@@ -74,6 +75,7 @@ import { useAuth } from '~/composables/useAuth'
 
 import DashboardSidebar from '~/components/layout/dashboard/sidebar.vue'
 import DashboardHeader from '~/components/layout/dashboard/header.vue'
+import EmailVerificationBanner from '~/components/layout/dashboard/email-verification-banner.vue'
 
 const route = useRoute()
 const OpenMenuIcon = PhList

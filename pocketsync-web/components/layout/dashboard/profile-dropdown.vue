@@ -39,15 +39,14 @@ import { useAuth } from '~/composables/useAuth'
 import { useUtils } from '~/composables/useUtils'
 import type { UserResponseDto } from '~/api-client'
 
-const { user: authUser, logout, ensureUserProfile } = useAuth()
+const { user: authUser, logout } = useAuth()
 const { getUserInitials } = useUtils()
 
-const user = ref<UserResponseDto | null>(null)
+const user = computed(() => authUser.value as UserResponseDto)
 const userMenuOpen = ref(false)
 const dropdownContainer = ref<HTMLElement | null>(null)
 
 onMounted(async () => {
-    await ensureUserProfile()
     document.addEventListener('click', handleClickOutside)
 })
 
