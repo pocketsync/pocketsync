@@ -1,5 +1,5 @@
 <template>
-    <div class="relative ml-3">
+    <div class="relative ml-3" ref="dropdownContainer">
         <div>
             <button @click="userMenuOpen = !userMenuOpen" type="button"
                 class="flex max-w-xs items-center rounded-full bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
@@ -34,7 +34,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useAuth } from '~/composables/useAuth'
 import { useUtils } from '~/composables/useUtils'
 import type { UserResponseDto } from '~/api-client'
@@ -44,10 +44,22 @@ const { getUserInitials } = useUtils()
 
 const user = ref<UserResponseDto | null>(null)
 const userMenuOpen = ref(false)
+const dropdownContainer = ref<HTMLElement | null>(null)
 
 onMounted(async () => {
     await ensureUserProfile()
+    document.addEventListener('click', handleClickOutside)
 })
+
+onUnmounted(() => {
+    document.removeEventListener('click', handleClickOutside)
+})
+
+function handleClickOutside(event: MouseEvent) {
+    if (dropdownContainer.value && !dropdownContainer.value.contains(event.target as Node)) {
+        userMenuOpen.value = false
+    }
+}
 
 watch(() => authUser.value, (newUser) => {
     user.value = newUser
