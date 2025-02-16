@@ -26,9 +26,9 @@
                     </div>
                 </div>
                 <div class="flex items-center">
-                    <NuxtLink to="/auth/login"
+                    <NuxtLink :to="isAuthenticated ? '/console' : '/auth/login'"
                         class="get-started-btn ml-8 inline-flex items-center justify-center px-6 py-2.5 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transform transition-all duration-200 hover:scale-105 hover:shadow-lg">
-                        Get Started
+                        {{ isAuthenticated ? 'Go to Console' : 'Get Started' }}
                         <svg xmlns="http://www.w3.org/2000/svg"
                             class="h-4 w-4 ml-2 transform transition-transform group-hover:translate-x-1" fill="none"
                             viewBox="0 0 24 24" stroke="currentColor">
@@ -42,6 +42,11 @@
     </nav>
 </template>
 
+<script setup lang="ts">
+import { useAuth } from '~/composables/useAuth'
+
+const { isAuthenticated } = useAuth()
+</script>
 
 <style scoped>
 .get-started-btn {
