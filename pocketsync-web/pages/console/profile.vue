@@ -7,7 +7,7 @@
                     <h3 class="text-lg font-medium leading-6 text-gray-900">Profile Information</h3>
                     <div class="mt-5 space-y-6">
                         <div class="flex items-center space-x-4">
-                            <div v-if="user.avatarUrl" class="h-14 w-14 rounded-full overflow-hidden">
+                            <div v-if="user?.avatarUrl" class="h-14 w-14 rounded-full overflow-hidden">
                                 <img :src="user.avatarUrl" :alt="user.name" class="h-full w-full object-cover" />
                             </div>
                             <div v-else class="h-14 w-14 rounded-full bg-primary-100 flex items-center justify-center">
@@ -18,10 +18,16 @@
                             </button>
                         </div>
 
-                        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                        <div v-if="user" class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                             <div>
-                                <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
-                                <input type="text" id="name" v-model="user.name"
+                                <label for="firstName" class="block text-sm font-medium text-gray-700">First
+                                    name</label>
+                                <input type="text" id="firstName" v-model="user.firstName"
+                                    class="block w-full rounded-md border-0 px-3 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6" />
+                            </div>
+                            <div>
+                                <label for="lastName" class="block text-sm font-medium text-gray-700">Last name</label>
+                                <input type="text" id="lastName" v-model="user.lastName"
                                     class="block w-full rounded-md border-0 px-3 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6" />
                             </div>
                             <div>
@@ -106,18 +112,18 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { useAuth } from '~/composables/useAuth'
+import { useUtils } from '~/composables/useUtils'
 
 definePageMeta({
     layout: 'dashboard'
 })
 
-// User data
-const user = ref({
-    name: 'John Doe',
-    email: 'john@example.com',
-    avatarUrl: null
-})
+const { user: authUser, ensureUserProfile } = useAuth()
+const { getUserInitials } = useUtils()
+
+const user = ref(null)
 
 // Password change form
 const currentPassword = ref('')
@@ -128,12 +134,12 @@ const confirmPassword = ref('')
 const emailNotifications = ref(true)
 const marketingEmails = ref(false)
 
-// Helper function to get user initials
-function getUserInitials(user) {
-    return user.name
-        .split(' ')
-        .map(word => word[0])
-        .join('')
-        .toUpperCase()
-}
+onMounted(async () => {
+    await ensureUserProfile()
+})
+
+watch(() => authUser.value, (newUser) => {
+    user.value = newUser
+}, { immediate: true })
+
 </script>
