@@ -7,8 +7,8 @@
                     <h3 class="text-lg font-medium leading-6 text-gray-900">Profile Information</h3>
                     <div class="mt-5 space-y-6">
                         <div class="flex items-center space-x-4">
-                            <div v-if="user.avatar_url" class="h-14 w-14 rounded-full overflow-hidden">
-                                <img :src="user.avatar_url" :alt="user.name" class="h-full w-full object-cover" />
+                            <div v-if="user.avatarUrl" class="h-14 w-14 rounded-full overflow-hidden">
+                                <img :src="user.avatarUrl" :alt="user.name" class="h-full w-full object-cover" />
                             </div>
                             <div v-else class="h-14 w-14 rounded-full bg-primary-100 flex items-center justify-center">
                                 <span class="text-lg font-medium text-primary-600">{{ getUserInitials(user) }}</span>
@@ -116,7 +116,7 @@ definePageMeta({
 const user = ref({
     name: 'John Doe',
     email: 'john@example.com',
-    avatar_url: null
+    avatarUrl: null
 })
 
 // Password change form

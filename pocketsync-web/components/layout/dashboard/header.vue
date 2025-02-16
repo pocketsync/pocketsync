@@ -10,8 +10,13 @@
                             class="flex max-w-xs items-center rounded-full bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
                             <span class="sr-only">Open user menu</span>
                             <div
-                                class="h-8 w-8 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center text-primary-600 font-medium transform transition-all duration-200 hover:scale-105 hover:shadow-sm">
-                                {{ user ? getUserInitials(user) : '' }}
+                                class="h-8 w-8 rounded-full overflow-hidden">
+                                <img v-if="user?.avatarUrl" :src="user.avatarUrl" :alt="user?.name"
+                                    class="h-full w-full rounded-full object-cover" />
+                                <div v-else
+                                    class="h-full w-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center text-primary-600 font-medium">
+                                    {{ user ? getUserInitials(user) : '' }}
+                                </div>
                             </div>
                         </button>
                     </div>

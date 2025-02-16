@@ -28,8 +28,8 @@
 
                         <div>
                             <div class="inline-block h-9 w-9 rounded-full">
-                                <img v-if="user?.avatar_url" :src="user.avatar_url" :alt="user?.name"
-                                    class="h-full w-full rounded-full" />
+                                <img v-if="user?.avatarUrl" :src="user.avatarUrl" :alt="user?.name"
+                                    class="h-full w-full rounded-full object-cover" />
                                 <div v-else
                                     class="inline-flex h-full w-full items-center justify-center rounded-full bg-primary-100">
                                     <span class="text-sm font-medium text-primary-600">{{ getUserInitials(user)
