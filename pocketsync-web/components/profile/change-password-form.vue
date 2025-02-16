@@ -3,20 +3,26 @@
         <div class="px-4 py-5 sm:p-6">
             <h3 class="text-lg font-medium leading-6 text-gray-900">Change Password</h3>
             <div class="mt-5 space-y-4">
-                <div v-if="!user?.isSocialUser">
+                <div v-if="!error?.code?.includes('SOCIAL_AUTH')">
                     <label for="current-password" class="block text-sm font-medium text-gray-700">Current Password</label>
                     <input type="password" id="current-password" v-model="currentPassword"
+                        :class="{'ring-red-300 focus:ring-red-500': errors.value?.currentPassword}"
                         class="block w-full rounded-md border-0 px-3 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6" />
+                    <p v-if="errors.value?.currentPassword" class="mt-1 text-sm text-red-600">{{ errors.value.currentPassword[0] }}</p>
                 </div>
                 <div>
                     <label for="new-password" class="block text-sm font-medium text-gray-700">New Password</label>
                     <input type="password" id="new-password" v-model="newPassword"
+                        :class="{'ring-red-300 focus:ring-red-500': errors.value?.newPassword}"
                         class="block w-full rounded-md border-0 px-3 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6" />
+                    <p v-if="errors.value?.newPassword" class="mt-1 text-sm text-red-600">{{ errors.value.newPassword[0] }}</p>
                 </div>
                 <div>
                     <label for="confirm-password" class="block text-sm font-medium text-gray-700">Confirm Password</label>
                     <input type="password" id="confirm-password" v-model="confirmPassword"
+                        :class="{'ring-red-300 focus:ring-red-500': errors.value?.confirmPassword}"
                         class="block w-full rounded-md border-0 px-3 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6" />
+                    <p v-if="errors.value?.confirmPassword" class="mt-1 text-sm text-red-600">{{ errors.value.confirmPassword[0] }}</p>
                 </div>
                 <ErrorAlert v-if="error" :message="error.message" class="mt-4" />
             </div>
@@ -35,24 +41,41 @@
 import { ref, computed } from 'vue'
 import { useAuth } from '~/composables/useAuth'
 import { useToast } from '~/composables/useToast'
+import { useValidation } from '~/composables/useValidation'
 import ErrorAlert from '~/components/common/error-alert.vue'
 
 const { changePassword, isLoading, error, user } = useAuth()
 const { success: successToast, error: errorToast } = useToast()
+const { validate, errors, rules } = useValidation()
 
 const currentPassword = ref('')
 const newPassword = ref('')
 const confirmPassword = ref('')
 
+const validationRules = computed(() => ({
+    ...(error?.code?.includes('SOCIAL_AUTH') ? {} : {
+        currentPassword: [
+            rules.required('Current password is required'),
+            rules.minLength(8, 'Current password must be at least 8 characters')
+        ]
+    }),
+    newPassword: [
+        rules.required('New password is required'),
+        rules.password('Password must be at least 8 characters with numbers and letters')
+    ],
+    confirmPassword: [
+        rules.required('Please confirm your password'),
+        rules.match(newPassword.value, 'Passwords do not match')
+    ]
+}))
+
 const isFormValid = computed(() => {
-    // Basic password validation
-    const isNewPasswordValid = newPassword.value.length >= 8
-    const doPasswordsMatch = newPassword.value === confirmPassword.value
-    
-    // Current password is only required for non-social users
-    const isCurrentPasswordValid = user?.isSocialUser || currentPassword.value.length >= 8
-    
-    return isCurrentPasswordValid && isNewPasswordValid && doPasswordsMatch
+    const data = {
+        ...(error?.code?.includes('SOCIAL_AUTH') ? {} : { currentPassword: currentPassword.value }),
+        newPassword: newPassword.value,
+        confirmPassword: confirmPassword.value
+    }
+    return validate(data, validationRules.value)
 })
 
 const handleChangePassword = async () => {
