@@ -6,6 +6,7 @@ api/app-users-api.ts
 api/app-users-sdk-api.ts
 api/authentication-api.ts
 api/change-logs-api.ts
+api/notification-settings-api.ts
 api/projects-api.ts
 base.ts
 common.ts
@@ -22,6 +23,7 @@ model/create-auth-token-dto.ts
 model/create-project-dto.ts
 model/index.ts
 model/login-dto.ts
+model/notification-settings-dto.ts
 model/project-response-dto.ts
 model/project-response-list.ts
 model/project-stats-response-dto.ts

@@ -18,5 +18,6 @@ export * from './api/app-users-api';
 export * from './api/app-users-sdk-api';
 export * from './api/authentication-api';
 export * from './api/change-logs-api';
+export * from './api/notification-settings-api';
 export * from './api/projects-api';
 

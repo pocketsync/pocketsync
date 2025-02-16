@@ -7,6 +7,7 @@ export * from './create-app-user-dto';
 export * from './create-auth-token-dto';
 export * from './create-project-dto';
 export * from './login-dto';
+export * from './notification-settings-dto';
 export * from './project-response-dto';
 export * from './project-response-list';
 export * from './project-stats-response-dto';
