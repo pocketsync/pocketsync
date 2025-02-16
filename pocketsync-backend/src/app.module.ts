@@ -9,6 +9,7 @@ import { ProjectsModule } from './modules/projects/projects.module';
 import { AppUsersModule } from './modules/app-users/app-users.module';
 import { DevicesModule } from './modules/devices/devices.module';
 import { ChangeLogsModule } from './modules/change-logs/change-logs.module';
+import { EmailModule } from './modules/email/email.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { ChangeLogsModule } from './modules/change-logs/change-logs.module';
     AppUsersModule,
     DevicesModule,
     ChangeLogsModule,
+    EmailModule,
   ],
   providers: [
     {
@@ -48,4 +50,4 @@ import { ChangeLogsModule } from './modules/change-logs/change-logs.module';
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}
