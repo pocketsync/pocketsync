@@ -35,3 +35,4 @@ model/reset-password-dto.ts
 model/update-profile-dto.ts
 model/update-project-dto.ts
 model/user-response-dto.ts
+model/verify-email-dto.ts

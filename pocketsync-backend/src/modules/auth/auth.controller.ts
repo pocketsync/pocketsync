@@ -14,6 +14,7 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { RequestPasswordResetDto } from './dto/request-password-reset.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -236,7 +237,7 @@ export class AuthController {
     await this.authService.requestPasswordReset(requestPasswordResetDto.email);
     return { message: 'Password reset email sent successfully' };
   }
-  
+
   @Post('reset-password')
   @ApiOperation({
     summary: 'Reset password',
@@ -264,14 +265,14 @@ export class AuthController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Email verified successfully'
+    description: 'Email verified successfully',
   })
   @ApiResponse({
     status: 400,
     description: 'Invalid or expired verification token'
   })
-  async verifyEmail(@Body('token') token: string) {
-    await this.authService.verifyEmail(token);
+  async verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
+    await this.authService.verifyEmail(verifyEmailDto.token);
     return { message: 'Email verified successfully' };
   }
 }
