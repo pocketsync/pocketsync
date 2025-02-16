@@ -290,6 +290,19 @@ export const useAuth = () => {
         }
     }
 
+    const verifyEmail = async (token: string) => {
+        error.value = null
+        try {
+            isLoading.value = true
+            await authApi.verifyEmail({ token })
+        } catch (err: any) {
+            error.value = handleAuthError(err)
+            throw error.value
+        } finally {
+            isLoading.value = false
+        }
+    }
+
     return {
         user,
         isAuthenticated,
@@ -307,5 +320,6 @@ export const useAuth = () => {
         updateProfile,
         requestPasswordReset,
         resetPassword,
+        verifyEmail,
     }
 }

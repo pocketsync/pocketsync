@@ -46,8 +46,7 @@ export class EmailService {
   }
 
   async sendTemplatedEmail(to: string, subject: string, template: string, context: any) {
-    // TODO: Implement template rendering logic
-    const html = template; // Replace with actual template rendering
+    const html = await this.emailTemplateService.render(template, context);
     return this.sendEmail(to, subject, html);
   }
 

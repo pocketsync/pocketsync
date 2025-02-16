@@ -42,6 +42,7 @@
         <DashboardSidebar />
 
         <div class="flex flex-1 flex-col md:pl-64">
+            <EmailVerificationBanner />
             <!-- Top header -->
             <div class="sticky top-0 z-10 bg-white pl-1 pt-1 sm:pl-3 sm:pt-3 md:hidden">
                 <button @click="sidebarOpen = true"
@@ -74,6 +75,7 @@ import { useAuth } from '~/composables/useAuth'
 
 import DashboardSidebar from '~/components/layout/dashboard/sidebar.vue'
 import DashboardHeader from '~/components/layout/dashboard/header.vue'
+import EmailVerificationBanner from '~/components/layout/dashboard/email-verification-banner.vue'
 
 const route = useRoute()
 const OpenMenuIcon = PhList
