@@ -1,12 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import { EmailTemplateService } from './email-template.service';
 
 @Injectable()
 export class EmailService {
   private transporter: nodemailer.Transporter;
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private emailTemplateService: EmailTemplateService,
+  ) {
     this.initializeTransporter();
   }
 
@@ -45,5 +49,16 @@ export class EmailService {
     // TODO: Implement template rendering logic
     const html = template; // Replace with actual template rendering
     return this.sendEmail(to, subject, html);
+  }
+
+  async sendPasswordResetEmail(to: string, token: string) {
+    const frontendUrl = this.configService.get('FRONTEND_URL', 'http://localhost:3000');
+    const resetLink = `${frontendUrl}/auth/reset-password?token=${token}`;
+
+    const html = await this.emailTemplateService.render('password-reset', {
+      resetLink,
+    });
+
+    return this.sendEmail(to, 'Reset Your Password', html);
   }
 }

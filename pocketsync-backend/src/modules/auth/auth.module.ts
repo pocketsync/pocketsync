@@ -11,6 +11,8 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { UserMapper } from './mappers/user.mapper';
 import { NotificationSettingsController } from './controllers/notification-settings.controller';
 import { NotificationSettingsService } from './services/notification-settings.service';
+import { EmailService } from '../email/email.service';
+import { EmailTemplateService } from '../email/email-template.service';
 
 @Module({
   imports: [
@@ -27,7 +29,7 @@ import { NotificationSettingsService } from './services/notification-settings.se
     }),
   ],
   controllers: [AuthController, NotificationSettingsController],
-  providers: [AuthService, JwtStrategy, GoogleStrategy, GithubStrategy, UserMapper, NotificationSettingsService],
+  providers: [AuthService, JwtStrategy, GoogleStrategy, GithubStrategy, UserMapper, NotificationSettingsService, EmailService, EmailTemplateService],
   exports: [JwtModule, AuthService],
 })
-export class AuthModule {}
+export class AuthModule { }

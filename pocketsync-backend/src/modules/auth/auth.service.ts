@@ -52,7 +52,6 @@ export class AuthService {
   async requestPasswordReset(email: string): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
-      // Return void to prevent email enumeration
       return;
     }
 
@@ -67,7 +66,7 @@ export class AuthService {
       },
     });
 
-    await this.emailService.sendPasswordResetEmail(user.email, token);
+    await this.emailService.sendPasswordResetEmail(email, token);
   }
 
   async resetPassword(token: string, newPassword: string): Promise<void> {
