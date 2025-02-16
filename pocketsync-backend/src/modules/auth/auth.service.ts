@@ -51,7 +51,7 @@ export class AuthService {
     });
 
     // Send verification email
-    const verificationUrl = `${this.configService.get('FRONTEND_URL')}/verify-email?token=${verificationToken}`;
+    const verificationUrl = `${this.configService.get('FRONTEND_URL')}/auth/verify-email?token=${verificationToken}`;
     await this.emailService.sendTemplatedEmail(
       user.email!,
       'Verify your email address',

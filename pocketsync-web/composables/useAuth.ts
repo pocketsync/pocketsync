@@ -228,7 +228,8 @@ export const useAuth = () => {
 
     // Lazy profile loading
     const ensureUserProfile = async () => {
-        if (isAuthenticated.value && !user.value) {
+        if (isAuthenticated.value && !user.value && !isLoading.value) {
+            console.log("fetching profile")
             await fetchUserProfile()
         }
     }
