@@ -6,6 +6,11 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   devtools: { enabled: true },
   vite: {
+    build: {
+      rollupOptions: {
+        treeshake: false
+      }
+    },
     plugins: [tailwindcss()],
     resolve: {
       alias: {
