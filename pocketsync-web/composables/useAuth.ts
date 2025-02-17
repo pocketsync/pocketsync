@@ -195,6 +195,8 @@ export const useAuth = () => {
             const runtimeConfig = useRuntimeConfig()
             const basePath = runtimeConfig.public.apiBaseUrl
 
+            console.log(basePath)
+
             window.location.href = `${basePath}/auth/github`
         } catch (err: any) {
             error.value = handleAuthError(err)
@@ -207,6 +209,8 @@ export const useAuth = () => {
         try {
             const runtimeConfig = useRuntimeConfig()
             const basePath = runtimeConfig.public.apiBaseUrl
+
+            console.log(basePath)
 
             window.location.href = `${basePath}/auth/google`
         } catch (err: any) {
