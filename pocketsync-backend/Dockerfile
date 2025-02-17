@@ -29,8 +29,9 @@ RUN npm ci --only=production
 # Générer Prisma Client
 RUN npx prisma generate
 
-# Copier l'application buildée
+# Copier l'application buildée et les templates
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/src/modules/email/templates ./dist/src/modules/email/templates
 
 # Définir l'environnement
 ENV NODE_ENV=production
