@@ -4,13 +4,13 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Assurez-vous que le chemin de COPY est correct
-COPY backend/package.json backend/package-lock.json ./
+COPY pocketsync-backend/package.json pocketsync-backend/package-lock.json ./
 
 # Installer les dépendances
 RUN npm ci
 
 # Copier tout le projet
-COPY backend/. .
+COPY pocketsync-backend/. .
 
 # Générer Prisma Client et builder l'application
 RUN npx prisma generate
