@@ -35,8 +35,9 @@ export const useAuth = () => {
     const cookieOptions = {
         maxAge: 7 * 24 * 60 * 60, // 7 days
         secure: process.env.NODE_ENV === 'production',
-        sameSite: true,
+        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
         httpOnly: true,
+        path: '/' // Ensure cookie is available across all paths
     }
 
     const accessTokenCookie = useCookie('access_token', cookieOptions)
