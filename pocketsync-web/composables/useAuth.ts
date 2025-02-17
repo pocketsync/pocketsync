@@ -57,10 +57,10 @@ export const useAuth = () => {
                 code: 'NETWORK_ERROR'
             }
         }
-    
+
         const status = err.response.status
         const data = err.response.data
-    
+
         switch (status) {
             case 400:
                 return {
@@ -215,20 +215,39 @@ export const useAuth = () => {
 
     // Initialize authentication state
     const initAuth = async () => {
-        const token = useCookie('access_token').value
-        if (token) {
-            isAuthenticated.value = true
-            await ensureUserProfile()
+        const token = accessTokenCookie.value
+        const refresh = refreshTokenCookie.value
+
+        if (token && refresh) {
+            try {
+                isAuthenticated.value = true
+                await ensureUserProfile()
+            } catch (err) {
+                // If token is invalid or expired, try to refresh
+                try {
+                    const response = await authApi.refreshToken({ refreshToken: refresh })
+                    if (response.data) {
+                        setTokens(response.data.accessToken, response.data.refreshToken)
+                        isAuthenticated.value = true
+                        await ensureUserProfile()
+                    }
+                } catch (refreshErr) {
+                    // If refresh fails, log out
+                    logout()
+                }
+            }
         } else {
             logout()
         }
     }
 
-    onMounted(() => {
+    if (import.meta.server) {
         initAuth()
-    })
+    } else {
+        onMounted(() => {
+            initAuth()
+        })
 
-    if (import.meta.client) {
         nextTick(() => {
             initAuth()
         })
