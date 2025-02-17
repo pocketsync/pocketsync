@@ -218,11 +218,20 @@ export const useAuth = () => {
         const token = useCookie('access_token').value
         if (token) {
             isAuthenticated.value = true
+            await ensureUserProfile()
+        } else {
+            logout()
         }
     }
 
-    if (import.meta.client) {
+    onMounted(() => {
         initAuth()
+    })
+
+    if (import.meta.client) {
+        nextTick(() => {
+            initAuth()
+        })
     }
 
     const ensureUserProfile = async () => {
