@@ -38,8 +38,8 @@ const props = defineProps<{
         activeUsers: number
         totalDevices: number
         activeDevices: number
-        changesCount: number
-        pendingChanges: number
+        totalChangeLogs: number
+        pendingChanges: number,
     }
 }>()
 </script>

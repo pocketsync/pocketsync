@@ -53,7 +53,7 @@ const resendVerification = async () => {
         await resendEmailVerification()
         successToast('Verification email sent successfully')
         startCooldown()
-    } catch (error) {
+    } catch (error: any) {
         errorToast(error.message || 'Failed to send verification email')
     } finally {
         isLoading.value = false
