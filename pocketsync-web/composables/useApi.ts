@@ -21,9 +21,10 @@ export const useApi = () => {
         failedQueue = []
     }
 
+    const runtimeConfig = useRuntimeConfig()
     // Create axios instance
     const axiosInstance: AxiosInstance = axios.create({
-        baseURL: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:3000',
+        baseURL: runtimeConfig.public.apiBaseUrl || 'http://localhost:3000',
         timeout: 10000,
         headers: {
             'Content-Type': 'application/json'
