@@ -12,7 +12,7 @@
                 <p class="mt-6 text-lg leading-8 text-gray-600">Simple, transparent pricing that scales with your needs. All plans include core features.</p>
             </div>
 
-            <div class="mx-auto mt-16 grid max-w-lg grid-cols-1 items-center gap-y-6 sm:mt-20 sm:gap-y-0 lg:max-w-6xl lg:grid-cols-3">
+            <div class="mx-auto mt-16 grid max-w-lg grid-cols-1 items-center gap-y-6 sm:mt-20 sm:gap-y-0 lg:max-w-4xl lg:grid-cols-2">
                 <!-- Free Tier -->
                 <div class="rounded-3xl p-8 ring-1 ring-gray-900/10 sm:p-10">
                     <h3 class="text-lg font-semibold leading-8 text-primary-600">Free</h3>
@@ -27,39 +27,6 @@
                                 <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
                             </svg>
                             Up to 1,000 syncs/month
-                        </li>
-                        <li class="flex gap-x-3">
-                            <svg class="h-6 w-5 flex-none text-primary-600" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
-                            </svg>
-                            Basic conflict resolution
-                        </li>
-                        <li class="flex gap-x-3">
-                            <svg class="h-6 w-5 flex-none text-primary-600" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
-                            </svg>
-                            Community support
-                        </li>
-                    </ul>
-                    <NuxtLink to="/auth/register" class="mt-8 block rounded-md bg-primary-600 px-3.5 py-2 text-center text-sm font-semibold leading-6 text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600">
-                        Get started
-                    </NuxtLink>
-                </div>
-
-                <!-- Starter Plan -->
-                <div class="rounded-3xl p-8 ring-1 ring-gray-900/10 sm:p-10">
-                    <h3 class="text-lg font-semibold leading-8 text-primary-600">Starter</h3>
-                    <p class="mt-4 text-sm leading-6 text-gray-600">Perfect for small projects and individual developers.</p>
-                    <p class="mt-6 flex items-baseline gap-x-1">
-                        <span class="text-4xl font-bold tracking-tight text-gray-900">$29</span>
-                        <span class="text-sm font-semibold leading-6 text-gray-600">/month</span>
-                    </p>
-                    <ul role="list" class="mt-8 space-y-3 text-sm leading-6 text-gray-600">
-                        <li class="flex gap-x-3">
-                            <svg class="h-6 w-5 flex-none text-primary-600" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
-                            </svg>
-                            Up to 10,000 syncs/month
                         </li>
                         <li class="flex gap-x-3">
                             <svg class="h-6 w-5 flex-none text-primary-600" viewBox="0 0 20 20" fill="currentColor">
