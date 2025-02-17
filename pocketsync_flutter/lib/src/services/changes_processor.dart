@@ -6,7 +6,6 @@ import 'package:pocketsync_flutter/src/errors/sync_error.dart';
 import 'package:pocketsync_flutter/src/models/change_log.dart';
 import 'package:pocketsync_flutter/src/models/change_set.dart';
 import 'package:pocketsync_flutter/src/services/logger_service.dart';
-import 'package:sqflite/sqflite.dart';
 
 class ChangesProcessor {
   final PocketSyncDatabase _db;
@@ -258,38 +257,8 @@ class ChangesProcessor {
             }
           }
 
-          // Store original trigger definitions before dropping
-          final triggers = await txn.query(
-            'sqlite_master',
-            where: "type = 'trigger' AND tbl_name = ? AND name IN (?, ?, ?)",
-            whereArgs: [
-              tableName,
-              'after_insert_$tableName',
-              'after_update_$tableName',
-              'after_delete_$tableName'
-            ],
-          );
-
-          // Drop existing triggers
-          for (final trigger in triggers) {
-            final triggerName = trigger['name'] as String;
-            await txn.execute('DROP TRIGGER IF EXISTS $triggerName');
-          }
-
-          // Store trigger definitions for later recreation
-          final backupBatch = txn.batch();
-          for (final trigger in triggers) {
-            backupBatch.insert(
-              '__pocketsync_trigger_backup',
-              {
-                'table_name': tableName,
-                'trigger_name': trigger['name'],
-                'trigger_sql': trigger['sql'],
-              },
-              conflictAlgorithm: ConflictAlgorithm.replace,
-            );
-          }
-          await backupBatch.commit();
+          // Disable triggers for this table
+          await _db.disableTriggers(tableName);
 
           // Apply the change operation
           switch (operation) {
@@ -354,24 +323,8 @@ class ChangesProcessor {
               break;
           }
         } finally {
-          // Get stored trigger definitions
-          final backupTriggers = await txn.query(
-            '__pocketsync_trigger_backup',
-            where: 'table_name = ?',
-            whereArgs: [tableName],
-          );
-
-          // Recreate triggers
-          for (final trigger in backupTriggers) {
-            await txn.execute(trigger['trigger_sql'] as String);
-          }
-
-          // Clean up backup for this table
-          await txn.delete(
-            '__pocketsync_trigger_backup',
-            where: 'table_name = ?',
-            whereArgs: [tableName],
-          );
+          // Re-enable triggers for this table
+          await _db.enableTriggers(tableName);
         }
       }
 
