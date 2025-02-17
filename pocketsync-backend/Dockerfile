@@ -21,7 +21,7 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-COPY backend/. .
+COPY pocketsync-backend/. .
 
 # Installer uniquement les dépendances de production
 RUN npm ci --only=production
