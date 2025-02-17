@@ -7,6 +7,8 @@ export default defineNuxtRouteMiddleware((to) => {
 
     const { isAuthenticated } = useAuth()
 
+    console.log(isAuthenticated.value)
+
     if (isAuthenticated.value && to.path.startsWith('/auth')) {
         return navigateTo('/console')
     }
