@@ -1,7 +1,7 @@
 name: pocketsync_flutter
 description: "A new Flutter plugin project."
 version: 0.0.1
-homepage:
+homepage: https://pocketsync.dev
 
 environment:
   sdk: ^3.6.1
