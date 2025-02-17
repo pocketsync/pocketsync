@@ -5,12 +5,14 @@ import 'package:pocketsync_flutter/src/errors/sync_error.dart';
 import 'package:pocketsync_flutter/src/models/change_log.dart';
 import 'package:pocketsync_flutter/src/models/change_processing_response.dart';
 import 'package:pocketsync_flutter/src/models/change_set.dart';
+import 'package:pocketsync_flutter/src/services/logger_service.dart';
 import 'package:dio/dio.dart';
 import 'package:socket_io_client/socket_io_client.dart' as socket_io;
 
 class PocketSyncNetworkService {
   final Dio _dio;
   socket_io.Socket? _socket;
+  final _logger = LoggerService.instance;
 
   final String _serverUrl;
   final String _projectId;
@@ -34,77 +36,35 @@ class PocketSyncNetworkService {
         _deviceId = deviceId;
 
   void setUserId(String userId) {
+    _logger.debug('Setting user ID: $userId');
     _userId = userId;
     _connectWebSocket();
   }
 
   void setDeviceId(String deviceId) {
+    _logger.debug('Setting device ID: $deviceId');
     _deviceId = deviceId;
     _connectWebSocket();
   }
 
-  /// Disconnects from the WebSocket server
   void disconnect() {
+    _logger.info('Disconnecting from WebSocket server');
     _socket?.disconnect();
     _socket = null;
   }
 
-  /// Reconnects to the WebSocket server
   void reconnect() {
-    if (_socket == null) {
-      _connectWebSocket();
-    }
-  }
-
-  Options _getRequestOptions() {
-    if (_userId == null) {
-      throw InitializationError('User ID not set');
-    }
-
-    if (_deviceId == null) {
-      throw InitializationError('Device ID not set');
-    }
-
-    return Options(
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $_authToken',
-        'x-project-id': _projectId,
-        'x-user-id': _userId!,
-        'x-device-id': _deviceId,
-      },
-    );
-  }
-
-  Future<ChangeProcessingResponse> sendChanges(ChangeSet changes) async {
-    if (_userId == null) {
-      throw InitializationError('User ID not set');
-    }
-    if (_deviceId == null) {
-      throw InitializationError('Device ID not set');
-    }
-
-    final url = '$_serverUrl/sdk/changes';
-    try {
-      final response = await _dio.post(
-        url,
-        options: _getRequestOptions(),
-        data: {
-          'changeSets': [changes.toJson()],
-        },
-      );
-
-      return ChangeProcessingResponse.fromJson(response.data);
-    } on DioException catch (e) {
-      final statusCode = e.response?.statusCode;
-      final message = e.response?.statusMessage ?? 'Network request failed';
-      throw NetworkError(message, statusCode: statusCode, cause: e);
-    } catch (e) {
-      throw NetworkError('Failed to send changes', cause: e);
-    }
+    _logger.info('Reconnecting to WebSocket server');
+    _connectWebSocket();
   }
 
   void _connectWebSocket() {
+    if (_userId == null || _deviceId == null) {
+      _logger.debug('Skipping WebSocket connection: missing user ID or device ID');
+      return;
+    }
+
+    _logger.info('Connecting to WebSocket server');
     if (_socket != null || _userId == null || _deviceId == null) return;
 
     try {
@@ -151,6 +111,59 @@ class PocketSyncNetworkService {
     } catch (e) {
       throw NetworkError('WebSocket connection failed', cause: e);
     }
+  }
+
+  Future<ChangeProcessingResponse> sendChanges(ChangeSet changes) async {
+    try {
+      _logger.info('Sending changes to server: ${changes.changeIds.length} changes');
+      if (_userId == null) {
+        throw InitializationError('User ID not set');
+      }
+      if (_deviceId == null) {
+        throw InitializationError('Device ID not set');
+      }
+
+      final url = '$_serverUrl/sdk/changes';
+      try {
+        final response = await _dio.post(
+          url,
+          options: _getRequestOptions(),
+          data: {
+            'changeSets': [changes.toJson()],
+          },
+        );
+
+        return ChangeProcessingResponse.fromJson(response.data);
+      } on DioException catch (e) {
+        final statusCode = e.response?.statusCode;
+        final message = e.response?.statusMessage ?? 'Network request failed';
+        throw NetworkError(message, statusCode: statusCode, cause: e);
+      } catch (e) {
+        throw NetworkError('Failed to send changes', cause: e);
+      }
+    } catch (e) {
+      _logger.error('Error sending changes to server', error: e);
+      rethrow;
+    }
+  }
+
+  Options _getRequestOptions() {
+    if (_userId == null) {
+      throw InitializationError('User ID not set');
+    }
+    if (_deviceId == null) {
+      throw InitializationError('Device ID not set');
+    }
+
+    return Options(
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $_authToken',
+        'x-project-id': _projectId,
+        'x-user-id': _userId!,
+        'x-device-id': _deviceId,
+      },
+    );
   }
 
   void dispose() {

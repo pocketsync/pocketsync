@@ -5,11 +5,13 @@ import 'package:pocketsync_flutter/pocketsync_flutter.dart';
 import 'package:pocketsync_flutter/src/errors/sync_error.dart';
 import 'package:pocketsync_flutter/src/models/change_log.dart';
 import 'package:pocketsync_flutter/src/models/change_set.dart';
+import 'package:pocketsync_flutter/src/services/logger_service.dart';
 import 'package:sqflite/sqflite.dart';
 
 class ChangesProcessor {
   final PocketSyncDatabase _db;
   final ConflictResolver _conflictResolver;
+  final _logger = LoggerService.instance;
 
   ChangesProcessor(this._db, {ConflictResolver? conflictResolver})
       : _conflictResolver = conflictResolver ?? const ConflictResolver();
@@ -25,6 +27,8 @@ class ChangesProcessor {
       int lastVersion = 0;
       final changeIds = <int>[];
 
+      _logger.debug('Starting to fetch unsynced changes with batch size: $batchSize');
+
       while (true) {
         List<Map<String, dynamic>> changes;
         try {
@@ -36,11 +40,13 @@ class ChangesProcessor {
             limit: batchSize,
           );
         } catch (e) {
-          log('Error querying changes: $e');
+          _logger.error('Error querying changes', error: e);
           throw SyncStateError('Failed to query changes: ${e.toString()}');
         }
 
         if (changes.isEmpty) break;
+
+        _logger.debug('Processing batch of ${changes.length} changes');
 
         for (final change in changes) {
           try {

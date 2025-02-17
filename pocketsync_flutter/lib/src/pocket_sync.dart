@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'dart:developer';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:pocketsync_flutter/src/errors/sync_error.dart';
 import 'package:pocketsync_flutter/src/models/change_set.dart';
+import 'package:pocketsync_flutter/src/services/logger_service.dart';
 import 'models/pocket_sync_options.dart';
 import 'models/change_processing_response.dart';
 import 'services/pocket_sync_network_service.dart';
@@ -12,6 +12,8 @@ import 'services/pocket_sync_database.dart';
 class PocketSync {
   static final PocketSync instance = PocketSync._internal();
   PocketSync._internal();
+
+  final _logger = LoggerService.instance;
 
   late PocketSyncDatabase _database;
   String? _userId;
@@ -28,14 +30,14 @@ class PocketSync {
   /// Throws [StateError] if PocketSync is not initialized
   PocketSyncDatabase get database => _runGuarded(() => _database);
 
-  T _runGuarded<T>(T Function() callaback) {
+  T _runGuarded<T>(T Function() callback) {
     if (!_isInitialized) {
       throw StateError(
         'You should call PocketSync.instance.initialize before any other call.',
       );
     }
 
-    return callaback();
+    return callback();
   }
 
   /// Initializes PocketSync with the given configuration
@@ -138,7 +140,7 @@ class PocketSync {
   /// Internal sync method
   Future<void> _sync() async {
     if (_isSyncing || _userId == null || _isPaused || _isManuallyPaused) {
-      log('Sync already in progress, user ID not set, or sync is paused');
+      _logger.debug('Sync skipped: already in progress, user ID not set, or sync is paused');
       return;
     }
     _isSyncing = true;
@@ -148,14 +150,16 @@ class PocketSync {
       if (changeSet.insertions.changes.isNotEmpty ||
           changeSet.updates.changes.isNotEmpty ||
           changeSet.deletions.changes.isNotEmpty) {
+        _logger.info('Processing changes: ${changeSet.changeIds.length} changes found');
         final processedResponse = await _sendChanges(changeSet);
 
         if (processedResponse.status == 'success' && processedResponse.processed) {
           await _markChangesSynced(changeSet.changeIds);
+          _logger.info('Changes successfully synced');
         }
       }
     } on SyncError catch(e) {
-      log('$e');
+      _logger.error('Sync error occurred', error: e);
     } finally {
       _isSyncing = false;
     }
