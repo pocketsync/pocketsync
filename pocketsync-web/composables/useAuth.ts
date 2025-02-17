@@ -206,8 +206,6 @@ export const useAuth = () => {
             const runtimeConfig = useRuntimeConfig()
             const basePath = runtimeConfig.public.apiBaseUrl
 
-            console.log(basePath)
-
             window.location.href = `${basePath}/auth/google`
         } catch (err: any) {
             error.value = handleAuthError(err)
@@ -218,13 +216,14 @@ export const useAuth = () => {
     // Initialize authentication state
     const initAuth = async () => {
         const token = useCookie('access_token').value
-        console.log(token)
         if (token) {
             isAuthenticated.value = true
         }
     }
 
-    initAuth()
+    if (import.meta.client) {
+        initAuth()
+    }
 
     const ensureUserProfile = async () => {
         if (isAuthenticated.value && !user.value && !isLoading.value) {
