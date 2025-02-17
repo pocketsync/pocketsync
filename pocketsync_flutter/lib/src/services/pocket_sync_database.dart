@@ -36,7 +36,7 @@ class PocketSyncDatabase {
       CREATE TABLE __pocketsync_changes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         table_name TEXT NOT NULL,
-        record_rowid INTEGER NOT NULL,
+        record_rowid TEXT NOT NULL,
         operation TEXT NOT NULL,
         timestamp INTEGER NOT NULL,
         data TEXT NOT NULL,
@@ -103,6 +103,13 @@ class PocketSyncDatabase {
 
     for (final table in tables) {
       final tableName = table['name'] as String;
+      
+      // Add ps_global_id column to user tables
+      await db.execute('''
+        ALTER TABLE $tableName ADD COLUMN ps_global_id TEXT;
+        CREATE INDEX idx_${tableName}_ps_global_id ON $tableName(ps_global_id);
+      ''');
+
       await _createTableTriggers(db, version, tableName);
     }
   }
@@ -125,7 +132,7 @@ class PocketSyncDatabase {
           table_name, record_rowid, operation, timestamp, data, version
         ) VALUES (
           '$tableName',
-          NEW.rowid,
+          NEW.ps_global_id,
           'UPDATE',
           (strftime('%s', 'now') * 1000),
           json_object(
@@ -153,11 +160,13 @@ class PocketSyncDatabase {
       CREATE TRIGGER IF NOT EXISTS after_insert_$tableName
       AFTER INSERT ON $tableName
       BEGIN
+        UPDATE $tableName SET ps_global_id = (SELECT hex(randomblob(16))) WHERE rowid = NEW.rowid AND ps_global_id IS NULL;
+        
         INSERT INTO __pocketsync_changes (
           table_name, record_rowid, operation, timestamp, data, version
         ) VALUES (
           '$tableName',
-          NEW.rowid,
+          NEW.ps_global_id,
           'INSERT',
           (strftime('%s', 'now') * 1000),
           json_object(
@@ -188,7 +197,7 @@ class PocketSyncDatabase {
           table_name, record_rowid, operation, timestamp, data, version
         ) VALUES (
           '$tableName',
-          OLD.rowid,
+          OLD.ps_global_id,
           'DELETE',
           (strftime('%s', 'now') * 1000),
           json_object(
