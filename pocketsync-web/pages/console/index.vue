@@ -151,7 +151,7 @@ const createProject = () => {
 const copyCode = (section) => {
     const codeElements = {
         'flutter': 'dependencies:\n  pocketsync_flutter: ^1.0.0',
-        'flutter-init': 'final pocketSync = await PocketSync.initialize(\n  options: PocketSyncOptions(\n    serverUrl: \'https://api.pocketsync.dev\',\n    projectId: \'your-project-id\',\n    authToken: \'your-auth-token\',\n  ),\n);\n\n// Regular SQLite operations are automatically tracked\nawait database.insert(\'users\', {\n  \'name\': \'John Doe\',\n  \'email\': \'john@example.com\'\n});\n\n// Changes are automatically synchronized when online\n// No additional code needed for sync'
+        'flutter-init': 'final pocketSync = await PocketSync.instance.initialize(\n  options: PocketSyncOptions(\n    serverUrl: \'https://api.pocketsync.dev\',\n    projectId: \'your-project-id\',\n    authToken: \'your-auth-token\',\n  ),\n);\n\n// Regular SQLite operations are automatically tracked\nawait database.insert(\'users\', {\n  \'name\': \'John Doe\',\n  \'email\': \'john@example.com\'\n});\n\n// Changes are automatically synchronized when online\n// No additional code needed for sync'
     }
 
     navigator.clipboard.writeText(codeElements[section])

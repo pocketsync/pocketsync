@@ -137,7 +137,7 @@ class PocketSync {
 
   /// Internal sync method
   Future<void> _sync() async {
-    if (_isSyncing || _userId == null || _isPaused) {
+    if (_isSyncing || _userId == null || _isPaused || _isManuallyPaused) {
       log('Sync already in progress, user ID not set, or sync is paused');
       return;
     }

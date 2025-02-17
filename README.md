@@ -60,7 +60,7 @@ dependencies:
 
 2. Initialize PocketSync in your Flutter app:
 ```dart
-final pocketSync = await PocketSync.initialize(
+final pocketSync = await PocketSync.instance.initialize(
   options: PocketSyncOptions(
     serverUrl: 'your-server-url',
     projectId: 'your-project-id',
@@ -70,6 +70,8 @@ final pocketSync = await PocketSync.initialize(
 ```
 
 ### Basic Usage
+
+final database = PocketSync.instance.database;
 
 ```dart
 // Regular SQLite operations are automatically tracked
