@@ -160,7 +160,6 @@ async function createToken() {
 
     if (!isValid || errors.value.tokenName) {
         showError.value = true
-        console.log('Validation failed, showing error message')
         return
     }
 

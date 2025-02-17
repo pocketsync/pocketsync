@@ -192,7 +192,10 @@ export const useAuth = () => {
     const loginWithGithub = async () => {
         error.value = null
         try {
-            window.location.href = `${config.basePath}/auth/github`
+            const runtimeConfig = useRuntimeConfig()
+            const basePath = runtimeConfig.public.apiBaseUrl
+
+            window.location.href = `${basePath}/auth/github`
         } catch (err: any) {
             error.value = handleAuthError(err)
             throw error.value
@@ -202,7 +205,10 @@ export const useAuth = () => {
     const loginWithGoogle = async () => {
         error.value = null
         try {
-            window.location.href = `${config.basePath}/auth/google`
+            const runtimeConfig = useRuntimeConfig()
+            const basePath = runtimeConfig.public.apiBaseUrl
+
+            window.location.href = `${basePath}/auth/google`
         } catch (err: any) {
             error.value = handleAuthError(err)
             throw error.value
@@ -221,7 +227,6 @@ export const useAuth = () => {
 
     const ensureUserProfile = async () => {
         if (isAuthenticated.value && !user.value && !isLoading.value) {
-            console.log("fetching profile")
             await fetchUserProfile()
         }
     }
