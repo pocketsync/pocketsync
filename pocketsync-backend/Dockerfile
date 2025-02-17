@@ -3,8 +3,8 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files from the correct context
-COPY ./package.json ./package-lock.json ./
+# Copy package files
+COPY package*.json ./
 
 # Install dependencies
 RUN npm ci
@@ -24,7 +24,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json ./
+COPY package*.json ./
 
 # Install production dependencies only
 RUN npm ci --only=production
