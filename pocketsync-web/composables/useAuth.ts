@@ -35,8 +35,7 @@ export const useAuth = () => {
     const cookieOptions = {
         maxAge: 7 * 24 * 60 * 60, // 7 days
         secure: process.env.NODE_ENV === 'production',
-        sameSite: true,
-        httpOnly: true
+        sameSite: true
     }
 
     const accessTokenCookie = useCookie('access_token', cookieOptions)
@@ -194,8 +193,6 @@ export const useAuth = () => {
         try {
             const runtimeConfig = useRuntimeConfig()
             const basePath = runtimeConfig.public.apiBaseUrl
-
-            console.log(basePath)
 
             window.location.href = `${basePath}/auth/github`
         } catch (err: any) {
