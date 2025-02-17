@@ -3,15 +3,17 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy and install dependencies
-COPY package.json package-lock.json ./
+# Assurez-vous que le chemin de COPY est correct
+COPY backend/package.json backend/package-lock.json ./
+
+# Installer les dépendances
 RUN npm ci
 
-# Copy source and generate Prisma client
-COPY . .
-RUN npx prisma generate
+# Copier tout le projet
+COPY backend/. .
 
-# Build application
+# Générer Prisma Client et builder l'application
+RUN npx prisma generate
 RUN npm run build
 
 # Production stage
@@ -19,21 +21,22 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy entire project
-COPY . .
+COPY backend/. .
 
-# Install production dependencies
+# Installer uniquement les dépendances de production
 RUN npm ci --only=production
 
-# Generate Prisma Client
+# Générer Prisma Client
 RUN npx prisma generate
 
-# Copy built application
+# Copier l'application buildée
 COPY --from=builder /app/dist ./dist
 
-# Set environment variables
+# Définir l'environnement
 ENV NODE_ENV=production
 
-# Expose port and start server
+# Exposer le port
 EXPOSE 3000
+
+# Démarrer le serveur
 CMD ["npm", "run", "start:prod"]
