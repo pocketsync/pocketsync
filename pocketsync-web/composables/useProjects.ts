@@ -30,12 +30,10 @@ export const useProjects = () => {
         hasMore: false
     })
 
-    // Initialize API client using the shared configuration
     const { config, axiosInstance } = useApi()
     const projectsApi = new ProjectsApi(config, undefined, axiosInstance)
 
     const handleProjectError = (err: any): ProjectError => {
-        // Network or connection errors
         if (!err.response || err.code === 'ECONNABORTED') {
             return {
                 message: 'Network error. Please check your connection and try again.',
@@ -59,7 +57,6 @@ export const useProjects = () => {
                     code: 'ACCESS_DENIED'
                 }
             case 404:
-                // Redirect to project list if project not found
                 projects.value = []
                 currentProject.value = null
                 navigateTo('/console/projects')
@@ -81,7 +78,6 @@ export const useProjects = () => {
         }
     }
 
-    // Project management methods
     const fetchProjects = async (page = 1, limit = 10) => {
         error.value = null
         try {

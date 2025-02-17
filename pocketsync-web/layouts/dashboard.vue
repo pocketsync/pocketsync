@@ -104,7 +104,6 @@ const navigationLinks = [
 
 const ExternalLinkIcon = PhArrowSquareOut
 
-// Close menus when clicking outside
 onMounted(() => {
     document.addEventListener('click', (event) => {
         const target = event.target
@@ -116,7 +115,6 @@ onMounted(() => {
 
 const { ensureUserProfile } = useAuth()
 
-// Fetch user profile when layout is mounted
 onMounted(async () => {
     await ensureUserProfile()
 })

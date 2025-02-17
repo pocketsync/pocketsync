@@ -123,10 +123,8 @@ const resetComplete = ref(false)
 const passwordError = ref('')
 const confirmPasswordError = ref('')
 
-// Get token from URL
 const token = computed(() => route.query.token)
 
-// Password validation
 const validatePassword = (pass) => {
     const minLength = 8
     const hasUpperCase = /[A-Z]/.test(pass)

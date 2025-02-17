@@ -172,14 +172,12 @@ async function handleRegister() {
     termsError.value = false
     clearErrors()
 
-    // Validate terms acceptance
     if (!acceptTerms.value) {
         errorMessage.value = 'Please accept the terms and conditions'
         termsError.value = true
         return
     }
 
-    // Validate form
     const validationRules = {
         firstName: [rules.required()],
         lastName: [rules.required()],

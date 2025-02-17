@@ -29,9 +29,7 @@ onMounted(async () => {
 
     try {
         const { setTokens, fetchUserProfile } = useAuth()
-        // Set the tokens received from the backend
         setTokens(accessToken, refreshToken)
-        // Fetch the user profile with the new tokens
         await fetchUserProfile()
         navigateTo('/console')
     } catch (err) {
