@@ -5,7 +5,7 @@ import NavBar from '~/components/layout/default/NavBar.vue';
 const route = useRoute();
 
 const useContentWrapper = () => {
-    return route.name !== 'index'
+  return route.name !== 'index'
 };
 
 useHead({
@@ -13,13 +13,13 @@ useHead({
   meta: [
     { name: 'description', content: 'PocketSync is a powerful local-first synchronization solution that helps you keep your data in sync across all your devices while maintaining privacy and security.' },
     { name: 'keywords', content: 'local-first, sync, synchronization, offline-first, data sync, privacy' },
-    
+
     // Open Graph
     { property: 'og:type', content: 'website' },
     { property: 'og:title', content: 'PocketSync - Local-First Sync Solution' },
     { property: 'og:description', content: 'PocketSync is a powerful local-first synchronization solution that helps you keep your data in sync across all your devices while maintaining privacy and security.' },
     { property: 'og:site_name', content: 'PocketSync' },
-    
+
     // Twitter Card
     { name: 'twitter:card', content: 'summary_large_image' },
     { name: 'twitter:title', content: 'PocketSync - Local-First Sync Solution' },
@@ -36,19 +36,19 @@ useHead({
 </script>
 
 <template>
-    <div class="min-h-screen flex flex-col">
-        <!-- Navbar -->
-        <NavBar />
+  <div class="min-h-screen flex flex-col">
+    <!-- Navbar -->
+    <NavBar />
 
-        <!-- Main Content -->
-        <main class="flex-grow mt-16">
-            <div v-if="useContentWrapper()" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <slot />
-            </div>
-            <slot v-else />
-        </main>
+    <!-- Main Content -->
+    <main class="flex-grow mt-16">
+      <div v-if="useContentWrapper()" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <slot />
+      </div>
+      <slot v-else />
+    </main>
 
-        <!-- Footer -->
-        <Footer />
-    </div>
+    <!-- Footer -->
+    <Footer />
+  </div>
 </template>

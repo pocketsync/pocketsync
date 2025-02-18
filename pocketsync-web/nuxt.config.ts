@@ -13,11 +13,6 @@ export default defineNuxtConfig({
       }
     },
     plugins: [tailwindcss()],
-    resolve: {
-      alias: {
-        'web-client': fileURLToPath(new URL('./api-client', import.meta.url))
-      }
-    }
   },
   runtimeConfig: {
     public: {

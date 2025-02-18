@@ -4,6 +4,7 @@ import { useCookie } from 'nuxt/app'
 import type { LoginDto, RegisterDto, UserResponseDto, ChangePasswordDto } from "~/api-client"
 import { useApi } from './useApi'
 import { AuthenticationApi } from "~/api-client"
+import { cookieOptions } from '~/utils/cookie.options'
 
 interface AuthError {
     message: string
@@ -33,25 +34,12 @@ export const useAuth = () => {
     const { config, axiosInstance } = useApi()
     const authApi = new AuthenticationApi(config, undefined, axiosInstance)
 
-    const cookieOptions = {
-        maxAge: 7 * 24 * 60 * 60, // 7 days
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: false,
-        // Only set httpOnly on server-side
-        httpOnly: process.client ? false : true,
-    }
-
     const accessTokenCookie = useCookie('access_token', cookieOptions)
     const refreshTokenCookie = useCookie('refresh_token', cookieOptions)
 
     const setTokens = (accessToken: string, refreshToken: string) => {
-        // Only set cookies if they don't exist or if we're on the server
-        if (!process.client || !accessTokenCookie.value) {
-            accessTokenCookie.value = accessToken
-        }
-        if (!process.client || !refreshTokenCookie.value) {
-            refreshTokenCookie.value = refreshToken
-        }
+        refreshTokenCookie.value = refreshToken
+        accessTokenCookie.value = accessToken
     }
 
     const clearTokens = () => {

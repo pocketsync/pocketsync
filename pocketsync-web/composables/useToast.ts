@@ -19,7 +19,7 @@ export function useToast() {
             type,
             duration
         }
-        
+
         toasts.value.push(toast)
 
         if (duration > 0) {
