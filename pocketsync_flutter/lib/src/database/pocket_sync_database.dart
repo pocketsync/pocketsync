@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:pocketsync_flutter/pocketsync_flutter.dart';
+import 'package:pocketsync_flutter/src/database/database_change_manager.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
@@ -8,7 +9,8 @@ import 'package:uuid/uuid.dart';
 /// with the ability to track changes and sync them with a remote server
 class PocketSyncDatabase {
   Database? _db;
-  Function(List<Map<String, dynamic>>)? onChangesAdded;
+
+  final DatabaseChangeManager changeManager = DatabaseChangeManager();
 
   /// Opens and initializes the database
   Future<Database> initialize({
@@ -306,6 +308,7 @@ class PocketSyncDatabase {
 
   /// Closes the database
   Future<void> close() async {
+    changeManager.dispose();
     await _db?.close();
     _db = null;
   }
@@ -341,15 +344,24 @@ class PocketSyncDatabase {
 
   /// Private method to handle change notifications
   Future<void> _notifyChanges() async {
-    if (onChangesAdded != null) {
-      final changes = await _db!.query(
-        '__pocketsync_changes',
-        where: 'id = last_insert_rowid()',
-      );
-      if (changes.isNotEmpty) {
-        onChangesAdded!(changes);
-      }
+    final changes = await _db!.query(
+      '__pocketsync_changes',
+      where: 'id = last_insert_rowid()',
+    );
+
+    if (changes.isNotEmpty) {
+      changeManager.notifyListeners(changes);
     }
+  }
+
+  /// Adds a listener for database changes
+  void addChangeListener(DatabaseChangeListener listener) {
+    changeManager.addListener(listener);
+  }
+
+  /// Removes a previously added change listener
+  void removeChangeListener(DatabaseChangeListener listener) {
+    changeManager.removeListener(listener);
   }
 
   /// Inserts a row into the specified table
@@ -541,7 +553,7 @@ extension WatchExtension on PocketSyncDatabase {
 
     // Set up change listener if this is the first watcher
     if (_watchers.length == 1) {
-      onChangesAdded = _handleChanges;
+      changeManager.addListener(_handleChanges);
     }
 
     // Return stream that removes the watcher when cancelled
@@ -581,7 +593,7 @@ extension WatchExtension on PocketSyncDatabase {
 
     // Remove change listener if no more watchers
     if (_watchers.isEmpty) {
-      onChangesAdded = null;
+      changeManager.removeListener(_handleChanges);
       _debounceTimer?.cancel();
       _debounceTimer = null;
       _watchersByDb.remove(this);

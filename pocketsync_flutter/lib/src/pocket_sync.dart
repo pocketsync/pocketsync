@@ -1,13 +1,14 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:pocketsync_flutter/src/database/pocket_sync_database.dart';
 import 'package:pocketsync_flutter/src/errors/sync_error.dart';
 import 'package:pocketsync_flutter/src/models/change_set.dart';
+import 'package:pocketsync_flutter/src/services/debouncer.dart';
 import 'package:pocketsync_flutter/src/services/logger_service.dart';
 import 'models/pocket_sync_options.dart';
 import 'models/change_processing_response.dart';
 import 'services/pocket_sync_network_service.dart';
 import 'services/changes_processor.dart';
-import 'services/pocket_sync_database.dart';
 
 class PocketSync {
   static final PocketSync instance = PocketSync._internal();
@@ -26,6 +27,7 @@ class PocketSync {
   bool _isManuallyPaused = false;
   bool _isSyncStarted = false;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  final Debouncer _debouncer = Debouncer();
 
   /// Returns the database instance
   /// Throws [StateError] if PocketSync is not initialized
@@ -81,7 +83,7 @@ class PocketSync {
     _networkService.onChangesReceived = _changesProcessor.applyRemoteChanges;
 
     // Set up real-time change notification
-    _database.onChangesAdded = (_) => _sync();
+    _database.addChangeListener((changes) => _sync());
 
     // Initialize connectivity monitoring
     _setupConnectivityMonitoring();
@@ -148,26 +150,28 @@ class PocketSync {
     }
     _isSyncing = true;
 
-    try {
-      final changeSet = await _changesProcessor.getUnSyncedChanges();
-      if (changeSet.insertions.changes.isNotEmpty ||
-          changeSet.updates.changes.isNotEmpty ||
-          changeSet.deletions.changes.isNotEmpty) {
-        _logger.info(
-            'Processing changes: ${changeSet.changeIds.length} changes found');
-        final processedResponse = await _sendChanges(changeSet);
+    _debouncer.run(() async {
+      try {
+        final changeSet = await _changesProcessor.getUnSyncedChanges();
+        if (changeSet.insertions.changes.isNotEmpty ||
+            changeSet.updates.changes.isNotEmpty ||
+            changeSet.deletions.changes.isNotEmpty) {
+          _logger.info(
+              'Processing changes: ${changeSet.changeIds.length} changes found');
+          final processedResponse = await _sendChanges(changeSet);
 
-        if (processedResponse.status == 'success' &&
-            processedResponse.processed) {
-          await _markChangesSynced(changeSet.changeIds);
-          _logger.info('Changes successfully synced');
+          if (processedResponse.status == 'success' &&
+              processedResponse.processed) {
+            await _markChangesSynced(changeSet.changeIds);
+            _logger.info('Changes successfully synced');
+          }
         }
+      } on SyncError catch (e) {
+        _logger.error('Sync error occurred', error: e);
+      } finally {
+        _isSyncing = false;
       }
-    } on SyncError catch (e) {
-      _logger.error('Sync error occurred', error: e);
-    } finally {
-      _isSyncing = false;
-    }
+    });
   }
 
   /// Sends changes to the server
