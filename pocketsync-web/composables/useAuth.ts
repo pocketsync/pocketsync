@@ -37,15 +37,21 @@ export const useAuth = () => {
         maxAge: 7 * 24 * 60 * 60, // 7 days
         secure: process.env.NODE_ENV === 'production',
         sameSite: true,
-        httpOnly: true,
+        // Only set httpOnly on server-side
+        httpOnly: process.client ? false : true,
     }
 
     const accessTokenCookie = useCookie('access_token', cookieOptions)
     const refreshTokenCookie = useCookie('refresh_token', cookieOptions)
 
     const setTokens = (accessToken: string, refreshToken: string) => {
-        accessTokenCookie.value = accessToken
-        refreshTokenCookie.value = refreshToken
+        // Only set cookies if they don't exist or if we're on the server
+        if (!process.client || !accessTokenCookie.value) {
+            accessTokenCookie.value = accessToken
+        }
+        if (!process.client || !refreshTokenCookie.value) {
+            refreshTokenCookie.value = refreshToken
+        }
     }
 
     const clearTokens = () => {
