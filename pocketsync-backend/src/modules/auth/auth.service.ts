@@ -195,6 +195,11 @@ export class AuthService {
 
     if (!user) {
       user = await this.createUser(profile);
+    } else if (!user.isEmailVerified) {
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: { isEmailVerified: true }
+      });
     }
 
     await this.createOrUpdateSocialConnection(user.id, providerId, profile);
