@@ -1,7 +1,16 @@
 import { useAuth } from '~/composables/useAuth'
 
-export default defineNuxtPlugin((nuxtApp) => {
+export default defineNuxtPlugin(async (nuxtApp) => {
   const auth = useAuth()
+  
+  // Skip auth initialization during SSR to prevent network errors
+  if (import.meta.server) {
+    return
+  }
+
+  // Initialize auth only once at app startup
+  await auth.initAuth()
+
   const publicPages = [
     '/',
     '/about',
@@ -22,10 +31,19 @@ export default defineNuxtPlugin((nuxtApp) => {
   ]
 
   nuxtApp.$router.beforeEach(async (to: any, from: any) => {
+    // Skip auth checks during SSR
+    if (process.server) {
+      return true
+    }
+
+    // Only fetch profile if authenticated and profile is not already loaded
+    if (auth.isAuthenticated.value && !auth.user.value) {
+      await auth.fetchUserProfile()
+    }
+
     const isAuthPage = authPages.includes(to.path)
-    console.log(to.path)
     const isPublicPage = publicPages.includes(to.path)
-    const isAuthenticated = await auth.isAuthenticated
+    const isAuthenticated = auth.isAuthenticated.value
 
     if (isAuthPage && isAuthenticated) {
       return '/console'

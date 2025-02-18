@@ -4,14 +4,19 @@
             <button @click="userMenuOpen = !userMenuOpen" type="button"
                 class="flex max-w-xs items-center rounded-full bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
                 <span class="sr-only">Open user menu</span>
-                <div class="h-8 w-8 rounded-full overflow-hidden">
-                    <img v-if="user?.avatarUrl" :src="user.avatarUrl" :alt="user?.firstName?? ''"
-                        class="h-full w-full rounded-full object-cover" />
-                    <div v-else
-                        class="h-full w-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center text-primary-600 font-medium">
-                        {{ user ? getUserInitials(user) : '' }}
+                <ClientOnly>
+                    <div class="h-8 w-8 rounded-full overflow-hidden">
+                        <img v-if="user?.avatarUrl" :src="user.avatarUrl" :alt="user?.firstName?? ''"
+                            class="h-full w-full rounded-full object-cover" />
+                        <div v-else
+                            class="h-full w-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center text-primary-600 font-medium">
+                            {{ user ? getUserInitials(user) : '' }}
+                        </div>
                     </div>
-                </div>
+                    <template #fallback>
+                        <div class="h-8 w-8 rounded-full overflow-hidden bg-gradient-to-br from-primary-100 to-primary-200"></div>
+                    </template>
+                </ClientOnly>
             </button>
         </div>
         <div v-if="userMenuOpen"
@@ -34,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useAuth } from '~/composables/useAuth'
 import { useUtils } from '~/composables/useUtils'
 import type { UserResponseDto } from '~/api-client'

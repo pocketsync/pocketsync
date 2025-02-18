@@ -29,6 +29,32 @@ export const useAuth = () => {
     const isAuthenticated = useState<boolean>('is_authenticated', () => false)
     const isLoading = ref(false)
     const error = ref<AuthError | null>(null)
+    const isInitialized = ref(false)
+
+    // Skip API initialization during SSR
+    if (process.server) {
+        return {
+            user,
+            isAuthenticated,
+            isLoading,
+            error,
+            login: async () => {},
+            register: async () => {},
+            logout: () => {},
+            loginWithGithub: async () => {},
+            loginWithGoogle: async () => {},
+            fetchUserProfile: async () => {},
+            initAuth: async () => {},
+            ensureUserProfile: async () => {},
+            setTokens: () => {},
+            changePassword: async () => {},
+            updateProfile: async () => {},
+            resendEmailVerification: async () => {},
+            requestPasswordReset: async () => {},
+            resetPassword: async () => {},
+            verifyEmail: async () => {},
+        }
+    }
 
     const { config, axiosInstance } = useApi()
     const authApi = new AuthenticationApi(config, undefined, axiosInstance)
@@ -142,7 +168,6 @@ export const useAuth = () => {
                 setTokens(response.data.accessToken, response.data.refreshToken)
                 isAuthenticated.value = true
                 user.value = response.data.user
-                await fetchUserProfile()
             }
 
             return response.data
@@ -209,15 +234,52 @@ export const useAuth = () => {
         }
     }
 
-
-    const initAuth = async () => {
-        const token = accessTokenCookie.value
-        const refresh = refreshTokenCookie.value
-
-        isAuthenticated.value = !!token && !!refresh
+    const isTokenExpired = (token: string): boolean => {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]))
+            const expirationTime = payload.exp * 1000
+            return Date.now() >= expirationTime
+        } catch {
+            return true
+        }
     }
 
-    initAuth()
+    const refreshAccessToken = async (): Promise<boolean> => {
+        try {
+            const refreshToken = refreshTokenCookie.value
+            if (!refreshToken) return false
+
+            const response = await authApi.refreshToken({ refreshToken })
+            if (response.data) {
+                setTokens(response.data.accessToken, response.data.refreshToken)
+                return true
+            }
+            return false
+        } catch {
+            clearTokens()
+            return false
+        }
+    }
+
+    const initAuth = async () => {
+        if (isInitialized.value) return
+
+        const token = accessTokenCookie.value
+        const refresh = refreshTokenCookie.value
+    
+        if (refresh && (!token || isTokenExpired(token))) {
+            const success = await refreshAccessToken()
+            isAuthenticated.value = success
+            if (success) {
+                await fetchUserProfile()
+            }
+        } else if (token && refresh) {
+            isAuthenticated.value = true
+            await fetchUserProfile()
+        }
+
+        isInitialized.value = true
+    }
 
     const ensureUserProfile = async () => {
         if (isAuthenticated.value && !user.value && !isLoading.value) {
