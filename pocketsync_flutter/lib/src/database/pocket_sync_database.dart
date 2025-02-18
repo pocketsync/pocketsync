@@ -161,19 +161,6 @@ class PocketSyncDatabase {
       END;
     ''');
 
-    // BEFORE INSERT trigger for ps_global_id
-    await db.execute('''
-      CREATE TRIGGER IF NOT EXISTS before_insert_$tableName
-      BEFORE INSERT ON $tableName
-      WHEN NEW.ps_global_id IS NULL
-      BEGIN
-        SELECT RAISE(IGNORE) WHERE EXISTS (
-          SELECT 1 FROM $tableName WHERE ps_global_id = NEW.ps_global_id
-        );
-        SELECT hex(randomblob(16)) INTO NEW.ps_global_id;
-      END;
-    ''');
-
     // AFTER INSERT trigger for change tracking
     await db.execute('''
       CREATE TRIGGER IF NOT EXISTS after_insert_$tableName
@@ -318,6 +305,21 @@ class PocketSyncDatabase {
     changeManager.removeGlobalListener(listener);
   }
 
+  /// Generates a new ps_global_id
+  Future<String> _generatePsGlobalId() async {
+    final result = await _db!.rawQuery('SELECT hex(randomblob(16)) as uuid');
+    return result.first['uuid'] as String;
+  }
+
+  /// Ensures a map of values has a ps_global_id
+  Future<Map<String, Object?>> _ensurePsGlobalId(
+      Map<String, Object?> values) async {
+    if (!values.containsKey('ps_global_id')) {
+      values['ps_global_id'] = await _generatePsGlobalId();
+    }
+    return values;
+  }
+
   /// Inserts a row into the specified table
   ///
   /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
@@ -327,6 +329,8 @@ class PocketSyncDatabase {
     String? nullColumnHack,
     ConflictAlgorithm? conflictAlgorithm,
   }) async {
+    values = await _ensurePsGlobalId(values);
+
     final result = await _db!.insert(
       table,
       values,
@@ -388,11 +392,21 @@ class PocketSyncDatabase {
     String sql, [
     List<Object?>? arguments,
   ]) async {
+    final isInsertOperation = sql.trim().toUpperCase().startsWith('INSERT');
+
+    if (isInsertOperation) {
+      // Inject ps_global_id for INSERT operations
+      final psGlobalId = await _generatePsGlobalId();
+      sql = sql.replaceFirst(')', ', ps_global_id)');
+      sql = sql.replaceFirst('?)', '?, ?)');
+      arguments = (arguments ?? [])..add(psGlobalId);
+    }
+
     final result = await _db!.rawQuery(sql, arguments);
 
     // Check if the query modifies data
     final normalizedSql = sql.trim().toUpperCase();
-    if (normalizedSql.startsWith('INSERT') ||
+    if (isInsertOperation ||
         normalizedSql.startsWith('UPDATE') ||
         normalizedSql.startsWith('DELETE')) {
       await notifyChanges();
@@ -404,7 +418,8 @@ class PocketSyncDatabase {
   /// Starts a batch operation
   /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
   Batch batch() {
-    return _db!.batch();
+    final batch = _db!.batch();
+    return _PocketSyncBatch(batch);
   }
 
   /// Commits a batch operation and notifies changes
@@ -440,6 +455,126 @@ class PocketSyncDatabase {
 
     return result;
   }
+}
+
+/// Wrapper for Batch to handle ps_global_id generation
+class _PocketSyncBatch implements Batch {
+  final Batch _batch;
+
+  _PocketSyncBatch(this._batch);
+
+  @override
+  Future<List<Object?>> commit({
+    bool? exclusive,
+    bool? noResult,
+    bool? continueOnError,
+  }) async {
+    return _batch.commit(
+      exclusive: exclusive,
+      noResult: noResult,
+      continueOnError: continueOnError,
+    );
+  }
+
+  @override
+  void insert(
+    String table,
+    Map<String, Object?> values, {
+    String? nullColumnHack,
+    ConflictAlgorithm? conflictAlgorithm,
+  }) {
+    // Generate ps_global_id synchronously for batch operations
+    if (!values.containsKey('ps_global_id')) {
+      values = Map.of(values);
+      values['ps_global_id'] =
+          'ps_${DateTime.now().microsecondsSinceEpoch}_${values.hashCode}';
+    }
+    _batch.insert(
+      table,
+      values,
+      nullColumnHack: nullColumnHack,
+      conflictAlgorithm: conflictAlgorithm,
+    );
+  }
+
+  @override
+  void rawInsert(String sql, [List<Object?>? arguments]) {
+    if (!sql.toLowerCase().contains('ps_global_id')) {
+      // Generate ps_global_id synchronously for batch operations
+      final psGlobalId =
+          'ps_${DateTime.now().microsecondsSinceEpoch}_${sql.hashCode}';
+      sql = sql.replaceFirst(')', ', ps_global_id)');
+      sql = sql.replaceFirst('?)', '?, ?)');
+      arguments = (arguments ?? [])..add(psGlobalId);
+    }
+    _batch.rawInsert(sql, arguments);
+  }
+
+  // Forward other Batch methods to _batch
+  @override
+  void delete(String table, {String? where, List<Object?>? whereArgs}) =>
+      _batch.delete(table, where: where, whereArgs: whereArgs);
+
+  @override
+  void execute(String sql, [List<Object?>? arguments]) =>
+      _batch.execute(sql, arguments);
+
+  @override
+  void query(String table,
+          {bool? distinct,
+          List<String>? columns,
+          String? where,
+          List<Object?>? whereArgs,
+          String? groupBy,
+          String? having,
+          String? orderBy,
+          int? limit,
+          int? offset}) =>
+      _batch.query(
+        table,
+        distinct: distinct,
+        columns: columns,
+        where: where,
+        whereArgs: whereArgs,
+        groupBy: groupBy,
+        having: having,
+        orderBy: orderBy,
+        limit: limit,
+        offset: offset,
+      );
+
+  @override
+  void rawQuery(String sql, [List<Object?>? arguments]) =>
+      _batch.rawQuery(sql, arguments);
+
+  @override
+  void update(String table, Map<String, Object?> values,
+          {String? where,
+          List<Object?>? whereArgs,
+          ConflictAlgorithm? conflictAlgorithm}) =>
+      _batch.update(
+        table,
+        values,
+        where: where,
+        whereArgs: whereArgs,
+        conflictAlgorithm: conflictAlgorithm,
+      );
+
+  @override
+  Future<List<Object?>> apply({bool? noResult, bool? continueOnError}) {
+    return _batch.apply(noResult: noResult, continueOnError: continueOnError);
+  }
+
+  @override
+  int get length => _batch.length;
+
+  @override
+  void rawDelete(String sql, [List<Object?>? arguments]) =>
+      _batch.rawDelete(sql, arguments);
+
+  @override
+  void rawUpdate(String sql, [List<Object?>? arguments]) =>
+      _batch.rawUpdate(sql, arguments);
 }
 
 class QueryWatcher {

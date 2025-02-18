@@ -330,7 +330,6 @@ class ChangesProcessor {
       // Apply all changes
       for (final entry in changeSet.insertions.changes.entries) {
         for (final row in entry.value.rows) {
-          print(entry.key);
           await applyTableOperation(entry.key, row, 'INSERT', txn);
         }
       }
