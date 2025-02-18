@@ -55,7 +55,7 @@ class PocketSync {
     if (_isInitialized) return;
 
     _networkService = PocketSyncNetworkService(
-      serverUrl: options.serverUrl,
+      serverUrl: options.serverUrl ?? 'https://api.pocketsync.dev',
       projectId: options.projectId,
       authToken: options.authToken,
     );

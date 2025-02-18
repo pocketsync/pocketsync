@@ -13,7 +13,9 @@ enum ConflictResolutionStrategy {
   custom
 }
 
-/// Handles conflict resolution between local and remote changes
+/// Handles conflict resolution between local and remote changes.
+/// The default strategy is to ignore conflicts and apply remote changes.
+/// 
 class ConflictResolver {
   final ConflictResolutionStrategy strategy;
   final Future<Map<String, dynamic>> Function(

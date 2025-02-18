@@ -2,6 +2,8 @@ import 'package:pocketsync_flutter/pocketsync_flutter.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
+/// PocketSync database service for managing local database operations
+/// with the ability to track changes and sync them with a remote server
 class PocketSyncDatabase {
   Database? _db;
   Function(List<Map<String, dynamic>>)? onChangesAdded;
@@ -10,11 +12,10 @@ class PocketSyncDatabase {
   Future<Database> initialize({
     required String dbPath,
     required DatabaseOptions options,
-    int version = 1,
   }) async {
     _db = await openDatabase(
       dbPath,
-      version: version,
+      version: options.version,
       onOpen: options.onOpen,
       onUpgrade: options.onUpgrade,
       onConfigure: options.onConfigure,
@@ -308,6 +309,8 @@ class PocketSyncDatabase {
   }
 
   /// Executes a raw SQL query
+  ///
+  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
   Future<List<Map<String, dynamic>>> query(
     String table, {
     bool? distinct,
@@ -348,6 +351,8 @@ class PocketSyncDatabase {
   }
 
   /// Inserts a row into the specified table
+  ///
+  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
   Future<int> insert(
     String table,
     Map<String, Object?> values, {
@@ -367,6 +372,8 @@ class PocketSyncDatabase {
   }
 
   /// Updates rows in the specified table
+  ///
+  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
   Future<int> update(
     String table,
     Map<String, Object?> values, {
@@ -388,6 +395,8 @@ class PocketSyncDatabase {
   }
 
   /// Deletes rows from the specified table
+  ///
+  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
   Future<int> delete(
     String table, {
     String? where,
@@ -405,6 +414,8 @@ class PocketSyncDatabase {
   }
 
   /// Executes a raw SQL query with optional arguments
+  ///
+  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
   Future<List<Map<String, dynamic>>> rawQuery(
     String sql, [
     List<Object?>? arguments,
@@ -423,11 +434,14 @@ class PocketSyncDatabase {
   }
 
   /// Starts a batch operation
+  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
   Batch batch() {
     return _db!.batch();
   }
 
   /// Commits a batch operation and notifies changes
+  ///
+  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
   Future<List<Object?>> commitBatch(Batch batch) async {
     final result = await batch.commit();
     await _notifyChanges();
@@ -435,12 +449,16 @@ class PocketSyncDatabase {
   }
 
   /// Applies a batch operation without reading the results and notifies changes
+  ///
+  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
   Future<void> applyBatch(Batch batch) async {
     await batch.apply();
     await _notifyChanges();
   }
 
   /// Executes a transaction
+  ///
+  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
   Future<T> transaction<T>(Future<T> Function(Transaction txn) action) async {
     final result = await _db!.transaction((txn) async {
       try {

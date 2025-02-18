@@ -41,8 +41,11 @@ class TableRows {
   factory TableRows.fromJson(Map<String, dynamic> json) {
     return TableRows(
       List<Row>.from(
-        (json['rows'] as List).map((row) => Row.fromJson(
-            row is String ? jsonDecode(row) : row as Map<String, dynamic>)),
+        (json['rows'] as List).map(
+          (row) => Row.fromJson(
+            row is String ? jsonDecode(row) : row as Map<String, dynamic>,
+          ),
+        ),
       ),
     );
   }

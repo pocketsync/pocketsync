@@ -12,8 +12,9 @@ PocketSync makes it easy to sync data across devices without managing a backend.
 - 🛠 **Zero Backend Setup** – No need to build or manage a backend—PocketSync does it for you.  
 
 ### **⚠️ Known Limitations**  
-- Using **integers as primary keys** may cause unexpected behavior. Consider using UUIDs.  
-- The SDK is in early alpha, so breaking changes may occur.  
+- The SDK is in early alpha, so breaking changes may occur.
+- Changes are synced in the order they were made, so conflicts may arise if the same record is updated simultaneously on different devices.
+- The service is not yet optimized for large-scale production use.
 
 ---
 
@@ -166,4 +167,6 @@ This project is licensed under the **MIT License** – see the LICENSE file for 
 ---
 
 ### **🛠 Help Improve PocketSync!**  
-PocketSync is in early alpha, and your feedback is invaluable. **Report issues, suggest features, or contribute!** 🚀  
+PocketSync is in early alpha, and your feedback is invaluable. **Report issues, suggest features, or contribute!** 
+
+Reach out on [X](https://x.com/nossesteve) to discuss
