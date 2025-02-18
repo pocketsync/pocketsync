@@ -129,6 +129,7 @@ class PocketSync {
       _isPaused = false;
       _isManuallyPaused = false;
       _isSyncStarted = true;
+      _networkService.isSyncEnabled = true;
 
       await _sync();
     });
@@ -185,6 +186,7 @@ class PocketSync {
     _runGuarded(() {
       _isPaused = true;
       _isManuallyPaused = true;
+      _networkService.isSyncEnabled = false;
       _networkService.disconnect();
       _logger.info('Sync manually paused');
     });
@@ -198,6 +200,7 @@ class PocketSync {
     _runGuarded(() async {
       _isPaused = false;
       _isManuallyPaused = false;
+      _networkService.isSyncEnabled = true;
       _networkService.reconnect();
       _logger.info('Sync resumed');
       await _sync();
