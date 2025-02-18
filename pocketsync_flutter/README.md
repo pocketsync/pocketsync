@@ -105,9 +105,7 @@ await PocketSync.instance.dispose();
 
 ## **📋 Database Operations**  
 
-Since PocketSync works **directly with SQLite**, use `PocketSync.instance.database` for CRUD operations:  
-
-> PocketSyncDatabase is built on top of [sqflite](https://pub.dev/packages/sqflite) which means you can deal with the database in the same way you would if using sqflite.
+PocketSyncDatabase is built on top of [sqflite](https://pub.dev/packages/sqflite) which means you can deal with the database in the same way you would if using sqflite.
 
 ```dart
 final db = PocketSync.instance.database;
@@ -134,6 +132,14 @@ await db.delete(
   whereArgs: ['uuid'],
 );
 ```  
+
+You can watch changes on a query:
+```dart
+final db = PocketSync.instance.database;
+
+// Watch for changes on a query
+final changesStream = db.watch('SELECT * FROM todos');
+```
 
 ---
 

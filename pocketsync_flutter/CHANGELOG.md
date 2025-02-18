@@ -1,3 +1,6 @@
+## 0.0.4
+- Optimize table extraction algo for watching queries
+
 ## 0.0.3
 - Support watching sql statements
 - Fix bug where engine was looking for remote changing despite sync not being enabled
