@@ -28,6 +28,7 @@ export const useAuth = () => {
     const isAuthenticated = useState<boolean>('is_authenticated', () => false)
     const isLoading = ref(false)
     const error = ref<AuthError | null>(null)
+    const initialized = useState<boolean>('auth_initialized', () => false)
 
     const { config, axiosInstance } = useApi()
     const authApi = new AuthenticationApi(config, undefined, axiosInstance)
@@ -37,7 +38,6 @@ export const useAuth = () => {
         secure: process.env.NODE_ENV === 'production',
         sameSite: true,
         httpOnly: true,
-        path: '/' // Ensure cookie is available across all paths
     }
 
     const accessTokenCookie = useCookie('access_token', cookieOptions)
@@ -217,13 +217,20 @@ export const useAuth = () => {
     }
 
     // Initialize authentication state
+    const waitForInit = async () => {
+        if (!initialized.value) {
+            await initAuth()
+        }
+    }
+
     const initAuth = async () => {
+        if (initialized.value) return
+
         const token = accessTokenCookie.value
         const refresh = refreshTokenCookie.value
 
         if (token && refresh) {
             try {
-                // First validate the token by getting the user profile
                 await ensureUserProfile()
                 isAuthenticated.value = true
             } catch (err) {
@@ -232,11 +239,8 @@ export const useAuth = () => {
                     const response = await authApi.refreshToken({ refreshToken: refresh })
                     if (response.data) {
                         setTokens(response.data.accessToken, response.data.refreshToken)
-                        // Validate the new token
                         await ensureUserProfile()
                         isAuthenticated.value = true
-                    } else {
-                        throw new Error('Invalid refresh token response')
                     }
                 } catch (refreshErr) {
                     // If refresh fails, log out
@@ -246,6 +250,8 @@ export const useAuth = () => {
         } else {
             logout()
         }
+
+        initialized.value = true
     }
 
     if (import.meta.server) {
@@ -357,10 +363,12 @@ export const useAuth = () => {
         login,
         register,
         logout,
-        initAuth,
         loginWithGithub,
         loginWithGoogle,
         fetchUserProfile,
+        initAuth,
+        waitForInit,
+        initialized,
         ensureUserProfile,
         setTokens,
         changePassword,

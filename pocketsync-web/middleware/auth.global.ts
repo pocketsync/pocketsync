@@ -1,7 +1,10 @@
 import { useAuth } from '~/composables/useAuth'
 
 export default defineNuxtRouteMiddleware(async (to) => {
-    const { isAuthenticated } = useAuth()
+    const { isAuthenticated, waitForInit } = useAuth()
+    
+    // Ensure auth is initialized before proceeding
+    await waitForInit()
 
     // Allow access to non-console routes
     if (!to.path.startsWith('/console')) {
