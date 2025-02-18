@@ -161,13 +161,24 @@ class PocketSyncDatabase {
       END;
     ''');
 
-    // INSERT trigger
+    // BEFORE INSERT trigger for ps_global_id
+    await db.execute('''
+      CREATE TRIGGER IF NOT EXISTS before_insert_$tableName
+      BEFORE INSERT ON $tableName
+      WHEN NEW.ps_global_id IS NULL
+      BEGIN
+        SELECT RAISE(IGNORE) WHERE EXISTS (
+          SELECT 1 FROM $tableName WHERE ps_global_id = NEW.ps_global_id
+        );
+        SELECT hex(randomblob(16)) INTO NEW.ps_global_id;
+      END;
+    ''');
+
+    // AFTER INSERT trigger for change tracking
     await db.execute('''
       CREATE TRIGGER IF NOT EXISTS after_insert_$tableName
       AFTER INSERT ON $tableName
       BEGIN
-        UPDATE $tableName SET ps_global_id = (SELECT hex(randomblob(16))) WHERE rowid = NEW.rowid AND ps_global_id IS NULL;
-        
         INSERT INTO __pocketsync_changes (
           table_name, record_rowid, operation, timestamp, data, version
         ) VALUES (
@@ -379,7 +390,7 @@ class PocketSyncDatabase {
   ]) async {
     final result = await _db!.rawQuery(sql, arguments);
 
-    // Check if the query modifies data (INSERT, UPDATE, DELETE)
+    // Check if the query modifies data
     final normalizedSql = sql.trim().toUpperCase();
     if (normalizedSql.startsWith('INSERT') ||
         normalizedSql.startsWith('UPDATE') ||
@@ -476,7 +487,7 @@ extension WatchExtension on PocketSyncDatabase {
 
   Set<String> _extractTablesFromSql(String sql) {
     final tables = <String>{};
-    final regex = RegExp(r'(?:(?:FROM|JOIN|UPDATE|INTO|TABLE)\s+)(\w+)',
+    final regex = RegExp(r'(?:(?:FROM|JOIN|UPDATE|DELETE|INTO|TABLE)\s+)(\w+)',
         caseSensitive: false);
     for (final match in regex.allMatches(sql)) {
       tables.add(match.group(1)!);

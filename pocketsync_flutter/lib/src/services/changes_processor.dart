@@ -260,8 +260,8 @@ class ChangesProcessor {
             }
           }
 
-          // Disable triggers for this table using transaction
-          await txn.execute('PRAGMA ${tableName}_triggers_disabled = 1');
+          // Disable all triggers temporarily
+          await txn.execute('PRAGMA recursive_triggers = OFF;');
 
           // Apply the change operation
           switch (operation) {
@@ -310,11 +310,11 @@ class ChangesProcessor {
                   where: 'ps_global_id = ?',
                   whereArgs: [row.primaryKey],
                 );
+              } else {
+                // Row does not exist, ignore
               }
               break;
             case 'DELETE':
-              // For deletes, we just attempt the operation
-              // If the row doesn't exist, that's fine
               await txn.delete(
                 tableName,
                 where: 'ps_global_id = ?',
@@ -323,14 +323,14 @@ class ChangesProcessor {
               break;
           }
         } finally {
-          // Re-enable triggers for this table using transaction
-          await txn.execute('PRAGMA ${tableName}_triggers_disabled = 0');
+          await txn.execute('PRAGMA recursive_triggers = ON;');
         }
       }
 
       // Apply all changes
       for (final entry in changeSet.insertions.changes.entries) {
         for (final row in entry.value.rows) {
+          print(entry.key);
           await applyTableOperation(entry.key, row, 'INSERT', txn);
         }
       }

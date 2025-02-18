@@ -36,8 +36,8 @@ export class ChangeMergerService {
         continue;
       }
 
-      // Process deletions first, then updates, then insertions
-      for (const changeType of ['deletions', 'updates', 'insertions'] as const) {
+      // Process insertions first to ensure they take precedence, then updates, then deletions
+      for (const changeType of ['insertions', 'updates', 'deletions'] as const) {
         for (const [tableName, tableChanges] of Object.entries(changeSet[changeType])) {
           if (!latestVersions[tableName]) {
             latestVersions[tableName] = {};
