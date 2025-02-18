@@ -34,22 +34,22 @@ export interface UserResponseDto {
     'email': string;
     /**
      * User first name
-     * @type {object}
+     * @type {string}
      * @memberof UserResponseDto
      */
-    'firstName': object | null;
+    'firstName': string | null;
     /**
      * User last name
-     * @type {object}
+     * @type {string}
      * @memberof UserResponseDto
      */
-    'lastName': object | null;
+    'lastName': string | null;
     /**
      * URL of the user\'s avatar
-     * @type {object}
+     * @type {string}
      * @memberof UserResponseDto
      */
-    'avatarUrl'?: object;
+    'avatarUrl'?: string;
     /**
      * Whether the user\'s email is verified
      * @type {boolean}

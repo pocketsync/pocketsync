@@ -17,6 +17,7 @@ export class UserResponseDto {
     description: 'User first name',
     example: 'John',
     nullable: true,
+    type: 'string',
   })
   firstName?: string | null;
 
@@ -24,6 +25,7 @@ export class UserResponseDto {
     description: 'User last name',
     example: 'Doe',
     nullable: true,
+    type: 'string',
   })
   lastName?: string | null;
 

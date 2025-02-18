@@ -4,10 +4,6 @@ import NavBar from '~/components/layout/default/NavBar.vue';
 
 const route = useRoute();
 
-const useContentWrapper = () => {
-  return route.name !== 'index'
-};
-
 useHead({
   title: 'PocketSync - Effortless local-First Sync Solution',
   meta: [
@@ -27,9 +23,6 @@ useHead({
   ],
   link: [
     { rel: 'canonical', href: `https://pocketsync.io${route.path}` },
-    { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' },
-    { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32x32.png' },
-    { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/favicon-16x16.png' },
   ]
 })
 </script>

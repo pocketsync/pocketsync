@@ -5,7 +5,7 @@
                 class="flex max-w-xs items-center rounded-full bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
                 <span class="sr-only">Open user menu</span>
                 <div class="h-8 w-8 rounded-full overflow-hidden">
-                    <img v-if="user?.avatarUrl" :src="user.avatarUrl" :alt="user?.name"
+                    <img v-if="user?.avatarUrl" :src="user.avatarUrl" :alt="user?.firstName?? ''"
                         class="h-full w-full rounded-full object-cover" />
                     <div v-else
                         class="h-full w-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center text-primary-600 font-medium">
@@ -59,13 +59,6 @@ function handleClickOutside(event: MouseEvent) {
         userMenuOpen.value = false
     }
 }
-
-watch(() => authUser.value, (newUser) => {
-    user.value = newUser
-    if (!newUser) {
-        userMenuOpen.value = false
-    }
-}, { immediate: true })
 
 async function handleSignOut() {
     userMenuOpen.value = false
