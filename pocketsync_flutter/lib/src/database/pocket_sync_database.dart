@@ -544,14 +544,13 @@ extension WatchExtension on PocketSyncDatabase {
   Timer? get _debounceTimer => _debounceTimers[this];
   set _debounceTimer(Timer? timer) => _debounceTimers[this] = timer;
 
-  /// Extracts table names from a SQL query
   Set<String> _extractTablesFromSql(String sql) {
-    // Simple regex to extract table names
-    // Note: This is a basic implementation and might need to be enhanced
-    // based on your SQL query complexity
-    final tableRegex = RegExp(r'(?:FROM|JOIN)\s+([a-zA-Z_][a-zA-Z0-9_]*)',
-        caseSensitive: false);
-    return tableRegex.allMatches(sql).map((match) => match.group(1)!).toSet();
+    final tables = <String>{};
+    final regex = RegExp(r'(?:(?:FROM|JOIN|UPDATE|INTO|TABLE)\s+)(\w+)', caseSensitive: false);
+    for (final match in regex.allMatches(sql)) {
+      tables.add(match.group(1)!);
+    }
+    return tables;
   }
 
   Stream<List<Map<String, dynamic>>> watch(
