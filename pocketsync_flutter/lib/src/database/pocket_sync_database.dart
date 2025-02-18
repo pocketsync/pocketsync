@@ -274,7 +274,7 @@ class PocketSyncDatabase {
   }
 
   /// Private method to handle change notifications
-  Future<void> _notifyChanges() async {
+  Future<void> notifyChanges() async {
     final changes = await _db!.query(
       '__pocketsync_changes',
       where: 'id = last_insert_rowid()',
@@ -282,7 +282,7 @@ class PocketSyncDatabase {
 
     if (changes.isNotEmpty) {
       for (final change in changes) {
-        changeManager.notifyChange(PsDatabaseChange.fromMap(change));
+        changeManager.notifyChange(PsDatabaseChange.fromJson(change));
       }
     }
   }
@@ -323,7 +323,7 @@ class PocketSyncDatabase {
       conflictAlgorithm: conflictAlgorithm,
     );
 
-    await _notifyChanges();
+    await notifyChanges();
 
     return result;
   }
@@ -346,7 +346,7 @@ class PocketSyncDatabase {
       conflictAlgorithm: conflictAlgorithm,
     );
 
-    await _notifyChanges();
+    await notifyChanges();
 
     return result;
   }
@@ -365,7 +365,7 @@ class PocketSyncDatabase {
       whereArgs: whereArgs,
     );
 
-    await _notifyChanges();
+    await notifyChanges();
 
     return result;
   }
@@ -384,7 +384,7 @@ class PocketSyncDatabase {
     if (normalizedSql.startsWith('INSERT') ||
         normalizedSql.startsWith('UPDATE') ||
         normalizedSql.startsWith('DELETE')) {
-      await _notifyChanges();
+      await notifyChanges();
     }
 
     return result;
@@ -401,7 +401,7 @@ class PocketSyncDatabase {
   /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
   Future<List<Object?>> commitBatch(Batch batch) async {
     final result = await batch.commit();
-    await _notifyChanges();
+    await notifyChanges();
     return result;
   }
 
@@ -410,7 +410,7 @@ class PocketSyncDatabase {
   /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
   Future<void> applyBatch(Batch batch) async {
     await batch.apply();
-    await _notifyChanges();
+    await notifyChanges();
   }
 
   /// Executes a transaction
@@ -425,7 +425,7 @@ class PocketSyncDatabase {
       }
     });
 
-    await _notifyChanges();
+    await notifyChanges();
 
     return result;
   }
@@ -476,7 +476,8 @@ extension WatchExtension on PocketSyncDatabase {
 
   Set<String> _extractTablesFromSql(String sql) {
     final tables = <String>{};
-    final regex = RegExp(r'(?:(?:FROM|JOIN|UPDATE|INTO|TABLE)\s+)(\w+)', caseSensitive: false);
+    final regex = RegExp(r'(?:(?:FROM|JOIN|UPDATE|INTO|TABLE)\s+)(\w+)',
+        caseSensitive: false);
     for (final match in regex.allMatches(sql)) {
       tables.add(match.group(1)!);
     }

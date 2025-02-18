@@ -118,4 +118,14 @@ class ChangeSet {
       deletions: TableChanges.fromJson(json['deletions']),
     );
   }
+
+  int get length =>
+      insertions.changes.length +
+      updates.changes.length +
+      deletions.changes.length;
+
+  bool get isNotEmpty =>
+      insertions.changes.isNotEmpty ||
+      updates.changes.isNotEmpty ||
+      deletions.changes.isNotEmpty;
 }

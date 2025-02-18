@@ -14,7 +14,7 @@ class PsDatabaseChange {
     required this.recordId,
   });
 
-  factory PsDatabaseChange.fromMap(Map<String, dynamic> map) {
+  factory PsDatabaseChange.fromJson(Map<String, dynamic> map) {
     return PsDatabaseChange(
       tableName: map['table_name'] as String,
       operation: map['operation'] as String,

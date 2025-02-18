@@ -253,7 +253,8 @@ class ChangesProcessor {
           if (existingRow.isNotEmpty) {
             final existingTimestamp = existingRow.first['timestamp'] as int?;
             final incomingTimestamp = row.timestamp;
-            if (existingTimestamp != null && existingTimestamp >= incomingTimestamp) {
+            if (existingTimestamp != null &&
+                existingTimestamp >= incomingTimestamp) {
               // Skip this change as we already have a newer version
               return;
             }
@@ -355,5 +356,10 @@ class ChangesProcessor {
         });
       }
     });
+
+    if (changeSet.isNotEmpty) {
+      _logger.info('Applied ${changeSet.length} remote changes');
+      _db.notifyChanges();
+    }
   }
 }
