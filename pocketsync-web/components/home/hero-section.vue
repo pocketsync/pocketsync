@@ -8,12 +8,11 @@
 
         <div class="mx-auto max-w-7xl px-6 pb-24 pt-10 sm:pb-32 lg:flex lg:px-8 lg:py-40">
             <div class="mx-auto max-w-2xl flex-shrink-0 lg:mx-0 lg:max-w-xl lg:pt-8">
-                <h1 class="mt-10 text-4xl font-bold tracking-tight text-white sm:text-6xl">Seamless Data Sync for Modern
-                    Apps
+                <h1 class="mt-10 text-4xl font-bold tracking-tight text-white sm:text-6xl">Seamless data sync for modern
+                    apps
                 </h1>
                 <p class="mt-6 text-lg leading-8 text-gray-300">Build powerful offline-first applications with automatic
-                    data
-                    synchronization. PocketSync handles the complexity of data sync, so you can focus on building great
+                    data synchronization. PocketSync handles the complexity of data sync, so you can focus on building great
                     features.
                 </p>
                 <div class="mt-10 flex items-center gap-x-6">
