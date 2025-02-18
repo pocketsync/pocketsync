@@ -35,7 +35,7 @@ export const useAuth = () => {
     const cookieOptions = {
         maxAge: 7 * 24 * 60 * 60, // 7 days
         secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+        sameSite: true,
         httpOnly: true,
         path: '/' // Ensure cookie is available across all paths
     }
@@ -223,16 +223,20 @@ export const useAuth = () => {
 
         if (token && refresh) {
             try {
-                isAuthenticated.value = true
+                // First validate the token by getting the user profile
                 await ensureUserProfile()
+                isAuthenticated.value = true
             } catch (err) {
                 // If token is invalid or expired, try to refresh
                 try {
                     const response = await authApi.refreshToken({ refreshToken: refresh })
                     if (response.data) {
                         setTokens(response.data.accessToken, response.data.refreshToken)
-                        isAuthenticated.value = true
+                        // Validate the new token
                         await ensureUserProfile()
+                        isAuthenticated.value = true
+                    } else {
+                        throw new Error('Invalid refresh token response')
                     }
                 } catch (refreshErr) {
                     // If refresh fails, log out
@@ -353,6 +357,7 @@ export const useAuth = () => {
         login,
         register,
         logout,
+        initAuth,
         loginWithGithub,
         loginWithGoogle,
         fetchUserProfile,
