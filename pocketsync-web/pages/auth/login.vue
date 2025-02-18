@@ -119,15 +119,15 @@
 <script setup>
 import { ref } from 'vue'
 import { useAuth } from '~/composables/useAuth'
+import { useValidation } from '~/composables/useValidation'
 
 useHead({
     title: 'Sign In - PocketSync'
 })
-import { useValidation } from '~/composables/useValidation'
-import { useRouter } from '#app'
 import ErrorAlert from '~/components/common/error-alert'
 
 const { login, loginWithGithub, loginWithGoogle, error: authError, isLoading } = useAuth()
+const { validate, rules, clearErrors } = useValidation()
 
 const form = ref({
     email: '',
@@ -145,6 +145,17 @@ definePageMeta({
 async function handleLogin() {
     error.value = ''
     validationErrors.value = null
+    clearErrors()
+
+    const validationRules = {
+        email: [rules.required(), rules.email()],
+        password: [rules.required(), rules.minLength(8)]
+    }
+
+    if (!validate(form.value, validationRules)) {
+        validationErrors.value = error.value
+        return
+    }
 
     try {
         await login(form.value.email, form.value.password)

@@ -82,6 +82,7 @@ const OpenMenuIcon = PhList
 const CloseMenuIcon = PhX
 const sidebarOpen = ref(false)
 const userMenuOpen = ref(false)
+const { ensureUserProfile } = useAuth()
 
 const navigationLinks = [
     {
@@ -104,18 +105,14 @@ const navigationLinks = [
 
 const ExternalLinkIcon = PhArrowSquareOut
 
-onMounted(() => {
+onMounted(async () => {
     document.addEventListener('click', (event) => {
         const target = event.target
         if (!target.closest('.user-menu')) {
             userMenuOpen.value = false
         }
     })
-})
 
-const { ensureUserProfile } = useAuth()
-
-onMounted(async () => {
     await ensureUserProfile()
 })
 

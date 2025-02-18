@@ -5,7 +5,7 @@
                 <div class="flex">
                     <div class="flex-shrink-0 flex items-center">
                         <NuxtLink to="/" class="flex items-center">
-                            <img src="/images/logo_full.svg" alt="PocketSync" class="hidden sm:block h-4" />
+                            <img src="/images/logo_full.svg" alt="PocketSync" class="hidden sm:block h-6" />
                             <img src="/images/logo_icon.svg" alt="PocketSync" class="block sm:hidden h-8" />
                         </NuxtLink>
                     </div>

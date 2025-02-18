@@ -29,7 +29,6 @@ export const useAuth = () => {
     const isAuthenticated = useState<boolean>('is_authenticated', () => false)
     const isLoading = ref(false)
     const error = ref<AuthError | null>(null)
-    const initialized = useState<boolean>('auth_initialized', () => false)
 
     const { config, axiosInstance } = useApi()
     const authApi = new AuthenticationApi(config, undefined, axiosInstance)
@@ -210,55 +209,15 @@ export const useAuth = () => {
         }
     }
 
-    // Initialize authentication state
-    const waitForInit = async () => {
-        if (!initialized.value) {
-            await initAuth()
-        }
-    }
 
     const initAuth = async () => {
-        if (initialized.value) return
-
         const token = accessTokenCookie.value
         const refresh = refreshTokenCookie.value
 
-        if (token && refresh) {
-            try {
-                await ensureUserProfile()
-                isAuthenticated.value = true
-            } catch (err) {
-                // If token is invalid or expired, try to refresh
-                try {
-                    const response = await authApi.refreshToken({ refreshToken: refresh })
-                    if (response.data) {
-                        setTokens(response.data.accessToken, response.data.refreshToken)
-                        await ensureUserProfile()
-                        isAuthenticated.value = true
-                    }
-                } catch (refreshErr) {
-                    // If refresh fails, log out
-                    logout()
-                }
-            }
-        } else {
-            logout()
-        }
-
-        initialized.value = true
+        isAuthenticated.value = !!token && !!refresh
     }
 
-    if (import.meta.server) {
-        initAuth()
-    } else {
-        onMounted(() => {
-            initAuth()
-        })
-
-        nextTick(() => {
-            initAuth()
-        })
-    }
+    initAuth()
 
     const ensureUserProfile = async () => {
         if (isAuthenticated.value && !user.value && !isLoading.value) {
@@ -361,8 +320,6 @@ export const useAuth = () => {
         loginWithGoogle,
         fetchUserProfile,
         initAuth,
-        waitForInit,
-        initialized,
         ensureUserProfile,
         setTokens,
         changePassword,
