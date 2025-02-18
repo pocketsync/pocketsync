@@ -52,7 +52,9 @@ export const useApi = () => {
             const originalRequest = error.config
 
             // Skip token refresh for auth endpoints
-            if (originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/register')) {
+            if (originalRequest.url?.includes('/auth/login') || 
+                originalRequest.url?.includes('/auth/register') || 
+                originalRequest.url?.includes('/auth/token/refresh')) {
                 return Promise.reject(error)
             }
 

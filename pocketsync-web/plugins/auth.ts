@@ -3,13 +3,16 @@ import { useAuth } from '~/composables/useAuth'
 export default defineNuxtPlugin(async (nuxtApp) => {
   const auth = useAuth()
   
-  // Skip auth initialization during SSR to prevent network errors
-  if (import.meta.server) {
-    return
-  }
-
-  // Initialize auth only once at app startup
+  // Initialize auth during SSR and client-side
   await auth.initAuth()
+
+  // Set up global error handler for auth errors
+  nuxtApp.vueApp.config.errorHandler = (error: any) => {
+    if (error?.response?.status === 401) {
+      auth.logout()
+      navigateTo('/auth/login')
+    }
+  }
 
   const publicPages = [
     '/',
@@ -32,7 +35,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
 
   nuxtApp.$router.beforeEach(async (to: any, from: any) => {
     // Skip auth checks during SSR
-    if (process.server) {
+    if (import.meta.server) {
       return true
     }
 

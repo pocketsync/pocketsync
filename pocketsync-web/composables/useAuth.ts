@@ -31,8 +31,13 @@ export const useAuth = () => {
     const error = ref<AuthError | null>(null)
     const isInitialized = ref(false)
 
-    // Skip API initialization during SSR
+    // During SSR, return a minimal auth state
     if (process.server) {
+        const accessToken = useCookie('access_token', cookieOptions).value
+        const refreshToken = useCookie('refresh_token', cookieOptions).value
+        
+        isAuthenticated.value = !!(accessToken && refreshToken)
+        
         return {
             user,
             isAuthenticated,
