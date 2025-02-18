@@ -30,7 +30,8 @@ export class UserResponseDto {
   @ApiProperty({
     description: 'URL of the user\'s avatar',
     example: 'https://example.com/avatar.jpg',
-    required: false
+    required: false,
+    type: 'string',
   })
   avatarUrl?: string | null;
 

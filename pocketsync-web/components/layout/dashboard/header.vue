@@ -12,26 +12,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useAuth } from '~/composables/useAuth'
-import { useUtils } from '~/composables/useUtils'
-import type { UserResponseDto } from '~/api-client'
 import ProfileDropdown from './profile-dropdown.vue'
 
 const { user: authUser, logout } = useAuth()
-const { getUserInitials } = useUtils()
-
-const user = computed(() => authUser.value as UserResponseDto)
 const userMenuOpen = ref(false)
 
 watch(() => authUser.value, (newUser) => {
-    user.value = newUser
     if (!newUser) {
         userMenuOpen.value = false
     }
 }, { immediate: true })
-
-async function handleSignOut() {
-    userMenuOpen.value = false
-    await logout()
-    await navigateTo('/auth/login')
-}
 </script>
