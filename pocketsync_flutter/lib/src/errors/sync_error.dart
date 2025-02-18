@@ -9,14 +9,16 @@ abstract class SyncError implements Exception {
   const SyncError(this.message, [this.cause]);
 
   @override
-  String toString() => 'SyncError: $message${cause != null ? '\nCause: $cause' : ''}';
+  String toString() =>
+      'SyncError: $message${cause != null ? '\nCause: $cause' : ''}';
 }
 
 /// Thrown when there's a network-related error during synchronization
 class NetworkError extends SyncError {
   final int? statusCode;
 
-  const NetworkError(String message, {this.statusCode, dynamic cause}) : super(message, cause);
+  const NetworkError(String message, {this.statusCode, dynamic cause})
+      : super(message, cause);
 }
 
 /// Thrown when there's a database-related error

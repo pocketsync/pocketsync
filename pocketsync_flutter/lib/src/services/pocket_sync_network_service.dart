@@ -23,13 +23,13 @@ class PocketSyncNetworkService {
   // Callback for handling incoming changes
   Future<void> Function(Iterable<ChangeLog>)? onChangesReceived;
 
-  PocketSyncNetworkService({
-    required String serverUrl,
-    required String projectId,
-    required String authToken,
-    String? deviceId,
-    Dio? dio
-  })  : _dio = dio ?? Dio(),
+  PocketSyncNetworkService(
+      {required String serverUrl,
+      required String projectId,
+      required String authToken,
+      String? deviceId,
+      Dio? dio})
+      : _dio = dio ?? Dio(),
         _serverUrl = serverUrl,
         _projectId = projectId,
         _authToken = authToken,
@@ -60,7 +60,8 @@ class PocketSyncNetworkService {
 
   void _connectWebSocket() {
     if (_userId == null || _deviceId == null) {
-      _logger.debug('Skipping WebSocket connection: missing user ID or device ID');
+      _logger
+          .debug('Skipping WebSocket connection: missing user ID or device ID');
       return;
     }
 
@@ -115,7 +116,8 @@ class PocketSyncNetworkService {
 
   Future<ChangeProcessingResponse> sendChanges(ChangeSet changes) async {
     try {
-      _logger.info('Sending changes to server: ${changes.changeIds.length} changes');
+      _logger.info(
+          'Sending changes to server: ${changes.changeIds.length} changes');
       if (_userId == null) {
         throw InitializationError('User ID not set');
       }

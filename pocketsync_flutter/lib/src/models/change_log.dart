@@ -26,7 +26,9 @@ class ChangeLog {
       deviceId: json['deviceId'],
       changeSet: ChangeSet.fromJson(jsonDecode(json['changeSet'])),
       receivedAt: DateTime.parse(json['receivedAt']),
-      processedAt: json['processedAt'] != null ? DateTime.parse(json['processedAt']) : null,
+      processedAt: json['processedAt'] != null
+          ? DateTime.parse(json['processedAt'])
+          : null,
     );
   }
 

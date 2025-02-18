@@ -1,11 +1,6 @@
 import 'dart:developer' as developer;
 
-enum LogLevel {
-  debug,
-  info,
-  warning,
-  error
-}
+enum LogLevel { debug, info, warning, error }
 
 class LoggerService {
   static final LoggerService instance = LoggerService._internal();
@@ -21,7 +16,8 @@ class LoggerService {
     return level.index >= _minLevel.index;
   }
 
-  void _log(LogLevel level, String message, {Object? error, StackTrace? stackTrace}) {
+  void _log(LogLevel level, String message,
+      {Object? error, StackTrace? stackTrace}) {
     if (!_shouldLog(level)) return;
 
     final timestamp = DateTime.now().toIso8601String();

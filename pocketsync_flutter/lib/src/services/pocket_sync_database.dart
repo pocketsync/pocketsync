@@ -103,7 +103,7 @@ class PocketSyncDatabase {
 
     for (final table in tables) {
       final tableName = table['name'] as String;
-      
+
       // Add ps_global_id column to user tables
       await db.execute('''
         ALTER TABLE $tableName ADD COLUMN ps_global_id TEXT;

@@ -42,6 +42,11 @@ class PocketSync {
   }
 
   /// Initializes PocketSync with the given configuration
+  /// [dbPath] - Path to the local database file
+  /// [options] - PocketSync configuration options
+  /// [databaseOptions] - Database configuration options
+  ///
+  /// Throws [StateError] if PocketSync is already initialized
   Future<void> initialize({
     required String dbPath,
     required PocketSyncOptions options,
@@ -104,6 +109,9 @@ class PocketSync {
   }
 
   /// Sets the user ID for synchronization
+  /// [userId] - User ID
+  /// This method should be called before [startSync].
+  /// Throws [StateError] if PocketSync is not initialized
   Future<void> setUserId({required String userId}) async {
     _runGuarded(() {
       _userId = userId;
@@ -112,9 +120,12 @@ class PocketSync {
   }
 
   /// Starts the synchronization process
+  ///
+  /// Throws [StateError] if user ID is not set
+  /// Throws [StateError] if PocketSync is not initialized
   Future<void> startSync() async {
     await _runGuarded(() async {
-      if (_userId == null) throw Exception('User ID not set');
+      if (_userId == null) throw StateError('User ID not set');
       _isPaused = false;
       _isManuallyPaused = false;
       _isSyncStarted = true;
@@ -167,6 +178,9 @@ class PocketSync {
       await _changesProcessor.markChangesSynced(changeIds);
 
   /// Pauses the synchronization process
+  /// This method can be called to pause the synchronization process
+  ///
+  /// Throws [StateError] if PocketSync is not initialized
   void pauseSync() {
     _runGuarded(() {
       _isPaused = true;
@@ -177,6 +191,9 @@ class PocketSync {
   }
 
   /// Resumes the synchronization process
+  /// This method can be called to resume the synchronization process
+  ///
+  /// Throws [StateError] if PocketSync is not initialized
   Future<void> resumeSync() async {
     _runGuarded(() async {
       _isPaused = false;
@@ -189,9 +206,6 @@ class PocketSync {
 
   /// Returns whether sync is currently paused
   bool get isPaused => _runGuarded(() => _isPaused);
-
-  /// Returns whether sync was manually paused
-  bool get isManuallyPaused => _runGuarded(() => _isManuallyPaused);
 
   /// Cleans up resources
   Future<void> dispose() async {

@@ -26,7 +26,8 @@ class ChangesProcessor {
       int lastVersion = 0;
       final changeIds = <int>[];
 
-      _logger.debug('Starting to fetch unsynced changes with batch size: $batchSize');
+      _logger.debug(
+          'Starting to fetch unsynced changes with batch size: $batchSize');
 
       while (true) {
         List<Map<String, dynamic>> changes;

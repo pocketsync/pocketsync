@@ -21,7 +21,7 @@ PocketSync makes it easy to sync data across devices without managing a backend.
 Install the SDK with:  
 
 ```sh
-flutter pub add pocket_sync
+flutter pub add pocketsync_flutter
 ```  
 
 ---
@@ -36,9 +36,8 @@ Once your project is created, get your **Project ID** and **Auth Token** from th
 ### **2️⃣ Initialize the SDK in Your App**  
 
 ```dart
-import 'package:pocket_sync/pocket_sync.dart';
+import 'package:pocketsync_flutter/pocketsync_flutter.dart';
 import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
 
 void main() async {
   // Get database path

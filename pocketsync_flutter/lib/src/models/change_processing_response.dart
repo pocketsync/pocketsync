@@ -18,8 +18,8 @@ class ChangeProcessingResponse {
   }
 
   Map<String, dynamic> toJson() => {
-    'status': status,
-    'processed': processed,
-    'message': message,
-  };
+        'status': status,
+        'processed': processed,
+        'message': message,
+      };
 }
