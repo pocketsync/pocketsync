@@ -23,7 +23,7 @@ class Row {
     return Row(
       primaryKey: json['primaryKey'] as String,
       timestamp: json['timestamp'] as int,
-      version: json['version'] as int,
+      version: (json['version'] ?? 1) as int,
       data: json['data'] as Map<String, dynamic>,
     );
   }

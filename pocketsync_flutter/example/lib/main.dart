@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:pocketsync_flutter/pocketsync_flutter.dart';
 import 'package:path/path.dart';
@@ -9,12 +8,17 @@ void main() async {
 
   String path = join(await getDatabasesPath(), 'todo_database.db');
 
+  const projectId = String.fromEnvironment('PS_PROJECT_ID');
+  const authToken = String.fromEnvironment('PS_AUTH_TOKEN');
+  const serverUrl = String.fromEnvironment('PS_SERVER_URL',
+      defaultValue: 'https://api.pocketsync.dev');
+
   await PocketSync.instance.initialize(
     dbPath: path,
     options: PocketSyncOptions(
-      projectId: 'ecd550f6-4ee3-4027-92db-63e218bb75f8',
-      authToken: 'ds_YzcwMmFlMzQ5N2RmNDdiNjk4OTFlNGI4MWI1MTYwMTE=',
-      serverUrl: defaultTargetPlatform == TargetPlatform.android ? 'http://10.0.2.2:3000' : 'http://127.0.0.1:3000',
+      projectId: projectId,
+      authToken: authToken,
+      serverUrl: serverUrl,
     ),
     databaseOptions: DatabaseOptions(
       onCreate: (db, version) async {

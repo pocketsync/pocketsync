@@ -5,6 +5,7 @@ import 'package:pocketsync_flutter/pocketsync_flutter.dart';
 import 'package:pocketsync_flutter/src/models/change_log.dart';
 import 'package:pocketsync_flutter/src/models/change_set.dart';
 import 'package:pocketsync_flutter/src/services/logger_service.dart';
+import 'package:sqflite/sqflite.dart';
 
 class ChangesProcessor {
   final PocketSyncDatabase _db;
@@ -238,27 +239,28 @@ class ChangesProcessor {
         String tableName,
         Row row,
         String operation,
+        Transaction txn,
       ) async {
         try {
           // Get existing row if any
           final existingRow = await txn.query(
             tableName,
-            where: "rowid = ?",
+            where: "ps_global_id = ?",
             whereArgs: [row.primaryKey],
           );
 
           // Apply last-write-wins conflict resolution
           if (existingRow.isNotEmpty) {
-            final existingTimestamp = existingRow.first['timestamp'] as int;
+            final existingTimestamp = existingRow.first['timestamp'] as int?;
             final incomingTimestamp = row.timestamp;
-            if (existingTimestamp >= incomingTimestamp) {
+            if (existingTimestamp != null && existingTimestamp >= incomingTimestamp) {
               // Skip this change as we already have a newer version
               return;
             }
           }
 
-          // Disable triggers for this table
-          await _db.disableTriggers(tableName);
+          // Disable triggers for this table using transaction
+          await txn.execute('PRAGMA ${tableName}_triggers_disabled = 1');
 
           // Apply the change operation
           switch (operation) {
@@ -269,7 +271,7 @@ class ChangesProcessor {
                 // Handle insert conflict by attempting to update instead
                 final existingRow = await txn.query(
                   tableName,
-                  where: 'rowid = ?',
+                  where: 'ps_global_id = ?',
                   whereArgs: [row.primaryKey],
                 );
                 if (existingRow.isNotEmpty) {
@@ -281,7 +283,7 @@ class ChangesProcessor {
                   await txn.update(
                     tableName,
                     resolvedRow,
-                    where: 'id = ?',
+                    where: 'ps_global_id = ?',
                     whereArgs: [row.primaryKey],
                   );
                 } else {
@@ -292,7 +294,7 @@ class ChangesProcessor {
             case 'UPDATE':
               final existingRow = await txn.query(
                 tableName,
-                where: 'rowid = ?',
+                where: 'ps_global_id = ?',
                 whereArgs: [row.primaryKey],
               );
               if (existingRow.isNotEmpty) {
@@ -304,12 +306,9 @@ class ChangesProcessor {
                 await txn.update(
                   tableName,
                   resolvedRow,
-                  where: 'id = ?',
+                  where: 'ps_global_id = ?',
                   whereArgs: [row.primaryKey],
                 );
-              } else {
-                // If row doesn't exist, insert it instead
-                await txn.insert(tableName, row.data);
               }
               break;
             case 'DELETE':
@@ -317,33 +316,33 @@ class ChangesProcessor {
               // If the row doesn't exist, that's fine
               await txn.delete(
                 tableName,
-                where: 'rowid = ?',
+                where: 'ps_global_id = ?',
                 whereArgs: [row.primaryKey],
               );
               break;
           }
         } finally {
-          // Re-enable triggers for this table
-          await _db.enableTriggers(tableName);
+          // Re-enable triggers for this table using transaction
+          await txn.execute('PRAGMA ${tableName}_triggers_disabled = 0');
         }
       }
 
       // Apply all changes
       for (final entry in changeSet.insertions.changes.entries) {
         for (final row in entry.value.rows) {
-          await applyTableOperation(entry.key, row, 'INSERT');
+          await applyTableOperation(entry.key, row, 'INSERT', txn);
         }
       }
 
       for (final entry in changeSet.updates.changes.entries) {
         for (final row in entry.value.rows) {
-          await applyTableOperation(entry.key, row, 'UPDATE');
+          await applyTableOperation(entry.key, row, 'UPDATE', txn);
         }
       }
 
       for (final entry in changeSet.deletions.changes.entries) {
         for (final row in entry.value.rows) {
-          await applyTableOperation(entry.key, row, 'DELETE');
+          await applyTableOperation(entry.key, row, 'DELETE', txn);
         }
       }
 
