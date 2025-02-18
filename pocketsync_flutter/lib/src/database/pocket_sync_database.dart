@@ -273,9 +273,12 @@ class PocketSyncDatabase {
 
   /// Private method to handle change notifications
   Future<void> notifyChanges() async {
+    // Get all recent changes from the changes table
     final changes = await _db!.query(
       '__pocketsync_changes',
-      where: 'id = last_insert_rowid()',
+      where:
+          'id IN (SELECT id FROM __pocketsync_changes ORDER BY id DESC LIMIT 100)',
+      orderBy: 'id ASC',
     );
 
     if (changes.isNotEmpty) {
@@ -286,24 +289,20 @@ class PocketSyncDatabase {
   }
 
   /// Adds a listener for changes to a specific table
-  void addTableListener(String table, DatabaseChangeListener listener) {
-    changeManager.addTableListener(table, listener);
-  }
+  void addTableListener(String table, DatabaseChangeListener listener) =>
+      changeManager.addTableListener(table, listener);
 
   /// Removes a table-specific listener
-  void removeTableListener(String table, DatabaseChangeListener listener) {
-    changeManager.removeTableListener(table, listener);
-  }
+  void removeTableListener(String table, DatabaseChangeListener listener) =>
+      changeManager.removeTableListener(table, listener);
 
   /// Adds a listener for all database changes
-  void addGlobalListener(DatabaseChangeListener listener) {
-    changeManager.addGlobalListener(listener);
-  }
+  void addGlobalListener(DatabaseChangeListener listener) =>
+      changeManager.addGlobalListener(listener);
 
   /// Removes a global listener
-  void removeGlobalListener(DatabaseChangeListener listener) {
-    changeManager.removeGlobalListener(listener);
-  }
+  void removeGlobalListener(DatabaseChangeListener listener) =>
+      changeManager.removeGlobalListener(listener);
 
   /// Generates a new ps_global_id
   Future<String> _generatePsGlobalId() async {

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:pocketsync_flutter/pocketsync_flutter.dart';
+import 'package:pocketsync_flutter/src/database/database_change.dart';
 import 'package:pocketsync_flutter/src/models/change_log.dart';
 import 'package:pocketsync_flutter/src/models/change_set.dart';
 import 'package:pocketsync_flutter/src/services/logger_service.dart';
@@ -227,13 +228,38 @@ class ChangesProcessor {
     );
   }
 
+  /// Notifies database changes to registered listeners
+  void _notifyChanges(ChangeSet changeSet) {
+    void notifyChangesForOperation(Map<String, TableRows> changes, String operation) {
+      for (final entry in changes.entries) {
+        for (final row in entry.value.rows) {
+          final change = PsDatabaseChange(
+            tableName: entry.key,
+            operation: operation,
+            data: row.data,
+            recordId: row.primaryKey,
+          );
+          _db.changeManager.notifyChange(change);
+        }
+      }
+    }
+
+    if (changeSet.isNotEmpty) {
+      _logger.info('Notifying ${changeSet.length} changes');
+      notifyChangesForOperation(changeSet.insertions.changes, 'INSERT');
+      notifyChangesForOperation(changeSet.updates.changes, 'UPDATE');
+      notifyChangesForOperation(changeSet.deletions.changes, 'DELETE');
+    }
+  }
+
   /// Applies remote changes to local database
   Future<void> applyRemoteChanges(Iterable<ChangeLog> changeLogs) async {
     if (changeLogs.isEmpty) return;
 
     final changeSet = _computeChangeSetFromChangeLogs(changeLogs);
     log('Applying change set: ${changeSet.toJson()}');
-
+    
+    final affectedTables = <String>{};
     await _db.transaction((txn) async {
       Future<void> applyTableOperation(
         String tableName,
@@ -354,11 +380,16 @@ class ChangesProcessor {
           'processed_at': now,
         });
       }
+
+      // Collect affected tables
+      affectedTables.addAll(changeSet.insertions.changes.keys);
+      affectedTables.addAll(changeSet.updates.changes.keys);
+      affectedTables.addAll(changeSet.deletions.changes.keys);
     });
 
     if (changeSet.isNotEmpty) {
       _logger.info('Applied ${changeSet.length} remote changes');
-      _db.notifyChanges();
+      _notifyChanges(changeSet);
     }
   }
 }
