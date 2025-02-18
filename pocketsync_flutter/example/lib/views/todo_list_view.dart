@@ -37,7 +37,6 @@ class _TodoListViewState extends State<TodoListView> {
   Future<void> _handleTodoOperation(Future<void> Function() operation) async {
     try {
       await operation();
-      if (mounted) setState(() {});
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -57,14 +56,6 @@ class _TodoListViewState extends State<TodoListView> {
             icon: Icon(_isSyncPaused ? Icons.play_arrow : Icons.pause),
             onPressed: _toggleSync,
             tooltip: _isSyncPaused ? 'Resume sync' : 'Pause sync',
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              _handleTodoOperation(() async {
-                await _todoController.getTodos();
-              });
-            },
           ),
         ],
       ),
@@ -100,8 +91,8 @@ class _TodoListViewState extends State<TodoListView> {
             ),
           ),
           Expanded(
-            child: FutureBuilder<List<Todo>>(
-              future: _todoController.getTodos(),
+            child: StreamBuilder<List<Todo>>(
+              stream: _todoController.getTodos(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());

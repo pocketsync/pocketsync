@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:pocketsync_flutter/pocketsync_flutter.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
@@ -107,7 +109,7 @@ class PocketSyncDatabase {
 
       // Add ps_global_id column to user tables
       await db.execute('''
-        ALTER TABLE $tableName ADD COLUMN ps_global_id TEXT;
+        ALTER TABLE $tableName ADD COLUMN ps_global_id TEXT NULL;
         CREATE INDEX idx_${tableName}_ps_global_id ON $tableName(ps_global_id);
       ''');
 
@@ -167,7 +169,7 @@ class PocketSyncDatabase {
           table_name, record_rowid, operation, timestamp, data, version
         ) VALUES (
           '$tableName',
-          NEW.ps_global_id,
+          (SELECT ps_global_id FROM $tableName WHERE rowid = NEW.rowid),
           'INSERT',
           (strftime('%s', 'now') * 1000),
           json_object(
@@ -471,5 +473,121 @@ class PocketSyncDatabase {
     await _notifyChanges();
 
     return result;
+  }
+}
+
+class QueryWatcher {
+  final String sql;
+  final List<Object?>? arguments;
+  final StreamController<List<Map<String, dynamic>>> _controller;
+  bool _isActive = true;
+
+  QueryWatcher(this.sql, this.arguments)
+      : _controller = StreamController<List<Map<String, dynamic>>>.broadcast();
+
+  Stream<List<Map<String, dynamic>>> get stream => _controller.stream;
+
+  void dispose() {
+    _isActive = false;
+    _controller.close();
+  }
+
+  Future<void> notify(PocketSyncDatabase db) async {
+    if (!_isActive) return;
+
+    try {
+      final results = await db.rawQuery(sql, arguments);
+      if (!_isActive) return; // Check again in case disposed during query
+      _controller.add(results);
+    } catch (e) {
+      if (!_isActive) return;
+      _controller.addError(e);
+    }
+  }
+}
+
+extension WatchExtension on PocketSyncDatabase {
+  static final Map<PocketSyncDatabase, Map<String, List<QueryWatcher>>>
+      _watchersByDb = {};
+  static final Map<PocketSyncDatabase, Timer?> _debounceTimers = {};
+  static const _debounceMs = 50;
+
+  Map<String, List<QueryWatcher>> get _watchers =>
+      _watchersByDb.putIfAbsent(this, () => {});
+
+  Timer? get _debounceTimer => _debounceTimers[this];
+  set _debounceTimer(Timer? timer) => _debounceTimers[this] = timer;
+
+  /// Watches a SQL query and returns a stream of results that updates when the underlying data changes
+  ///
+  /// Parameters:
+  /// - [sql]: The SQL query to watch
+  /// - [arguments]: Optional arguments for the SQL query
+  ///
+  /// Returns a Stream that emits the query results whenever the underlying data changes
+  Stream<List<Map<String, dynamic>>> watch(
+    String sql, [
+    List<Object?>? arguments,
+  ]) {
+    // Create unique key for the query
+    final queryKey = '$sql${arguments?.toString() ?? ''}';
+
+    // Create new watcher
+    final watcher = QueryWatcher(sql, arguments);
+    _watchers.putIfAbsent(queryKey, () => []).add(watcher);
+
+    // Initial query
+    watcher.notify(this);
+
+    // Set up change listener if this is the first watcher
+    if (_watchers.length == 1) {
+      onChangesAdded = _handleChanges;
+    }
+
+    // Return stream that removes the watcher when cancelled
+    return watcher.stream.transform(
+      StreamTransformer.fromHandlers(
+        handleDone: (sink) {
+          _removeWatcher(queryKey, watcher);
+          sink.close();
+        },
+      ),
+    );
+  }
+
+  void _handleChanges(List<Map<String, dynamic>> changes) {
+    // Cancel existing timer
+    _debounceTimer?.cancel();
+
+    // Start new timer
+    _debounceTimer = Timer(const Duration(milliseconds: _debounceMs), () {
+      // Notify all watchers
+      for (final watcherList in _watchers.values) {
+        for (final watcher in watcherList) {
+          watcher.notify(this);
+        }
+      }
+    });
+  }
+
+  void _removeWatcher(String queryKey, QueryWatcher watcher) {
+    final watchers = _watchers[queryKey];
+    if (watchers != null) {
+      watchers.remove(watcher);
+      if (watchers.isEmpty) {
+        _watchers.remove(queryKey);
+      }
+    }
+
+    // Remove change listener if no more watchers
+    if (_watchers.isEmpty) {
+      onChangesAdded = null;
+      _debounceTimer?.cancel();
+      _debounceTimer = null;
+      _watchersByDb.remove(this);
+      _debounceTimers.remove(this);
+    }
+
+    watcher.dispose();
   }
 }
