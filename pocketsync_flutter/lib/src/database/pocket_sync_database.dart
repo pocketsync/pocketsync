@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:pocketsync_flutter/pocketsync_flutter.dart';
+import 'package:pocketsync_flutter/src/database/database_change.dart';
 import 'package:pocketsync_flutter/src/database/database_change_manager.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
@@ -350,18 +351,30 @@ class PocketSyncDatabase {
     );
 
     if (changes.isNotEmpty) {
-      changeManager.notifyListeners(changes);
+      for (final change in changes) {
+        changeManager.notifyChange(PsDatabaseChange.fromMap(change));
+      }
     }
   }
 
-  /// Adds a listener for database changes
-  void addChangeListener(DatabaseChangeListener listener) {
-    changeManager.addListener(listener);
+  /// Adds a listener for changes to a specific table
+  void addTableListener(String table, DatabaseChangeListener listener) {
+    changeManager.addTableListener(table, listener);
   }
 
-  /// Removes a previously added change listener
-  void removeChangeListener(DatabaseChangeListener listener) {
-    changeManager.removeListener(listener);
+  /// Removes a table-specific listener
+  void removeTableListener(String table, DatabaseChangeListener listener) {
+    changeManager.removeTableListener(table, listener);
+  }
+
+  /// Adds a listener for all database changes
+  void addGlobalListener(DatabaseChangeListener listener) {
+    changeManager.addGlobalListener(listener);
+  }
+
+  /// Removes a global listener
+  void removeGlobalListener(DatabaseChangeListener listener) {
+    changeManager.removeGlobalListener(listener);
   }
 
   /// Inserts a row into the specified table
@@ -492,9 +505,10 @@ class QueryWatcher {
   final String sql;
   final List<Object?>? arguments;
   final StreamController<List<Map<String, dynamic>>> _controller;
+  final Set<String> tables;
   bool _isActive = true;
 
-  QueryWatcher(this.sql, this.arguments)
+  QueryWatcher(this.sql, this.arguments, this.tables)
       : _controller = StreamController<List<Map<String, dynamic>>>.broadcast();
 
   Stream<List<Map<String, dynamic>>> get stream => _controller.stream;
@@ -509,7 +523,7 @@ class QueryWatcher {
 
     try {
       final results = await db.rawQuery(sql, arguments);
-      if (!_isActive) return; // Check again in case disposed during query
+      if (!_isActive) return;
       _controller.add(results);
     } catch (e) {
       if (!_isActive) return;
@@ -530,76 +544,71 @@ extension WatchExtension on PocketSyncDatabase {
   Timer? get _debounceTimer => _debounceTimers[this];
   set _debounceTimer(Timer? timer) => _debounceTimers[this] = timer;
 
-  /// Watches a SQL query and returns a stream of results that updates when the underlying data changes
-  ///
-  /// Parameters:
-  /// - [sql]: The SQL query to watch
-  /// - [arguments]: Optional arguments for the SQL query
-  ///
-  /// Returns a Stream that emits the query results whenever the underlying data changes
+  /// Extracts table names from a SQL query
+  Set<String> _extractTablesFromSql(String sql) {
+    // Simple regex to extract table names
+    // Note: This is a basic implementation and might need to be enhanced
+    // based on your SQL query complexity
+    final tableRegex = RegExp(r'(?:FROM|JOIN)\s+([a-zA-Z_][a-zA-Z0-9_]*)',
+        caseSensitive: false);
+    return tableRegex.allMatches(sql).map((match) => match.group(1)!).toSet();
+  }
+
   Stream<List<Map<String, dynamic>>> watch(
     String sql, [
     List<Object?>? arguments,
   ]) {
-    // Create unique key for the query
     final queryKey = '$sql${arguments?.toString() ?? ''}';
-
-    // Create new watcher
-    final watcher = QueryWatcher(sql, arguments);
+    final tables = _extractTablesFromSql(sql);
+    final watcher = QueryWatcher(sql, arguments, tables);
     _watchers.putIfAbsent(queryKey, () => []).add(watcher);
 
     // Initial query
     watcher.notify(this);
 
-    // Set up change listener if this is the first watcher
-    if (_watchers.length == 1) {
-      changeManager.addListener(_handleChanges);
+    // Set up change listeners for relevant tables
+    void handleChange(PsDatabaseChange change) {
+      if (tables.contains(change.tableName)) {
+        _debounceTimer?.cancel();
+        _debounceTimer = Timer(const Duration(milliseconds: _debounceMs), () {
+          watcher.notify(this);
+        });
+      }
     }
 
-    // Return stream that removes the watcher when cancelled
+    // Add listeners for each table
+    for (final table in tables) {
+      changeManager.addTableListener(table, handleChange);
+    }
+
     return watcher.stream.transform(
       StreamTransformer.fromHandlers(
         handleDone: (sink) {
-          _removeWatcher(queryKey, watcher);
+          // Remove table listeners
+          for (final table in tables) {
+            changeManager.removeTableListener(table, handleChange);
+          }
+
+          // Remove watcher
+          final watchers = _watchers[queryKey];
+          if (watchers != null) {
+            watchers.remove(watcher);
+            if (watchers.isEmpty) {
+              _watchers.remove(queryKey);
+            }
+          }
+
+          if (_watchers.isEmpty) {
+            _debounceTimer?.cancel();
+            _debounceTimer = null;
+            _watchersByDb.remove(this);
+            _debounceTimers.remove(this);
+          }
+
+          watcher.dispose();
           sink.close();
         },
       ),
     );
-  }
-
-  void _handleChanges(List<Map<String, dynamic>> changes) {
-    // Cancel existing timer
-    _debounceTimer?.cancel();
-
-    // Start new timer
-    _debounceTimer = Timer(const Duration(milliseconds: _debounceMs), () {
-      // Notify all watchers
-      for (final watcherList in _watchers.values) {
-        for (final watcher in watcherList) {
-          watcher.notify(this);
-        }
-      }
-    });
-  }
-
-  void _removeWatcher(String queryKey, QueryWatcher watcher) {
-    final watchers = _watchers[queryKey];
-    if (watchers != null) {
-      watchers.remove(watcher);
-      if (watchers.isEmpty) {
-        _watchers.remove(queryKey);
-      }
-    }
-
-    // Remove change listener if no more watchers
-    if (_watchers.isEmpty) {
-      changeManager.removeListener(_handleChanges);
-      _debounceTimer?.cancel();
-      _debounceTimer = null;
-      _watchersByDb.remove(this);
-      _debounceTimers.remove(this);
-    }
-
-    watcher.dispose();
   }
 }

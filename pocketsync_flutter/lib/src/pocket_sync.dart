@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:pocketsync_flutter/src/database/database_change.dart';
 import 'package:pocketsync_flutter/src/database/pocket_sync_database.dart';
 import 'package:pocketsync_flutter/src/errors/sync_error.dart';
 import 'package:pocketsync_flutter/src/models/change_set.dart';
@@ -83,7 +84,7 @@ class PocketSync {
     _networkService.onChangesReceived = _changesProcessor.applyRemoteChanges;
 
     // Set up real-time change notification
-    _database.addChangeListener((changes) => _sync());
+    _database.addGlobalListener(_syncChanges);
 
     // Initialize connectivity monitoring
     _setupConnectivityMonitoring();
@@ -136,6 +137,8 @@ class PocketSync {
       await _sync();
     });
   }
+
+  void _syncChanges(PsDatabaseChange changes) => _sync();
 
   /// Internal sync method
   Future<void> _sync() async {
