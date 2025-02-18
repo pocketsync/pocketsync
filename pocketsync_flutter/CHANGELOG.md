@@ -1,5 +1,7 @@
 ## 0.0.4
 - Optimize table extraction algo for watching queries
+- Fix: Sometimes, remote changes application caused database locks, it's now fixed
+- Fix: Watching queries was not working as expected.
 
 ## 0.0.3
 - Support watching sql statements
