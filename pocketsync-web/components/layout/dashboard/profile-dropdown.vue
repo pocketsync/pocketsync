@@ -6,11 +6,11 @@
                 <span class="sr-only">Open user menu</span>
                 <ClientOnly>
                     <div class="h-8 w-8 rounded-full overflow-hidden">
-                        <img v-if="session?.user?.avatarUrl" :src="session.user.avatarUrl" :alt="session?.user?.firstName ?? ''"
+                        <img v-if="user?.avatarUrl" :src="user.avatarUrl" :alt="user?.firstName ?? ''"
                             class="h-full w-full rounded-full object-cover" />
                         <div v-else
                             class="h-full w-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center text-primary-600 font-medium">
-                            {{ session?.user ? getUserInitials(session.user) : '' }}
+                            {{ user ? getUserInitials(user) : '' }}
                         </div>
                     </div>
                     <template #fallback>
@@ -35,7 +35,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useUtils } from '~/composables/useUtils'
 
-const { data: session, signOut } = useAuth()
+const { user, signOut } = useAuth()
 const { getUserInitials } = useUtils()
 
 const userMenuOpen = ref(false)

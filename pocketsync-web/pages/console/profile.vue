@@ -7,7 +7,7 @@
                     <h3 class="text-lg font-medium leading-6 text-gray-900">Profile Information</h3>
                     <ErrorAlert v-if="error" :message="error" class="mt-4" />
                     <div class="mt-5 space-y-6">
-                        <div v-if="session?.user" class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                        <div v-if="user" class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                             <div>
                                 <label for="firstName" class="block text-sm font-medium text-gray-700">First
                                     name</label>
@@ -24,7 +24,7 @@
                             </div>
                             <div>
                                 <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
-                                <input type="email" id="email" v-model="session.user.email" disabled
+                                <input type="email" id="email" v-model="user.email" disabled
                                     class="block w-full rounded-md border-0 px-3 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 bg-gray-50 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6" />
                             </div>
                         </div>
@@ -49,7 +49,6 @@ import { ref } from 'vue'
 import { useValidation } from '~/composables/useValidation'
 import { useToast } from '~/composables/useToast'
 import ErrorAlert from '~/components/common/error-alert.vue'
-import { useAuth } from '#auth'
 
 useHead({
     title: 'Profile Settings - PocketSync'
@@ -60,15 +59,15 @@ definePageMeta({
     layout: 'dashboard'
 })
 
-const { data: session, update } = useAuth()
+const { user } = useAuth()
 const { success } = useToast()
 const { validate, rules, errors, clearErrors } = useValidation()
 const error = ref(null)
 const isLoading = ref(false)
 
 const profileData = ref({
-    firstName: session.value?.user?.firstName || '',
-    lastName: session.value?.user?.lastName || ''
+    firstName: user.value?.firstName || '',
+    lastName: user.value?.lastName || ''
 })
 
 const validationRules = {
@@ -89,14 +88,14 @@ const updateUserProfile = async () => {
 
     try {
         isLoading.value = true
-        await update({
-            data: {
-                firstName: profileData.value.firstName,
-                lastName: profileData.value.lastName
-            }
-        })
+        // await update({
+        //     data: {
+        //         firstName: profileData.value.firstName,
+        //         lastName: profileData.value.lastName
+        //     }
+        // })
         success('Profile updated successfully')
-    } catch (err) {
+    } catch (err: any) {
         error.value = err.message
     } finally {
         isLoading.value = false

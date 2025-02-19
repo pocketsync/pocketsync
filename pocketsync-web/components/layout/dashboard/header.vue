@@ -10,10 +10,5 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import ProfileDropdown from './profile-dropdown.vue'
-
-const { user: authUser, logout } = useAuth()
-const userMenuOpen = ref(false)
-
 </script>
