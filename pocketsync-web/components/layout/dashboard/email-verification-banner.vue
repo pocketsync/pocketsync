@@ -1,5 +1,5 @@
 <template>
-    <div v-if="!user?.isEmailVerified" class="bg-yellow-50 p-4 border-b border-yellow-100">
+    <div v-if="!user?.email_verified" class="bg-yellow-50 p-4 border-b border-yellow-100">
         <div class="flex items-center justify-between">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
@@ -22,14 +22,12 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useAuth } from '~/composables/useAuth'
 import { useToast } from '~/composables/useToast'
-import type { UserResponseDto } from '~/api-client'
 
-const { user: authUser, resendEmailVerification } = useAuth()
+const { data: session } = useAuth()
 const { success: successToast, error: errorToast } = useToast()
 
-const user = computed(() => authUser.value as UserResponseDto)
+const user = computed(() => session.value?.user)
 
 const isLoading = ref(false)
 const cooldownSeconds = ref(0)
@@ -50,7 +48,9 @@ const resendVerification = async () => {
 
     try {
         isLoading.value = true
-        await resendEmailVerification()
+        await $fetch('/api/auth/verification/send', {
+            method: 'POST'
+        })
         successToast('Verification email sent successfully')
         startCooldown()
     } catch (error: any) {

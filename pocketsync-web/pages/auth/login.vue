@@ -67,8 +67,7 @@
                             autocomplete="current-password" required
                             :class="{ 'border-red-300 focus:ring-red-500 focus:border-red-500': validationErrors?.password }"
                             class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
-                        <p v-if="validationErrors?.password" class="mt-1 text-sm text-red-600">{{
-            validationErrors.password[0] }}</p>
+                        <p v-if="validationErrors?.password" class="mt-1 text-sm text-red-600">{{ validationErrors.password[0] }}</p>
                     </div>
                 </div>
 
@@ -116,17 +115,16 @@
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
-import { useAuth } from '~/composables/useAuth'
 import { useValidation } from '~/composables/useValidation'
+import ErrorAlert from '~/components/common/error-alert.vue'
 
 useHead({
     title: 'Sign In - PocketSync'
 })
-import ErrorAlert from '~/components/common/error-alert'
 
-const { login, loginWithGithub, loginWithGoogle, error: authError, isLoading } = useAuth()
+const { signIn } = useAuth()
 const { validate, rules, clearErrors } = useValidation()
 
 const form = ref({
@@ -137,6 +135,7 @@ const form = ref({
 
 const error = ref('')
 const validationErrors = ref(null)
+const isLoading = ref(false)
 
 definePageMeta({
     layout: 'auth'
@@ -146,6 +145,7 @@ async function handleLogin() {
     error.value = ''
     validationErrors.value = null
     clearErrors()
+    isLoading.value = true
 
     const validationRules = {
         email: [rules.required(), rules.email()],
@@ -154,40 +154,51 @@ async function handleLogin() {
 
     if (!validate(form.value, validationRules)) {
         validationErrors.value = error.value
+        isLoading.value = false
         return
     }
 
     try {
-        await login(form.value.email, form.value.password)
+        await signIn({
+            email: form.value.email,
+            password: form.value.password
+        })
         navigateTo('/console')
     } catch (err) {
         if (err.code === 'VALIDATION_ERROR' && err.details) {
             validationErrors.value = err.details
         } else {
-            error.value = err.message
+            error.value = err.message || 'An error occurred during sign in'
         }
+        isLoading.value = false
     }
 }
 
 async function handleGithubLogin() {
     error.value = ''
     validationErrors.value = null
+    isLoading.value = true
 
     try {
-        await loginWithGithub()
+        await signIn('github')
+        navigateTo('/console')
     } catch (err) {
-        error.value = err.message
+        error.value = err.message || 'An error occurred during GitHub sign in'
+        isLoading.value = false
     }
 }
 
 async function handleGoogleLogin() {
     error.value = ''
     validationErrors.value = null
+    isLoading.value = true
 
     try {
-        await loginWithGoogle()
+        await signIn('google')
+        navigateTo('/console')
     } catch (err) {
-        error.value = err.message
+        error.value = err.message || 'An error occurred during Google sign in'
+        isLoading.value = false
     }
 }
 </script>

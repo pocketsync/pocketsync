@@ -7,24 +7,24 @@
                     <h3 class="text-lg font-medium leading-6 text-gray-900">Profile Information</h3>
                     <ErrorAlert v-if="error" :message="error" class="mt-4" />
                     <div class="mt-5 space-y-6">
-                        <div v-if="user" class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                        <div v-if="session?.user" class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                             <div>
                                 <label for="firstName" class="block text-sm font-medium text-gray-700">First
                                     name</label>
-                                <input type="text" id="firstName" v-model="user.firstName"
+                                <input type="text" id="firstName" v-model="profileData.firstName"
                                     class="block w-full rounded-md border-0 px-3 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6" />
                                 <p v-if="errors.firstName" class="mt-1 text-sm text-red-600">{{ errors.firstName[0] }}
                                 </p>
                             </div>
                             <div>
                                 <label for="lastName" class="block text-sm font-medium text-gray-700">Last name</label>
-                                <input type="text" id="lastName" v-model="user.lastName"
+                                <input type="text" id="lastName" v-model="profileData.lastName"
                                     class="block w-full rounded-md border-0 px-3 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6" />
                                 <p v-if="errors.lastName" class="mt-1 text-sm text-red-600">{{ errors.lastName[0] }}</p>
                             </div>
                             <div>
                                 <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
-                                <input type="email" id="email" v-model="user.email" disabled
+                                <input type="email" id="email" v-model="session.user.email" disabled
                                     class="block w-full rounded-md border-0 px-3 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 bg-gray-50 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6" />
                             </div>
                         </div>
@@ -45,12 +45,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { useAuth } from '~/composables/useAuth'
-import { useUtils } from '~/composables/useUtils'
+import { ref } from 'vue'
 import { useValidation } from '~/composables/useValidation'
 import { useToast } from '~/composables/useToast'
 import ErrorAlert from '~/components/common/error-alert.vue'
+import { useAuth } from '#auth'
 
 useHead({
     title: 'Profile Settings - PocketSync'
@@ -61,13 +60,16 @@ definePageMeta({
     layout: 'dashboard'
 })
 
-const { user: authUser, ensureUserProfile, updateProfile, error: authError, isLoading } = useAuth()
-const { getUserInitials } = useUtils()
+const { data: session, update } = useAuth()
 const { success } = useToast()
 const { validate, rules, errors, clearErrors } = useValidation()
-
-const user = computed(() => authUser.value as UserResponseDto)
 const error = ref(null)
+const isLoading = ref(false)
+
+const profileData = ref({
+    firstName: session.value?.user?.firstName || '',
+    lastName: session.value?.user?.lastName || ''
+})
 
 const validationRules = {
     firstName: [rules.required('First name is required'), rules.maxLength(50, 'First name must not exceed 50 characters')],
@@ -79,20 +81,25 @@ const updateUserProfile = async () => {
     error.value = null
 
     const isValid = validate({
-        firstName: user.value?.firstName,
-        lastName: user.value?.lastName
+        firstName: profileData.value.firstName,
+        lastName: profileData.value.lastName
     }, validationRules)
 
     if (!isValid) return
 
     try {
-        await updateProfile({
-            firstName: user.value.firstName,
-            lastName: user.value.lastName
+        isLoading.value = true
+        await update({
+            data: {
+                firstName: profileData.value.firstName,
+                lastName: profileData.value.lastName
+            }
         })
         success('Profile updated successfully')
     } catch (err) {
         error.value = err.message
+    } finally {
+        isLoading.value = false
     }
 }
 </script>

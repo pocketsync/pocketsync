@@ -130,21 +130,19 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { useAuth } from '~/composables/useAuth'
+import { useValidation } from '~/composables/useValidation'
+import ErrorAlert from '~/components/common/error-alert.vue'
 
 useHead({
     title: 'Create Account - PocketSync'
 })
-import { useRouter } from '#app'
-import { useValidation } from '~/composables/useValidation'
-import ErrorAlert from '~/components/common/error-alert'
 
 definePageMeta({
     layout: 'auth'
 })
 
-const { register, loginWithGoogle, loginWithGithub, error: authError } = useAuth()
-const router = useRouter()
+const auth = useAuth()
+const { rules, validate, clearErrors } = useValidation()
 
 const userForm = ref({
     firstName: '',
@@ -159,13 +157,11 @@ const termsError = ref(false)
 
 // Computed property to extract validation errors
 const validationErrors = computed(() => {
-    if (authError.value?.code === 'VALIDATION_ERROR') {
-        return authError.value.details
+    if (errorMessage.value?.code === 'VALIDATION_ERROR') {
+        return errorMessage.value.details
     }
     return null
 })
-
-const { rules, validate, clearErrors } = useValidation()
 
 async function handleRegister() {
     errorMessage.value = ''
@@ -192,43 +188,41 @@ async function handleRegister() {
 
     try {
         isLoading.value = true
-        const data = await register(userForm.value)
-        if (data) {
-            router.push({ name: 'console' })
-        }
+        await auth.signUp({
+            email: userForm.value.email,
+            password: userForm.value.password,
+            firstName: userForm.value.firstName,
+            lastName: userForm.value.lastName
+        })
+        navigateTo('/console')
     } catch (error) {
-        if (error.code === 'EMAIL_EXISTS') {
-            errorMessage.value = 'This email is already registered'
-        } else if (error.code === 'VALIDATION_ERROR') {
-            errorMessage.value = 'Please check your input'
-        } else {
-            errorMessage.value = error.message || 'An error occurred during registration. Please try again.'
-        }
-    } finally {
+        errorMessage.value = error.message || 'An error occurred during registration'
         isLoading.value = false
     }
 }
 
 async function handleGithubRegister() {
+    errorMessage.value = ''
+    isLoading.value = true
+
     try {
-        isLoading.value = true
-        await loginWithGithub()
-        await router.push('/console')
+        await auth.signIn({ provider: 'github' })
+        navigateTo('/console')
     } catch (error) {
-        errorMessage.value = 'Failed to register with GitHub. Please try again.'
-    } finally {
+        errorMessage.value = error.message || 'An error occurred during GitHub registration'
         isLoading.value = false
     }
 }
 
 async function handleGoogleRegister() {
+    errorMessage.value = ''
+    isLoading.value = true
+
     try {
-        isLoading.value = true
-        await loginWithGoogle()
-        await router.push('/console')
+        await auth.signIn({ provider: 'google' })
+        navigateTo('/console')
     } catch (error) {
-        errorMessage.value = 'Failed to register with Google. Please try again.'
-    } finally {
+        errorMessage.value = error.message || 'An error occurred during Google registration'
         isLoading.value = false
     }
 }

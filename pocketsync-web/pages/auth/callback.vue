@@ -9,7 +9,6 @@
 
 <script setup>
 import { onMounted } from 'vue'
-import { useAuth } from '~/composables/useAuth'
 
 const route = useRoute()
 const { error } = useAuth()

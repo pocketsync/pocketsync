@@ -84,7 +84,6 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useAuth } from '~/composables/useAuth'
 import { useValidation } from '~/composables/useValidation'
 
 definePageMeta({

@@ -52,7 +52,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from '#app'
-import { useAuth } from '~/composables/useAuth'
 import ErrorAlert from '~/components/common/error-alert'
 
 useHead({

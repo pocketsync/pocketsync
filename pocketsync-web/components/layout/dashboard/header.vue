@@ -1,25 +1,25 @@
 <template>
-    <header class="bg-gradient-to-r from-white to-gray-50 shadow-sm border-b border-gray-200">
-        <div class="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-            <h1 class="text-xl font-bold text-gray-900">Dashboard</h1>
+    <div class="sticky top-0 z-10 flex h-16 flex-shrink-0 bg-white shadow">
+        <button type="button" @click="sidebarOpen = true"
+            class="border-r border-gray-200 px-4 text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 md:hidden">
+            <span class="sr-only">Open sidebar</span>
+            <Bars3Icon class="h-6 w-6" aria-hidden="true" />
+        </button>
+        <div class="flex flex-1 justify-between px-4">
+            <div class="flex flex-1">
+                <!-- Search bar if needed -->
+            </div>
             <div class="ml-4 flex items-center md:ml-6">
                 <ProfileDropdown />
             </div>
         </div>
-    </header>
+    </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useAuth } from '~/composables/useAuth'
+import { Bars3Icon } from '@heroicons/vue/24/outline'
+import { useAuth } from '#auth'
 import ProfileDropdown from './profile-dropdown.vue'
 
-const { user: authUser, logout } = useAuth()
-const userMenuOpen = ref(false)
-
-watch(() => authUser.value, (newUser) => {
-    if (!newUser) {
-        userMenuOpen.value = false
-    }
-}, { immediate: true })
+const sidebarOpen = defineModel('sidebarOpen')
 </script>
