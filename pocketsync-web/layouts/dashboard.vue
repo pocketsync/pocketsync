@@ -83,12 +83,9 @@ const CloseMenuIcon = PhX
 const sidebarOpen = ref(false)
 const userMenuOpen = ref(false)
 
-const { getCurrentUser } = useAuth()
-
 const ExternalLinkIcon = PhArrowSquareOut
 
 onMounted(async () => {
-    getCurrentUser()
     document.addEventListener('click', (event) => {
         const target = event.target
         if (!target.closest('.user-menu')) {

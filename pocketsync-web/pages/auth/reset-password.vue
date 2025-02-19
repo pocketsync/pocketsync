@@ -152,6 +152,8 @@ watch(confirmPassword, (newValue) => {
     }
 })
 
+const { resetPassword } = useAuth()
+
 async function handleSubmit() {
     error.value = ''
     passwordError.value = validatePassword(password.value)
@@ -172,11 +174,10 @@ async function handleSubmit() {
 
     try {
         isLoading.value = true
-        const { resetPassword, error: authError } = useAuth()
         await resetPassword(token.value, password.value)
         resetComplete.value = true
     } catch (err) {
-        error.value = authError.value?.message || 'Failed to reset password. Please try again.'
+        error.value = err.message || 'Failed to reset password. Please try again.'
     } finally {
         isLoading.value = false
     }

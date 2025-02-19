@@ -121,6 +121,10 @@ export const useAuth = () => {
     }
 
     const getCurrentUser = async () => {
+        if (isAuthenticated.value) {
+            return;
+        }
+        
         error.value = null
         try {
             const response = await authApi.getCurrentUser()
@@ -185,6 +189,32 @@ export const useAuth = () => {
         }
     }
 
+    const requestPasswordReset = async (email: string) => {
+        error.value = null
+        try {
+            isLoading.value = true
+            await authApi.requestPasswordReset({ email })
+        } catch (err: any) {
+            error.value = handleAuthError(err)
+            throw error.value
+        } finally {
+            isLoading.value = false
+        }
+    }
+
+    const resetPassword = async (token: string, newPassword: string) => {
+        error.value = null
+        try {
+            isLoading.value = true
+            await authApi.resetPassword({ token, newPassword })
+        } catch (err: any) {
+            error.value = handleAuthError(err)
+            throw error.value
+        } finally {
+            isLoading.value = false
+        }
+    }
+
     return {
         user,
         isAuthenticated,
@@ -193,9 +223,10 @@ export const useAuth = () => {
         signIn,
         signInWithProvider,
         signOut,
-        getCurrentUser,
-        updateProfile,
+        requestPasswordReset,
+        resetPassword,
         changePassword,
-        signUp
+        getCurrentUser,
+        updateProfile
     }
 }
