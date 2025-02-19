@@ -139,6 +139,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useValidation } from '~/composables/useValidation'
+import { useAuth } from '~/composables/useAuth'
 import ErrorAlert from '~/components/common/error-alert.vue'
 
 useHead({
@@ -149,7 +150,7 @@ definePageMeta({
     layout: 'auth'
 })
 
-const auth = useAuth()
+const { signUp, signInWithProvider } = useAuth()
 const { rules, validate, clearErrors } = useValidation()
 
 const userForm = ref({
@@ -196,7 +197,7 @@ async function handleRegister() {
 
     try {
         isLoading.value = true
-        await auth.signUp({
+        await signUp({
             email: userForm.value.email,
             password: userForm.value.password,
             firstName: userForm.value.firstName,
@@ -214,8 +215,7 @@ async function handleGithubRegister() {
     isLoading.value = true
 
     try {
-        await auth.signIn({ provider: 'github' })
-        navigateTo('/console')
+        await signInWithProvider('github')
     } catch (error) {
         errorMessage.value = error.message || 'An error occurred during GitHub registration'
         isLoading.value = false
@@ -227,8 +227,7 @@ async function handleGoogleRegister() {
     isLoading.value = true
 
     try {
-        await auth.signIn({ provider: 'google' })
-        navigateTo('/console')
+        await signInWithProvider('google')
     } catch (error) {
         errorMessage.value = error.message || 'An error occurred during Google registration'
         isLoading.value = false

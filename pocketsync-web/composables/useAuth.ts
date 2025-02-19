@@ -163,6 +163,28 @@ export const useAuth = () => {
         }
     }
 
+    const signUp = async (data: { email: string; password: string; firstName: string; lastName: string }) => {
+        error.value = null
+        try {
+            isLoading.value = true
+            const response = await authApi.registerUser(data)
+            const { accessToken, refreshToken } = response.data
+            const accessTokenCookie = useCookie(ACCESS_TOKEN_COOKIE_NAME, cookieOptions)
+            const refreshTokenCookie = useCookie(REFRESH_TOKEN_COOKIE_NAME, cookieOptions)
+    
+            accessTokenCookie.value = accessToken
+            refreshTokenCookie.value = refreshToken
+            user.value = response.data.user
+            isAuthenticated.value = true
+            return response.data
+        } catch (err: any) {
+            error.value = handleAuthError(err)
+            throw error.value
+        } finally {
+            isLoading.value = false
+        }
+    }
+
     return {
         user,
         isAuthenticated,
@@ -173,6 +195,7 @@ export const useAuth = () => {
         signOut,
         getCurrentUser,
         updateProfile,
-        changePassword
+        changePassword,
+        signUp
     }
 }
