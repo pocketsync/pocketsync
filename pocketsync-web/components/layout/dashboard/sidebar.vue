@@ -25,21 +25,21 @@
             <div class="flex flex-shrink-0 border-t border-gray-200 p-4">
                 <div class="group block w-full flex-shrink-0">
                     <div class="flex items-center">
-                        <div :key="session?.user?.id">
+                        <div :key="user?.id">
                             <div class="inline-block h-9 w-9 rounded-full">
-                                <img v-if="session?.user?.avatarUrl" :src="session.user.avatarUrl" :alt="session?.user?.firstName ?? ''"
+                                <img v-if="user?.avatarUrl" :src="user.avatarUrl" :alt="user?.firstName ?? ''"
                                     class="h-full w-full rounded-full object-cover" />
                                 <div v-else
                                     class="inline-flex h-full w-full items-center justify-center rounded-full bg-primary-100">
                                     <span class="text-sm font-medium text-primary-600">
-                                        {{ getUserInitials(session?.user) }}
+                                        {{ getUserInitials(user) }}
                                     </span>
                                 </div>
                             </div>
                         </div>
                         <div class="ml-3">
                             <p class="text-sm font-medium text-gray-700 group-hover:text-gray-900">
-                                {{ session?.user ? `${session.user.firstName ?? ''} ${session.user.lastName ?? ''}` : '' }}
+                                {{ user ? `${user.firstName ?? ''} ${user.lastName ?? ''}` : '' }}
                             </p>
                             <button @click="handleSignOut"
                                 class="text-xs font-medium text-gray-500 group-hover:text-gray-700 cursor-pointer">
@@ -61,7 +61,7 @@ import {
 import { useUtils } from '~/composables/useUtils'
 
 const route = useRoute()
-const { data: session, signOut } = useAuth()
+const { user, signOut } = useAuth()
 const { getUserInitials } = useUtils()
 
 const handleSignOut = async () => {

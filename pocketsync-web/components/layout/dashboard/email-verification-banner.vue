@@ -1,5 +1,5 @@
 <template>
-    <div v-if="!user?.email_verified" class="bg-yellow-50 p-4 border-b border-yellow-100">
+    <div v-if="!user?.isEmailVerified" class="bg-yellow-50 p-4 border-b border-yellow-100">
         <div class="flex items-center justify-between">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
@@ -24,10 +24,8 @@
 import { ref, computed } from 'vue'
 import { useToast } from '~/composables/useToast'
 
-const { data: session } = useAuth()
+const { user } = useAuth()
 const { success: successToast, error: errorToast } = useToast()
-
-const user = computed(() => session.value?.user)
 
 const isLoading = ref(false)
 const cooldownSeconds = ref(0)

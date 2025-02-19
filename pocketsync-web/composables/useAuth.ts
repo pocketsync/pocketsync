@@ -1,6 +1,7 @@
 import { ref } from 'vue'
-import { AuthenticationApi, Configuration } from '~/api-client'
+import { AuthenticationApi } from '~/api-client'
 import type { LoginDto, UserResponseDto } from '~/api-client'
+import { cookieOptions, ACCESS_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME } from '~/utils/cookie.options'
 
 interface AuthError {
     message: string
@@ -17,7 +18,7 @@ type AuthErrorCode =
     | 'UNKNOWN_ERROR'
 
 export const useAuth = () => {
-    const user = ref<UserResponseDto | null>(null)
+    const user = useState<UserResponseDto | null>('user', () => null)
     const isAuthenticated = ref(false)
     const isLoading = ref(false)
     const error = ref<AuthError | null>(null)
@@ -66,6 +67,12 @@ export const useAuth = () => {
         try {
             isLoading.value = true
             const response = await authApi.loginUser(credentials)
+            const { accessToken, refreshToken } = response.data
+            const accessTokenCookie = useCookie(ACCESS_TOKEN_COOKIE_NAME, cookieOptions)
+            const refreshTokenCookie = useCookie(REFRESH_TOKEN_COOKIE_NAME, cookieOptions)
+
+            accessTokenCookie.value = accessToken
+            refreshTokenCookie.value = refreshToken
             user.value = response.data.user
             isAuthenticated.value = true
         } catch (err: any) {
