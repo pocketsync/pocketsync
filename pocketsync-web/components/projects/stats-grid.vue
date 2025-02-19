@@ -5,7 +5,7 @@
             <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">{{ stats.totalUsers || 0 }}</dd>
             <dd class="mt-2 flex items-center text-sm text-gray-600">
                 <PhUsers class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-400" />
-                <span>{{ stats.activeUsers }} active today</span>
+                <span>{{ stats.activeUsersToday || 0 }} active today</span>
             </dd>
         </div>
 
@@ -14,7 +14,7 @@
             <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">{{ stats.totalDevices || 0 }}</dd>
             <dd class="mt-2 flex items-center text-sm text-gray-600">
                 <PhDeviceMobile class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-400" />
-                <span>{{ stats.activeDevices }} online now</span>
+                <span>{{ stats.onlineDevices || 0 }} online now</span>
             </dd>
         </div>
 
@@ -23,7 +23,7 @@
             <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">{{ stats.totalChangeLogs || 0 }}</dd>
             <dd class="mt-2 flex items-center text-sm text-gray-600">
                 <PhArrowsClockwise class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-400" />
-                <span>{{ stats.pendingChanges }} pending sync</span>
+                <span>{{ stats.pendingChanges || 0 }} pending sync</span>
             </dd>
         </div>
     </div>
@@ -35,9 +35,9 @@ import { PhUsers, PhDeviceMobile, PhArrowsClockwise } from '@phosphor-icons/vue'
 const props = defineProps<{
     stats: {
         totalUsers: number
-        activeUsers: number
+        activeUsersToday: number
         totalDevices: number
-        activeDevices: number
+        onlineDevices: number
         totalChangeLogs: number
         pendingChanges: number,
     }
