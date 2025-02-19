@@ -118,6 +118,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useAuth } from '~/composables/useAuth'
 import { useValidation } from '~/composables/useValidation'
 import ErrorAlert from '~/components/common/error-alert.vue'
 
@@ -125,7 +126,7 @@ useHead({
     title: 'Sign In - PocketSync'
 })
 
-const { signIn } = useAuth()
+const { signIn, signInWithProvider, isLoading } = useAuth()
 const { validate, rules, clearErrors } = useValidation()
 const router = useRouter()
 const form = ref({
@@ -135,8 +136,7 @@ const form = ref({
 })
 
 const error = ref('')
-const validationErrors = ref(null)
-const isLoading = ref(false)
+const validationErrors = ref<Record<string, any> | undefined>(undefined)
 
 definePageMeta({
     layout: 'auth'
@@ -144,7 +144,7 @@ definePageMeta({
 
 async function handleLogin() {
     error.value = ''
-    validationErrors.value = null
+    validationErrors.value = undefined
     clearErrors()
     isLoading.value = true
 
@@ -154,7 +154,7 @@ async function handleLogin() {
     }
 
     if (!validate(form.value, validationRules)) {
-        validationErrors.value = error.value
+        validationErrors.value = error
         isLoading.value = false
         return
     }
@@ -163,8 +163,9 @@ async function handleLogin() {
         await signIn({
             email: form.value.email,
             password: form.value.password
-        }, { callbackUrl: '/console' })
-    } catch (err) {
+        })
+        await router.push('/console')
+    } catch (err: any) {
         if (err.code === 'VALIDATION_ERROR' && err.details) {
             validationErrors.value = err.details
         } else {
@@ -176,13 +177,12 @@ async function handleLogin() {
 
 async function handleGithubLogin() {
     error.value = ''
-    validationErrors.value = null
+    validationErrors.value = undefined
     isLoading.value = true
 
     try {
-        await signIn('github')
-        navigateTo('/console')
-    } catch (err) {
+        await signInWithProvider('github')
+    } catch (err: any) {
         error.value = err.message || 'An error occurred during GitHub sign in'
         isLoading.value = false
     }
@@ -190,13 +190,12 @@ async function handleGithubLogin() {
 
 async function handleGoogleLogin() {
     error.value = ''
-    validationErrors.value = null
+    validationErrors.value = undefined
     isLoading.value = true
 
     try {
-        await signIn('google')
-        navigateTo('/console')
-    } catch (err) {
+        await signInWithProvider('google')
+    } catch (err: any) {
         error.value = err.message || 'An error occurred during Google sign in'
         isLoading.value = false
     }
