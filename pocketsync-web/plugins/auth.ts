@@ -4,7 +4,9 @@ export default defineNuxtPlugin(async (nuxtApp) => {
   const auth = useAuth()
   
   // Initialize auth during SSR and client-side
-  await auth.initAuth()
+  if (process.client) {
+    await auth.initAuth()
+  }
 
   // Set up global error handler for auth errors
   nuxtApp.vueApp.config.errorHandler = (error: any) => {
@@ -39,31 +41,37 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       return true
     }
 
-    // Only fetch profile if authenticated and profile is not already loaded
-    if (auth.isAuthenticated.value && !auth.user.value) {
-      await auth.fetchUserProfile()
-    }
+    try {
+      // Only fetch profile if authenticated and profile is not already loaded
+      if (auth.isAuthenticated.value && !auth.user.value) {
+        await auth.fetchUserProfile()
+      }
 
-    const isAuthPage = authPages.includes(to.path)
-    const isPublicPage = publicPages.includes(to.path)
-    const isAuthenticated = auth.isAuthenticated.value
+      const isAuthPage = authPages.includes(to.path)
+      const isPublicPage = publicPages.includes(to.path)
+      const isAuthenticated = auth.isAuthenticated.value
 
-    if (isAuthPage && isAuthenticated) {
-      return '/console'
-    }
-
-    if (isPublicPage) {
-      if (isAuthenticated && to.path.startsWith('/auth/')) {
+      if (isAuthPage && isAuthenticated) {
         return '/console'
       }
-      return true
-    }
 
-    // Protect private pages
-    if (!isAuthenticated) {
+      if (isPublicPage) {
+        if (isAuthenticated && to.path.startsWith('/auth/')) {
+          return '/console'
+        }
+        return true
+      }
+
+      // Protect private pages
+      if (!isAuthenticated) {
+        return '/auth/login'
+      }
+
+      return true
+    } catch (error) {
+      console.error('Navigation guard error:', error)
+      auth.logout()
       return '/auth/login'
     }
-
-    return true
   })
 })
