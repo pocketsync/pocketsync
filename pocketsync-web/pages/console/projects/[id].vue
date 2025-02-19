@@ -50,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import IntegrationTab from '~/components/projects/integration-tab.vue'
 import UsersTab from '~/components/projects/users-tab.vue'
 import AuthTokensTab from '~/components/projects/auth-tokens-tab.vue'
@@ -86,11 +86,11 @@ const authTokens = computed(() => currentProject.value?.authTokens || [])
 const stats = computed(() => {
     return currentProject.value?.stats || {
         totalUsers: 0,
-        activeUsers: 0,
+        activeUsersToday: 0,
         totalDevices: 0,
-        activeDevices: 0,
+        onlineDevices: 0,
         totalChangeLogs: 0,
-        pendingChanges: 0
+        pendingChanges: 0,
     }
 })
 
