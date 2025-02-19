@@ -45,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useValidation } from '~/composables/useValidation'
 import { useToast } from '~/composables/useToast'
 import ErrorAlert from '~/components/common/error-alert.vue'
@@ -69,6 +69,15 @@ const profileData = ref({
     firstName: user.value?.firstName || '',
     lastName: user.value?.lastName || ''
 })
+
+watch(() => user.value, (newUser) => {
+    if (newUser) {
+        profileData.value = {
+            firstName: newUser.firstName || '',
+            lastName: newUser.lastName || ''
+        }
+    }
+}, { immediate: true })
 
 const validationRules = {
     firstName: [rules.required('First name is required'), rules.maxLength(50, 'First name must not exceed 50 characters')],
