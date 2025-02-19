@@ -22,7 +22,7 @@ useHead({
     { name: 'twitter:description', content: 'PocketSync is a powerful local-first synchronization solution that helps you keep your data in sync across all your devices while maintaining privacy and security.' },
   ],
   link: [
-    { rel: 'canonical', href: `https://pocketsync.io${route.path}` },
+    { rel: 'canonical', href: `https://pocketsync.dev${route.path}` },
   ]
 })
 </script>

@@ -34,7 +34,7 @@ export class EmailService {
       const info = await this.transporter.sendMail({
         from: emailConfig.from,
         to,
-        subject,
+        subject: `PocketSync - ${subject}`,
         html,
       });
 
@@ -58,6 +58,6 @@ export class EmailService {
       resetLink,
     });
 
-    return this.sendEmail(to, 'Reset Your Password', html);
+    return this.sendEmail(to, 'Reset your password', html);
   }
 }

@@ -91,13 +91,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useToast } from '~/composables/useToast'
 import { formatDistanceToNow } from 'date-fns'
 
 const { success: showSuccessToast } = useToast()
 
-const props = defineProps<{
+defineProps<{
     project: {
         id: string
         name: string
@@ -110,11 +109,8 @@ const props = defineProps<{
     }>
 }>()
 
-const emit = defineEmits(['create-token'])
-const { showToast } = useToast()
-
 // Server URL from environment variable
-const serverUrl = process.env.NUXT_PUBLIC_API_BASE_URL || 'https://api.pocketsync.io'
+const serverUrl = process.env.NUXT_PUBLIC_API_BASE_URL || 'https://api.pocketsync.dev'
 
 function copyToClipboard(text: string) {
     navigator.clipboard.writeText(text)
@@ -123,9 +119,5 @@ function copyToClipboard(text: string) {
 
 function formatDate(date: string) {
     return formatDistanceToNow(new Date(date), { addSuffix: true })
-}
-
-function openCreateTokenModal() {
-    emit('create-token')
 }
 </script>
