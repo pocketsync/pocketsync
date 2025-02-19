@@ -175,7 +175,7 @@ export const useAuth = () => {
             const { accessToken, refreshToken } = response.data
             const accessTokenCookie = useCookie(ACCESS_TOKEN_COOKIE_NAME, cookieOptions)
             const refreshTokenCookie = useCookie(REFRESH_TOKEN_COOKIE_NAME, cookieOptions)
-    
+
             accessTokenCookie.value = accessToken
             refreshTokenCookie.value = refreshToken
             user.value = response.data.user
@@ -237,6 +237,20 @@ export const useAuth = () => {
         try {
             isLoading.value = true
             await authApi.verifyEmail({ token })
+            await getCurrentUser()
+        } catch (err: any) {
+            error.value = handleAuthError(err)
+            throw error.value
+        } finally {
+            isLoading.value = false
+        }
+    }
+
+    const sendEmailVerification = async () => {
+        error.value = null
+        try {
+            isLoading.value = true
+            await authApi.resendEmailVerification()
         } catch (err: any) {
             error.value = handleAuthError(err)
             throw error.value
@@ -259,6 +273,7 @@ export const useAuth = () => {
         getCurrentUser,
         updateProfile,
         handleSocialCallback,
+        sendEmailVerification,
         verifyEmail,
         signUp,
     }

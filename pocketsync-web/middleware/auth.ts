@@ -13,6 +13,10 @@ export default defineNuxtRouteMiddleware(async (to) => {
         return navigateTo('/auth/login')
     }
 
+    if (isAuthenticated.value && to.path.startsWith('/auth')) {
+        return navigateTo('/console')
+    }
+
     try {
         // Fetch current user profile
         await getCurrentUser()

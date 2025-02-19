@@ -24,7 +24,7 @@
 import { ref, computed } from 'vue'
 import { useToast } from '~/composables/useToast'
 
-const { user } = useAuth()
+const { user, sendEmailVerification } = useAuth()
 const { success: successToast, error: errorToast } = useToast()
 
 const isLoading = ref(false)
@@ -46,9 +46,7 @@ const resendVerification = async () => {
 
     try {
         isLoading.value = true
-        await $fetch('/api/auth/verification/send', {
-            method: 'POST'
-        })
+        sendEmailVerification()
         successToast('Verification email sent successfully')
         startCooldown()
     } catch (error: any) {
