@@ -33,7 +33,7 @@ export default defineNuxtConfig({
         login: '/auth/login'
       },
       token: {
-        signInResponseTokenPointer: '/access_token'
+        signInResponseTokenPointer: '/accessToken'
       }
     },
     globalAppMiddleware: {
@@ -41,6 +41,6 @@ export default defineNuxtConfig({
     }
   },
   routeRules: {
-    '/console/**': { middleware: ['auth'] }
+    '/console/**': { appMiddleware: "sidebase-auth" }
   }
 });

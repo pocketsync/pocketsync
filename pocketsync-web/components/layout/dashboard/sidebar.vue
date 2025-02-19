@@ -54,7 +54,6 @@
 </template>
 
 <script setup lang="ts">
-import { useAuth } from '#auth'
 import { useUtils } from '~/composables/useUtils'
 
 const { data: session, signOut } = useAuth()

@@ -23,10 +23,14 @@
                     class="w-full flex justify-center items-center px-4 py-2.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200"
                     :disabled="isLoading">
                     <svg class="h-5 w-5 mr-2" viewBox="0 0 24 24">
-                        <path fill="#EA4335" d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115Z" />
-                        <path fill="#34A853" d="M16.04 18.013c-1.09.703-2.474 1.078-4.04 1.078a7.077 7.077 0 0 1-6.723-4.823l-4.04 3.067A11.965 11.965 0 0 0 12 24c2.933 0 5.735-1.043 7.834-3l-3.793-2.987Z" />
-                        <path fill="#4A90E2" d="M19.834 21c2.195-2.048 3.62-5.096 3.62-9 0-.71-.109-1.473-.272-2.182H12v4.637h6.436c-.317 1.559-1.17 2.766-2.395 3.558L19.834 21Z" />
-                        <path fill="#FBBC05" d="M5.277 14.268A7.12 7.12 0 0 1 4.909 12c0-.782.125-1.533.357-2.235L1.24 6.65A11.934 11.934 0 0 0 0 12c0 1.92.445 3.73 1.237 5.335l4.04-3.067Z" />
+                        <path fill="#EA4335"
+                            d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115Z" />
+                        <path fill="#34A853"
+                            d="M16.04 18.013c-1.09.703-2.474 1.078-4.04 1.078a7.077 7.077 0 0 1-6.723-4.823l-4.04 3.067A11.965 11.965 0 0 0 12 24c2.933 0 5.735-1.043 7.834-3l-3.793-2.987Z" />
+                        <path fill="#4A90E2"
+                            d="M19.834 21c2.195-2.048 3.62-5.096 3.62-9 0-.71-.109-1.473-.272-2.182H12v4.637h6.436c-.317 1.559-1.17 2.766-2.395 3.558L19.834 21Z" />
+                        <path fill="#FBBC05"
+                            d="M5.277 14.268A7.12 7.12 0 0 1 4.909 12c0-.782.125-1.533.357-2.235L1.24 6.65A11.934 11.934 0 0 0 0 12c0 1.92.445 3.73 1.237 5.335l4.04-3.067Z" />
                     </svg>
                     Continue with Google
                 </button>
@@ -50,7 +54,7 @@
                         </label>
                         <div class="mt-1">
                             <input id="firstName" v-model="userForm.firstName" name="firstName" type="text" required
-                                :class="{'border-red-300 focus:ring-red-500 focus:border-red-500': validationErrors?.firstName}"
+                                :class="{ 'border-red-300 focus:ring-red-500 focus:border-red-500': validationErrors?.firstName }"
                                 class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
                         </div>
                     </div>
@@ -61,7 +65,7 @@
                         </label>
                         <div class="mt-1">
                             <input id="lastName" v-model="userForm.lastName" name="lastName" type="text" required
-                                :class="{'border-red-300 focus:ring-red-500 focus:border-red-500': validationErrors?.lastName}"
+                                :class="{ 'border-red-300 focus:ring-red-500 focus:border-red-500': validationErrors?.lastName }"
                                 class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
                         </div>
                     </div>
@@ -72,8 +76,9 @@
                         Email address
                     </label>
                     <div class="mt-1">
-                        <input id="email" v-model="userForm.email" name="email" type="email" autocomplete="email" required
-                            :class="{'border-red-300 focus:ring-red-500 focus:border-red-500': validationErrors?.email}"
+                        <input id="email" v-model="userForm.email" name="email" type="email" autocomplete="email"
+                            required
+                            :class="{ 'border-red-300 focus:ring-red-500 focus:border-red-500': validationErrors?.email }"
                             class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
                     </div>
                 </div>
@@ -84,7 +89,7 @@
                     </label>
                     <div class="mt-1">
                         <input id="password" v-model="userForm.password" name="password" type="password" required
-                            :class="{'border-red-300 focus:ring-red-500 focus:border-red-500': validationErrors?.password}"
+                            :class="{ 'border-red-300 focus:ring-red-500 focus:border-red-500': validationErrors?.password }"
                             class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
                     </div>
                     <p class="mt-1 text-sm text-gray-500">Must be at least 8 characters with numbers and letters</p>
@@ -92,13 +97,15 @@
 
                 <div class="flex items-center">
                     <input id="terms" v-model="acceptTerms" name="terms" type="checkbox" required
-                        :class="{'border-red-300': termsError}"
+                        :class="{ 'border-red-300': termsError }"
                         class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer" />
                     <label for="terms" class="ml-2 block text-sm text-gray-900">
                         I agree to the
-                        <NuxtLink to="/terms" class="font-medium text-primary-600 hover:text-primary-500">Terms of Service</NuxtLink>
+                        <NuxtLink to="/terms" class="font-medium text-primary-600 hover:text-primary-500">Terms of
+                            Service</NuxtLink>
                         and
-                        <NuxtLink to="/privacy" class="font-medium text-primary-600 hover:text-primary-500">Privacy Policy</NuxtLink>
+                        <NuxtLink to="/privacy" class="font-medium text-primary-600 hover:text-primary-500">Privacy
+                            Policy</NuxtLink>
                     </label>
                 </div>
 
@@ -108,7 +115,8 @@
                         :class="{ 'opacity-75 cursor-not-allowed': isLoading }" :disabled="isLoading">
                         <svg v-if="isLoading" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
                             xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
                             <path class="opacity-75" fill="currentColor"
                                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
                             </path>
