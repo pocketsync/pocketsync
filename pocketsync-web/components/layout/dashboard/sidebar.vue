@@ -54,12 +54,29 @@
 </template>
 
 <script setup lang="ts">
+import {
+    PhBook,
+    PhHouse,
+} from '@phosphor-icons/vue'
 import { useUtils } from '~/composables/useUtils'
 
+const route = useRoute()
 const { data: session, signOut } = useAuth()
 const { getUserInitials } = useUtils()
 
 const handleSignOut = async () => {
     await signOut()
 }
+
+function isActive(href: string): boolean {
+    if (href === '/console') {
+        return route.path === href
+    }
+    return route.path.startsWith(href)
+}
+
+const navigation = [
+    { name: 'Dashboard', href: '/console', icon: PhHouse },
+    { name: 'Projects', href: '/console/projects', icon: PhBook },
+]
 </script>

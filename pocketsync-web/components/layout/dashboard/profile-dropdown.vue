@@ -33,7 +33,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { useAuth } from '#auth'
 import { useUtils } from '~/composables/useUtils'
 
 const { data: session, signOut } = useAuth()

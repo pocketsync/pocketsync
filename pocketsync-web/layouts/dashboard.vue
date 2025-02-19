@@ -81,26 +81,6 @@ const OpenMenuIcon = PhList
 const CloseMenuIcon = PhX
 const sidebarOpen = ref(false)
 const userMenuOpen = ref(false)
-const { ensureUserProfile } = useAuth()
-
-const navigationLinks = [
-    {
-        name: 'Dashboard',
-        to: '/console',
-        icon: PhCode
-    },
-    {
-        name: 'Projects',
-        to: '/console/projects',
-        icon: PhFolder
-    },
-    {
-        name: 'Documentation',
-        to: 'https://docs.pocketsync.dev',
-        icon: PhBook,
-        external: true
-    }
-]
 
 const ExternalLinkIcon = PhArrowSquareOut
 
@@ -111,8 +91,6 @@ onMounted(async () => {
             userMenuOpen.value = false
         }
     })
-
-    await ensureUserProfile()
 })
 
 useHead({
