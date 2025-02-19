@@ -46,7 +46,7 @@ export const useAuth = () => {
                 }
             case 401:
                 return {
-                    message: data.message || 'Invalid credentials. Please check your email and password.',
+                    message: 'Invalid credentials. Please check your email and password.',
                     code: 'INVALID_CREDENTIALS'
                 }
             case 403:
@@ -124,7 +124,7 @@ export const useAuth = () => {
         if (isAuthenticated.value) {
             return;
         }
-        
+
         error.value = null
         try {
             const response = await authApi.getCurrentUser()
@@ -215,6 +215,36 @@ export const useAuth = () => {
         }
     }
 
+    const handleSocialCallback = async (accessToken: string, refreshToken: string) => {
+        error.value = null
+        try {
+            isLoading.value = true
+            const accessTokenCookie = useCookie(ACCESS_TOKEN_COOKIE_NAME, cookieOptions)
+            const refreshTokenCookie = useCookie(REFRESH_TOKEN_COOKIE_NAME, cookieOptions)
+            accessTokenCookie.value = accessToken
+            refreshTokenCookie.value = refreshToken
+            await getCurrentUser()
+        } catch (err: any) {
+            error.value = handleAuthError(err)
+            throw error.value
+        } finally {
+            isLoading.value = false
+        }
+    }
+
+    const verifyEmail = async (token: string) => {
+        error.value = null
+        try {
+            isLoading.value = true
+            await authApi.verifyEmail({ token })
+        } catch (err: any) {
+            error.value = handleAuthError(err)
+            throw error.value
+        } finally {
+            isLoading.value = false
+        }
+    }
+
     return {
         user,
         isAuthenticated,
@@ -227,6 +257,9 @@ export const useAuth = () => {
         resetPassword,
         changePassword,
         getCurrentUser,
-        updateProfile
+        updateProfile,
+        handleSocialCallback,
+        verifyEmail,
+        signUp,
     }
 }

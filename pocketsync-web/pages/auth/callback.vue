@@ -9,30 +9,39 @@
 
 <script setup>
 import { onMounted } from 'vue'
+import { useRoute, useRouter } from '#app'
 
 const route = useRoute()
-const { error } = useAuth()
+const router = useRouter()
+const { error, handleSocialCallback } = useAuth()
+
+useHead({
+    title: 'Authentication - PocketSync'
+})
+
+definePageMeta({
+    layout: 'auth'
+})
 
 onMounted(async () => {
-    const accessToken = route.query.accessToken
-    const refreshToken = route.query.refreshToken
+    const accessToken = route.query.accessToken?.toString()
+    const refreshToken = route.query.refreshToken?.toString()
 
     if (!accessToken || !refreshToken) {
         error.value = {
             message: 'Invalid authentication callback',
             code: 'SOCIAL_AUTH_ERROR'
         }
-        navigateTo('/auth/login')
+        router.push('/auth/login')
         return
     }
 
     try {
-        const { setTokens, fetchUserProfile } = useAuth()
-        setTokens(accessToken, refreshToken)
-        await fetchUserProfile()
-        navigateTo('/console')
+        await handleSocialCallback(accessToken, refreshToken)
+        router.push('/console')
     } catch (err) {
-        navigateTo('/auth/login')
+        // Error is already handled by the composable
+        router.push('/auth/login')
     }
 })
 </script>
