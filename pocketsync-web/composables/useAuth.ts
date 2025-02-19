@@ -135,6 +135,34 @@ export const useAuth = () => {
         }
     }
 
+    const updateProfile = async ({ data }: { data: { firstName: string; lastName: string } }) => {
+        error.value = null
+        try {
+            isLoading.value = true
+            const response = await authApi.updateProfile(data)
+            user.value = response.data
+            return response.data
+        } catch (err: any) {
+            error.value = handleAuthError(err)
+            throw error.value
+        } finally {
+            isLoading.value = false
+        }
+    }
+
+    const changePassword = async ({ data }: { data: { currentPassword: string; newPassword: string } }) => {
+        error.value = null
+        try {
+            isLoading.value = true
+            await authApi.changePassword(data)
+        } catch (err: any) {
+            error.value = handleAuthError(err)
+            throw error.value
+        } finally {
+            isLoading.value = false
+        }
+    }
+
     return {
         user,
         isAuthenticated,
@@ -143,6 +171,8 @@ export const useAuth = () => {
         signIn,
         signInWithProvider,
         signOut,
-        getCurrentUser
+        getCurrentUser,
+        updateProfile,
+        changePassword
     }
 }

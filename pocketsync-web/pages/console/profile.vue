@@ -59,7 +59,7 @@ definePageMeta({
     layout: 'dashboard'
 })
 
-const { user } = useAuth()
+const { user, updateProfile } = useAuth()
 const { success } = useToast()
 const { validate, rules, errors, clearErrors } = useValidation()
 const error = ref(null)
@@ -88,12 +88,12 @@ const updateUserProfile = async () => {
 
     try {
         isLoading.value = true
-        // await update({
-        //     data: {
-        //         firstName: profileData.value.firstName,
-        //         lastName: profileData.value.lastName
-        //     }
-        // })
+        await updateProfile({
+            data: {
+                firstName: profileData.value.firstName,
+                lastName: profileData.value.lastName
+            }
+        })
         success('Profile updated successfully')
     } catch (err: any) {
         error.value = err.message

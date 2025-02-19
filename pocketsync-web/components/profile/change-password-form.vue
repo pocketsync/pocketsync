@@ -3,26 +3,26 @@
         <div class="px-4 py-5 sm:p-6">
             <h3 class="text-lg font-medium leading-6 text-gray-900">Change Password</h3>
             <div class="mt-5 space-y-4">
-                <div v-if="!session?.user?.provider?.includes('social')">
+                <div>
                     <label for="current-password" class="block text-sm font-medium text-gray-700">Current Password</label>
                     <input type="password" id="current-password" v-model="currentPassword"
-                        :class="{'ring-red-300 focus:ring-red-500': errors.value?.currentPassword}"
+                        :class="{'ring-red-300 focus:ring-red-500': validationErrors?.value?.currentPassword}"
                         class="block w-full rounded-md border-0 px-3 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6" />
-                    <p v-if="errors.value?.currentPassword" class="mt-1 text-sm text-red-600">{{ errors.value.currentPassword[0] }}</p>
+                    <p v-if="validationErrors?.value?.currentPassword" class="mt-1 text-sm text-red-600">{{ validationErrors?.value.currentPassword[0] }}</p>
                 </div>
                 <div>
                     <label for="new-password" class="block text-sm font-medium text-gray-700">New Password</label>
                     <input type="password" id="new-password" v-model="newPassword"
-                        :class="{'ring-red-300 focus:ring-red-500': errors.value?.newPassword}"
+                        :class="{'ring-red-300 focus:ring-red-500': validationErrors?.value?.newPassword}"
                         class="block w-full rounded-md border-0 px-3 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6" />
-                    <p v-if="errors.value?.newPassword" class="mt-1 text-sm text-red-600">{{ errors.value.newPassword[0] }}</p>
+                    <p v-if="validationErrors?.value?.newPassword" class="mt-1 text-sm text-red-600">{{ validationErrors?.value.newPassword[0] }}</p>
                 </div>
                 <div>
                     <label for="confirm-password" class="block text-sm font-medium text-gray-700">Confirm Password</label>
                     <input type="password" id="confirm-password" v-model="confirmPassword"
-                        :class="{'ring-red-300 focus:ring-red-500': errors.value?.confirmPassword}"
+                        :class="{'ring-red-300 focus:ring-red-500': validationErrors?.value?.confirmPassword}"
                         class="block w-full rounded-md border-0 px-3 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6" />
-                    <p v-if="errors.value?.confirmPassword" class="mt-1 text-sm text-red-600">{{ errors.value.confirmPassword[0] }}</p>
+                    <p v-if="validationErrors?.value?.confirmPassword" class="mt-1 text-sm text-red-600">{{ validationErrors?.value.confirmPassword[0] }}</p>
                 </div>
                 <ErrorAlert v-if="error" :message="error" class="mt-4" />
             </div>
@@ -41,7 +41,7 @@ import { ref, computed } from 'vue'
 import { useToast } from '~/composables/useToast'
 import ErrorAlert from '~/components/common/error-alert.vue'
 
-const { data: session, update } = useAuth()
+const { user, changePassword } = useAuth()
 const { success } = useToast()
 
 const currentPassword = ref('')
@@ -49,27 +49,24 @@ const newPassword = ref('')
 const confirmPassword = ref('')
 const error = ref(null)
 const isLoading = ref(false)
-const errors = ref({})
+const validationErrors = ref<Record<string, any> | undefined>(undefined)
 
 const isFormValid = computed(() => {
-    if (!session.value?.user?.provider?.includes('social')) {
-        return currentPassword.value && newPassword.value && confirmPassword.value && newPassword.value === confirmPassword.value
-    }
     return newPassword.value && confirmPassword.value && newPassword.value === confirmPassword.value
 })
 
 const handleChangePassword = async () => {
     error.value = null
-    errors.value = {}
+    validationErrors.value = {}
 
     if (newPassword.value !== confirmPassword.value) {
-        errors.value.confirmPassword = ['Passwords do not match']
+        validationErrors.value.confirmPassword = ['Passwords do not match']
         return
     }
 
     try {
         isLoading.value = true
-        await update({
+        await changePassword({
             data: {
                 currentPassword: currentPassword.value,
                 newPassword: newPassword.value
@@ -79,7 +76,7 @@ const handleChangePassword = async () => {
         currentPassword.value = ''
         newPassword.value = ''
         confirmPassword.value = ''
-    } catch (err) {
+    } catch (err: any) {
         error.value = err.message
     } finally {
         isLoading.value = false
