@@ -22,9 +22,8 @@ export const useAuth = () => {
     const isLoading = ref(false)
     const error = ref<AuthError | null>(null)
 
-    const authApi = new AuthenticationApi(new Configuration({
-        basePath: '/api'
-    }))
+    const { config, axiosInstance } = useApi()
+    const authApi = new AuthenticationApi(config, undefined, axiosInstance)
 
     const handleAuthError = (err: any): AuthError => {
         if (!err.response || err.code === 'ECONNABORTED') {

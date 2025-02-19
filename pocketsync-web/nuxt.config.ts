@@ -18,7 +18,4 @@ export default defineNuxtConfig({
       apiBaseUrl: process.env.API_BASE_URL,
     }
   },
-  routeRules: {
-    '/console/**': { appMiddleware: "sidebase-auth" }
-  }
 });
