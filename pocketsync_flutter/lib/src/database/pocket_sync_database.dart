@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:pocketsync_flutter/pocketsync_flutter.dart';
 import 'package:pocketsync_flutter/src/database/database_change_manager.dart';
+import 'package:pocketsync_flutter/src/services/device_fingerprint_service.dart';
 import 'package:pocketsync_flutter/src/utils/table_utils.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:uuid/uuid.dart';
 
 /// PocketSync database service for managing local database operations
 /// with the ability to track changes and sync them with a remote server
@@ -88,15 +88,17 @@ class PocketSyncDatabase {
       )
     ''');
 
-    final deviceState = await db.query('__pocketsync_device_state');
-    if (deviceState.isEmpty) {
-      final deviceId = const Uuid().v4();
-      final now = DateTime.now().millisecondsSinceEpoch;
-      await db.insert('__pocketsync_device_state', {
+    final deviceFingerprintService = DeviceFingerprintService(this);
+    final deviceId = await deviceFingerprintService.getDeviceFingerprint();
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await db.insert(
+      '__pocketsync_device_state',
+      {
         'device_id': deviceId,
         'last_sync_timestamp': now,
-      });
-    }
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   /// Sets up change tracking triggers for all user tables
