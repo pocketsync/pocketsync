@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:isolate';
 
 import 'package:pocketsync_flutter/pocketsync_flutter.dart';
 import 'package:pocketsync_flutter/src/database/database_change.dart';
@@ -149,7 +150,8 @@ class ChangesProcessor {
     await batch.commit();
   }
 
-  ChangeSet _computeChangeSetFromChangeLogs(Iterable<ChangeLog> changeLogs) {
+  static ChangeSet _computeChangeSetFromChangeLogs(
+      Iterable<ChangeLog> changeLogs) {
     final insertions = <String, List<Row>>{};
     final updates = <String, List<Row>>{};
     final deletions = <String, List<Row>>{};
@@ -257,57 +259,171 @@ class ChangesProcessor {
   Future<void> applyRemoteChanges(Iterable<ChangeLog> changeLogs) async {
     if (changeLogs.isEmpty) return;
 
-    final changeSet = _computeChangeSetFromChangeLogs(changeLogs);
-    _logger.info('Applying change set with ${changeSet.length} changes');
+    _logger.info('Processing ${changeLogs.length} changes');
 
+    // Pre-fetch existing rows on main thread since it requires DB access
+    final changeSet = _computeChangeSetFromChangeLogs(changeLogs);
+    final existingRows = await _db.transaction((txn) async {
+      return await _preloadExistingRows(changeSet, txn);
+    });
+
+    // Process changes in background isolate
+    final result = await _processChangesInIsolate(
+      changeLogs.toList(),
+      existingRows,
+    );
+
+    // Apply processed changes to database on main thread
+    await _applyProcessedChanges(result);
+
+    if (result.changeSet.isNotEmpty) {
+      _logger.info(
+          'Successfully applied ${result.changeSet.length} remote changes');
+      _notifyChanges(result.changeSet);
+    }
+  }
+
+  /// Processes changes in a background isolate
+  Future<_IsolateResult> _processChangesInIsolate(
+    List<ChangeLog> changeLogs,
+    Map<String, Map<String, Map<String, dynamic>>> existingRows,
+  ) async {
+    final receivePort = ReceivePort();
+    final isolate = await Isolate.spawn(
+      _processChangesIsolate,
+      _IsolateMessage(
+          changeLogs, existingRows, receivePort.sendPort, _conflictResolver),
+    );
+
+    try {
+      final result = await receivePort.first as _IsolateResult;
+      return result;
+    } finally {
+      receivePort.close();
+      isolate.kill();
+    }
+  }
+
+  /// Static method to run in isolate
+  static void _processChangesIsolate(_IsolateMessage message) {
+    final changeSet = _computeChangeSetFromChangeLogs(message.changeLogs);
+    final processedRows = <String, List<Map<String, dynamic>>>{};
     final affectedTables = <String>{};
+
+    // Process deletions
+    for (final entry in changeSet.deletions.changes.entries) {
+      final tableName = entry.key;
+      final rows = entry.value.rows;
+      if (rows.isEmpty) continue;
+
+      processedRows[tableName] = [];
+      affectedTables.add(tableName);
+    }
+
+    // Process modifications (updates and inserts)
+    void processModifications(
+        Map<String, TableRows> changes, String operation) {
+      for (final entry in changes.entries) {
+        final tableName = entry.key;
+        final rows = entry.value.rows;
+        if (rows.isEmpty) continue;
+
+        final tableExistingRows = message.existingRows[tableName] ?? {};
+        final validRows = <Map<String, dynamic>>[];
+
+        for (final row in rows) {
+          final existing = tableExistingRows[row.primaryKey];
+
+          if (existing != null) {
+            final existingTimestamp = existing['timestamp'] as int?;
+            if (existingTimestamp != null &&
+                existingTimestamp >= row.timestamp) {
+              continue; // Skip if existing version is newer
+            }
+
+            try {
+              final resolvedRow = message.conflictResolver.resolveConflict(
+                tableName,
+                existing,
+                row.data,
+              );
+              validRows.add(resolvedRow);
+            } catch (e) {
+              // If custom resolution is not supported, default to server wins
+              validRows.add(row.data);
+            }
+          } else if (operation == 'INSERT') {
+            validRows.add(row.data);
+          }
+        }
+
+        if (validRows.isNotEmpty) {
+          processedRows[tableName] = validRows;
+          affectedTables.add(tableName);
+        }
+      }
+    }
+
+    processModifications(changeSet.updates.changes, 'UPDATE');
+    processModifications(changeSet.insertions.changes, 'INSERT');
+
+    message.sendPort.send(_IsolateResult(
+      changeSet,
+      processedRows,
+      affectedTables.toList(),
+    ));
+  }
+
+  /// Applies the processed changes to the database
+  Future<void> _applyProcessedChanges(_IsolateResult result) async {
     await _db.transaction((txn) async {
-      // Disable triggers once for the entire transaction
       await txn.execute('PRAGMA recursive_triggers = OFF;');
 
       try {
-        // Pre-fetch existing rows to minimize queries
-        final existingRows = await _preloadExistingRows(changeSet, txn);
+        // Apply deletions first
+        for (final entry in result.changeSet.deletions.changes.entries) {
+          final tableName = entry.key;
+          final rows = entry.value.rows;
+          if (rows.isEmpty) continue;
 
-        // Batch process deletions first to avoid conflicts
-        await _batchProcessDeletions(changeSet.deletions.changes, txn);
+          final primaryKeys = rows.map((r) => r.primaryKey).toList();
+          final placeholders = List.filled(primaryKeys.length, '?').join(',');
 
-        // Batch process updates and insertions
-        await _batchProcessModifications(
-          changeSet.updates.changes,
-          existingRows,
-          'UPDATE',
-          txn,
-        );
+          await txn.rawDelete(
+            'DELETE FROM $tableName WHERE ps_global_id IN ($placeholders)',
+            primaryKeys,
+          );
+        }
 
-        await _batchProcessModifications(
-          changeSet.insertions.changes,
-          existingRows,
-          'INSERT',
-          txn,
-        );
+        // Apply modifications
+        for (final tableName in result.affectedTables) {
+          final rows = result.processedRows[tableName];
+          if (rows == null || rows.isEmpty) continue;
 
-        // Batch insert processed change logs
+          final batchSize = 100;
+          for (var i = 0; i < rows.length; i += batchSize) {
+            final batch = rows.skip(i).take(batchSize).toList();
+            final columns = batch.first.keys.toList();
+            final placeholders = List.filled(columns.length, '?').join(',');
+            final values = batch.map((_) => '($placeholders)').join(',');
+
+            await txn.rawInsert(
+              'INSERT OR REPLACE INTO $tableName (${columns.join(',')}) VALUES $values',
+              batch.expand((row) => columns.map((c) => row[c])).toList(),
+            );
+          }
+        }
+
+        // Mark changes as processed
         final now = DateTime.now().toIso8601String();
         await txn.rawInsert(
-          'INSERT INTO __pocketsync_processed_changes (change_log_id, processed_at) VALUES ${changeLogs.map((_) => '(?, ?)').join(', ')}',
-          changeLogs.expand((log) => [log.id, now]).toList(),
+          'INSERT INTO __pocketsync_processed_changes (change_log_id, processed_at) VALUES ${result.changeSet.changeIds.map((_) => '(?, ?)').join(', ')}',
+          result.changeSet.changeIds.expand((id) => [id, now]).toList(),
         );
-
-        // Collect affected tables
-        affectedTables
-          ..addAll(changeSet.insertions.changes.keys)
-          ..addAll(changeSet.updates.changes.keys)
-          ..addAll(changeSet.deletions.changes.keys);
       } finally {
         await txn.execute('PRAGMA recursive_triggers = ON;');
       }
     });
-
-    if (changeSet.isNotEmpty) {
-      _logger.info('Successfully applied ${changeSet.length} remote changes');
-      _notifyChanges(changeSet);
-    }
   }
 
   /// Pre-loads existing rows for all affected records to minimize database queries
@@ -343,92 +459,24 @@ class ChangesProcessor {
 
     return result;
   }
+}
 
-  /// Batch processes deletions for better performance
-  Future<void> _batchProcessDeletions(
-    Map<String, TableRows> deletions,
-    Transaction txn,
-  ) async {
-    for (final entry in deletions.entries) {
-      final tableName = entry.key;
-      final rows = entry.value.rows;
-      if (rows.isEmpty) continue;
+/// Message for isolate processing
+class _IsolateMessage {
+  final List<ChangeLog> changeLogs;
+  final Map<String, Map<String, Map<String, dynamic>>> existingRows;
+  final SendPort sendPort;
+  final ConflictResolver conflictResolver;
 
-      final primaryKeys = rows.map((r) => r.primaryKey).toList();
-      final placeholders = List.filled(primaryKeys.length, '?').join(',');
+  _IsolateMessage(
+      this.changeLogs, this.existingRows, this.sendPort, this.conflictResolver);
+}
 
-      await txn.rawDelete(
-        'DELETE FROM $tableName WHERE ps_global_id IN ($placeholders)',
-        primaryKeys,
-      );
-    }
-  }
+/// Result from isolate processing
+class _IsolateResult {
+  final ChangeSet changeSet;
+  final Map<String, List<Map<String, dynamic>>> processedRows;
+  final List<String> affectedTables;
 
-  /// Batch processes modifications (updates or inserts) with optimized conflict resolution
-  Future<void> _batchProcessModifications(
-    Map<String, TableRows> changes,
-    Map<String, Map<String, Map<String, dynamic>>> existingRows,
-    String operation,
-    Transaction txn,
-  ) async {
-    for (final entry in changes.entries) {
-      final tableName = entry.key;
-      final rows = entry.value.rows;
-      if (rows.isEmpty) continue;
-
-      final tableExistingRows = existingRows[tableName] ?? {};
-      final batchSize =
-          100; // Process in smaller batches to avoid memory issues
-
-      for (var i = 0; i < rows.length; i += batchSize) {
-        final batch = rows.skip(i).take(batchSize);
-        final validRows = <Map<String, dynamic>>[];
-
-        for (final row in batch) {
-          final existing = tableExistingRows[row.primaryKey];
-
-          if (existing != null) {
-            final existingTimestamp = existing['timestamp'] as int?;
-            if (existingTimestamp != null &&
-                existingTimestamp >= row.timestamp) {
-              continue; // Skip if existing version is newer
-            }
-
-            final resolvedRow = await _conflictResolver.resolveConflict(
-              tableName,
-              existing,
-              row.data,
-            );
-            validRows.add(resolvedRow);
-          } else if (operation == 'INSERT') {
-            validRows.add(row.data);
-          }
-        }
-
-        if (validRows.isEmpty) continue;
-
-        // Batch insert or update
-        if (operation == 'INSERT') {
-          final columns = validRows.first.keys.toList();
-          final placeholders = List.filled(columns.length, '?').join(',');
-          final values = validRows.map((row) => '($placeholders)').join(',');
-
-          await txn.rawInsert(
-            'INSERT OR REPLACE INTO $tableName (${columns.join(',')}) VALUES $values',
-            validRows.expand((row) => columns.map((c) => row[c])).toList(),
-          );
-        } else {
-          // For updates, use INSERT OR REPLACE to handle both insert and update cases
-          final columns = validRows.first.keys.toList();
-          final placeholders = List.filled(columns.length, '?').join(',');
-          final values = validRows.map((row) => '($placeholders)').join(',');
-
-          await txn.rawInsert(
-            'INSERT OR REPLACE INTO $tableName (${columns.join(',')}) VALUES $values',
-            validRows.expand((row) => columns.map((c) => row[c])).toList(),
-          );
-        }
-      }
-    }
-  }
+  _IsolateResult(this.changeSet, this.processedRows, this.affectedTables);
 }

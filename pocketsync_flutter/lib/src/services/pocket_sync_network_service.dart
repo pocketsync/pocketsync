@@ -23,8 +23,6 @@ class PocketSyncNetworkService {
   // Callback for handling incoming changes
   Future<void> Function(Iterable<ChangeLog>)? onChangesReceived;
 
-  bool isSyncEnabled = false;
-
   PocketSyncNetworkService(
       {required String serverUrl,
       required String projectId,
@@ -40,19 +38,13 @@ class PocketSyncNetworkService {
   void setUserId(String userId) {
     _logger.debug('Setting user ID: $userId');
     _userId = userId;
-    _attemptReconnection();
-  }
-
-  void _attemptReconnection() {
-    if (isSyncEnabled) {
-      _connectWebSocket();
-    }
+    _connectWebSocket();
   }
 
   void setDeviceId(String deviceId) {
     _logger.debug('Setting device ID: $deviceId');
     _deviceId = deviceId;
-    _attemptReconnection();
+    _connectWebSocket();
   }
 
   void disconnect() {
@@ -62,7 +54,7 @@ class PocketSyncNetworkService {
   }
 
   void reconnect() {
-    _logger.info('Reconnecting to WebSocket server: $isSyncEnabled');
+    _logger.info('Reconnecting to WebSocket server');
     _connectWebSocket();
   }
 
@@ -73,13 +65,11 @@ class PocketSyncNetworkService {
       return;
     }
 
-    if (!isSyncEnabled) {
-      _logger.info('Skipping WebSocket connection: sync is disabled');
-      return;
-    }
-
     _logger.info('Connecting to WebSocket server');
-    if (_socket != null || _userId == null || _deviceId == null) return;
+    if (_socket != null) {
+      _socket!.disconnect();
+      _socket = null;
+    }
 
     try {
       _socket = socket_io.io('$_serverUrl/changes', {
@@ -161,7 +151,8 @@ class PocketSyncNetworkService {
           completer.completeError(
               NetworkError(message, statusCode: statusCode, cause: e));
         } catch (e) {
-          completer.completeError(NetworkError('Failed to send changes', cause: e));
+          completer
+              .completeError(NetworkError('Failed to send changes', cause: e));
         }
       } catch (e) {
         _logger.error('Error sending changes to server', error: e);
