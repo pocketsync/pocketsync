@@ -95,10 +95,7 @@ class PocketSyncDatabase {
     final deviceId = await deviceFingerprintService.getDeviceFingerprint(db);
     await db.insert(
       '__pocketsync_device_state',
-      {
-        'device_id': deviceId,
-        'last_sync_timestamp': null,
-      },
+      {'device_id': deviceId, 'last_sync_timestamp': null},
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
