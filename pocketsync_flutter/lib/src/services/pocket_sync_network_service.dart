@@ -17,8 +17,10 @@ class PocketSyncNetworkService {
   final String _serverUrl;
   final String _projectId;
   final String _authToken;
+
   String? _userId;
   String? _deviceId;
+  DateTime? _lastSyncedAt;
 
   // Callback for handling incoming changes
   Future<void> Function(Iterable<ChangeLog>)? onChangesReceived;
@@ -44,6 +46,8 @@ class PocketSyncNetworkService {
     _logger.debug('Setting device ID: $deviceId');
     _deviceId = deviceId;
   }
+
+  void setLastSyncedAt(DateTime? lastSyncedAt) => _lastSyncedAt = lastSyncedAt;
 
   void disconnect() {
     _logger.info('Disconnecting from WebSocket server');
@@ -79,6 +83,7 @@ class PocketSyncNetworkService {
           'project_id': _projectId,
           'user_id': _userId,
           'device_id': _deviceId,
+          'last_synced_at': _lastSyncedAt?.toIso8601String(),
         },
         'extraHeaders': {
           'Authorization': 'Bearer $_authToken',

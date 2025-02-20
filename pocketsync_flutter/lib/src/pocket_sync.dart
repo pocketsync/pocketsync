@@ -75,7 +75,13 @@ class PocketSync {
     final deviceState = await db.query('__pocketsync_device_state', limit: 1);
     if (deviceState.isNotEmpty) {
       final deviceId = deviceState.first['device_id'] as String;
+      final lastSyncedAt = deviceState.first['last_sync_timestamp'] as int?;
       _networkService.setDeviceId(deviceId);
+      _networkService.setLastSyncedAt(
+        lastSyncedAt != null
+            ? DateTime.fromMillisecondsSinceEpoch(lastSyncedAt)
+            : null,
+      );
     }
 
     _changesProcessor = ChangesProcessor(
