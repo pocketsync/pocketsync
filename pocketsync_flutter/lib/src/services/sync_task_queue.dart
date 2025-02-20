@@ -84,8 +84,9 @@ class SyncTaskQueue {
         }
       } catch (e) {
         _logger.error(
-            'Failed to process sync queue after $_retryAttempt attempts',
-            error: e);
+          'Failed to process sync queue after $_retryAttempt attempts',
+          error: e,
+        );
         // If processing fails after all retries, complete all tasks with error
         for (final task in tasks) {
           if (!task.completer.isCompleted) {

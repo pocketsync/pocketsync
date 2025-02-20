@@ -1,3 +1,16 @@
+## 0.0.5
+
+### Breaking Changes
+- Renamed `startSync` method to `start`
+- Renamed `pauseSync` method to `pause`
+- Removed `resumeSync` method (use `start` method instead)
+
+### Performance Improvements
+- Implemented batch processing for database operations
+- Moved changes processing to a separate isolate for better performance
+- Optimized sync queue management
+- Enhanced conflict resolution handling
+
 ## 0.0.4
 - Optimize table extraction algo for watching queries
 - Fix: Sometimes, remote changes application caused database locks, it's now fixed
