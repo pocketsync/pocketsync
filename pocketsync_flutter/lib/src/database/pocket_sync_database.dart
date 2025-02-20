@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:pocketsync_flutter/pocketsync_flutter.dart';
-import 'package:pocketsync_flutter/src/database/database_change.dart';
 import 'package:pocketsync_flutter/src/database/database_change_manager.dart';
+import 'package:pocketsync_flutter/src/utils/table_utils.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
@@ -272,18 +272,19 @@ class PocketSyncDatabase {
   }
 
   /// Private method to handle change notifications
-  Future<void> notifyChanges() async {
-    // Get all recent changes from the changes table
-    final changes = await _db!.query(
-      '__pocketsync_changes',
-      where:
-          'id IN (SELECT id FROM __pocketsync_changes ORDER BY id DESC LIMIT 100)',
-      orderBy: 'id ASC',
-    );
+  Future<void> _notifyChanges(
+    Iterable<String> tables, {
+    bool force = false,
+  }) async {
+    // Get all recent changes from the change
 
-    if (changes.isNotEmpty) {
-      for (final change in changes) {
-        changeManager.notifyChange(PsDatabaseChange.fromJson(change));
+    if (force) {
+      changeManager.notifyAll();
+    } else {
+      if (tables.isNotEmpty) {
+        for (final table in tables) {
+          changeManager.notifyChange(table);
+        }
       }
     }
   }
@@ -337,7 +338,7 @@ class PocketSyncDatabase {
       conflictAlgorithm: conflictAlgorithm,
     );
 
-    await notifyChanges();
+    await _notifyChanges([table]);
 
     return result;
   }
@@ -360,7 +361,7 @@ class PocketSyncDatabase {
       conflictAlgorithm: conflictAlgorithm,
     );
 
-    await notifyChanges();
+    await _notifyChanges([table]);
 
     return result;
   }
@@ -379,7 +380,7 @@ class PocketSyncDatabase {
       whereArgs: whereArgs,
     );
 
-    await notifyChanges();
+    await _notifyChanges([table]);
 
     return result;
   }
@@ -391,6 +392,7 @@ class PocketSyncDatabase {
     String sql, [
     List<Object?>? arguments,
   ]) async {
+    final tables = extractAffectedTables(sql);
     final isInsertOperation = sql.trim().toUpperCase().startsWith('INSERT');
 
     if (isInsertOperation) {
@@ -408,7 +410,8 @@ class PocketSyncDatabase {
     if (isInsertOperation ||
         normalizedSql.startsWith('UPDATE') ||
         normalizedSql.startsWith('DELETE')) {
-      await notifyChanges();
+      print(tables);
+      await _notifyChanges(tables);
     }
 
     return result;
@@ -424,18 +427,18 @@ class PocketSyncDatabase {
   /// Commits a batch operation and notifies changes
   ///
   /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
-  Future<List<Object?>> commitBatch(Batch batch) async {
+  Future<List<Object?>> commit(Batch batch) async {
     final result = await batch.commit();
-    await notifyChanges();
+    await _notifyChanges((batch as _PocketSyncBatch)._affectedTables);
     return result;
   }
 
   /// Applies a batch operation without reading the results and notifies changes
   ///
   /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
-  Future<void> applyBatch(Batch batch) async {
+  Future<void> apply(Batch batch) async {
     await batch.apply();
-    await notifyChanges();
+    await _notifyChanges((batch as _PocketSyncBatch)._affectedTables);
   }
 
   /// Executes a transaction
@@ -450,7 +453,7 @@ class PocketSyncDatabase {
       }
     });
 
-    await notifyChanges();
+    await _notifyChanges([], force: true);
 
     return result;
   }
@@ -461,6 +464,8 @@ class _PocketSyncBatch implements Batch {
   final Batch _batch;
 
   _PocketSyncBatch(this._batch);
+
+  final Set<String> _affectedTables = {};
 
   @override
   Future<List<Object?>> commit({
@@ -494,6 +499,8 @@ class _PocketSyncBatch implements Batch {
       nullColumnHack: nullColumnHack,
       conflictAlgorithm: conflictAlgorithm,
     );
+
+    _affectedTables.add(table);
   }
 
   @override
@@ -507,16 +514,23 @@ class _PocketSyncBatch implements Batch {
       arguments = (arguments ?? [])..add(psGlobalId);
     }
     _batch.rawInsert(sql, arguments);
+
+    // Extract affected tables from the SQL statement
+    final tables = extractAffectedTables(sql);
+    _affectedTables.addAll(tables);
   }
 
   // Forward other Batch methods to _batch
   @override
-  void delete(String table, {String? where, List<Object?>? whereArgs}) =>
-      _batch.delete(table, where: where, whereArgs: whereArgs);
+  void delete(String table, {String? where, List<Object?>? whereArgs}) {
+    _batch.delete(table, where: where, whereArgs: whereArgs);
+    _affectedTables.add(table);
+  }
 
   @override
-  void execute(String sql, [List<Object?>? arguments]) =>
-      _batch.execute(sql, arguments);
+  void execute(String sql, [List<Object?>? arguments]) {
+    _batch.execute(sql, arguments);
+  }
 
   @override
   void query(String table,
@@ -548,16 +562,19 @@ class _PocketSyncBatch implements Batch {
 
   @override
   void update(String table, Map<String, Object?> values,
-          {String? where,
-          List<Object?>? whereArgs,
-          ConflictAlgorithm? conflictAlgorithm}) =>
-      _batch.update(
-        table,
-        values,
-        where: where,
-        whereArgs: whereArgs,
-        conflictAlgorithm: conflictAlgorithm,
-      );
+      {String? where,
+      List<Object?>? whereArgs,
+      ConflictAlgorithm? conflictAlgorithm}) {
+    _batch.update(
+      table,
+      values,
+      where: where,
+      whereArgs: whereArgs,
+      conflictAlgorithm: conflictAlgorithm,
+    );
+
+    _affectedTables.add(table);
+  }
 
   @override
   Future<List<Object?>> apply({bool? noResult, bool? continueOnError}) {
@@ -642,8 +659,8 @@ extension WatchExtension on PocketSyncDatabase {
     watcher.notify(this);
 
     // Set up change listeners for relevant tables
-    void handleChange(PsDatabaseChange change) {
-      if (tables.contains(change.tableName)) {
+    void handleChange(String table) {
+      if (tables.contains(table)) {
         _debounceTimer?.cancel();
         _debounceTimer = Timer(const Duration(milliseconds: _debounceMs), () {
           watcher.notify(this);

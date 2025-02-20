@@ -3,7 +3,6 @@ import 'dart:developer';
 import 'dart:isolate';
 
 import 'package:pocketsync_flutter/pocketsync_flutter.dart';
-import 'package:pocketsync_flutter/src/database/database_change.dart';
 import 'package:pocketsync_flutter/src/models/change_log.dart';
 import 'package:pocketsync_flutter/src/models/change_set.dart';
 import 'package:pocketsync_flutter/src/services/logger_service.dart';
@@ -233,17 +232,11 @@ class ChangesProcessor {
   /// Notifies database changes to registered listeners
   void _notifyChanges(ChangeSet changeSet) {
     void notifyChangesForOperation(
-        Map<String, TableRows> changes, String operation) {
+      Map<String, TableRows> changes,
+      String operation,
+    ) {
       for (final entry in changes.entries) {
-        for (final row in entry.value.rows) {
-          final change = PsDatabaseChange(
-            tableName: entry.key,
-            operation: operation,
-            data: row.data,
-            recordId: row.primaryKey,
-          );
-          _db.changeManager.notifyChange(change);
-        }
+        _db.changeManager.notifyChange(entry.key);
       }
     }
 
