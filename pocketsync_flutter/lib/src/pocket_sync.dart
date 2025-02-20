@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:pocketsync_flutter/src/database/database_change_manager.dart';
 import 'package:pocketsync_flutter/src/database/pocket_sync_database.dart';
 import 'package:pocketsync_flutter/src/models/change_set.dart';
 import 'package:pocketsync_flutter/src/services/logger_service.dart';
@@ -22,6 +23,7 @@ class PocketSync {
   late ChangesProcessor _changesProcessor;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   late final SyncTaskQueue _syncQueue;
+  late final DatabaseChangeManager _dbChangeManager;
 
   bool _isInitialized = false;
   bool _isSyncing = false;
@@ -54,6 +56,7 @@ class PocketSync {
   }) async {
     if (_isInitialized) return;
 
+    _dbChangeManager = DatabaseChangeManager();
     _networkService = PocketSyncNetworkService(
       serverUrl: options.serverUrl ?? 'https://api.pocketsync.dev',
       projectId: options.projectId,
@@ -65,7 +68,7 @@ class PocketSync {
       debounceDuration: const Duration(milliseconds: 500),
     );
 
-    _database = PocketSyncDatabase();
+    _database = PocketSyncDatabase(changeManager: _dbChangeManager);
     final db = await _database.initialize(
       dbPath: dbPath,
       options: databaseOptions,
@@ -86,6 +89,7 @@ class PocketSync {
 
     _changesProcessor = ChangesProcessor(
       _database,
+      databaseChangeManager: _dbChangeManager,
       conflictResolver: options.conflictResolver,
     );
 
@@ -134,7 +138,7 @@ class PocketSync {
       if (!_isPaused) return;
 
       // Set up real-time change notification
-      _database.addGlobalListener(_syncChanges);
+      _dbChangeManager.addGlobalListener(_syncChanges);
 
       // Initialize connectivity monitoring
       _setupConnectivityMonitoring();
@@ -218,7 +222,7 @@ class PocketSync {
     _runGuarded(() {
       _isPaused = true;
       _networkService.disconnect();
-      _database.removeGlobalListener(_syncChanges);
+      _dbChangeManager.removeGlobalListener(_syncChanges);
       _connectivitySubscription?.cancel();
       _logger.info('Sync manually paused');
     });

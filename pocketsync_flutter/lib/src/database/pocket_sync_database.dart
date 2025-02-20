@@ -9,9 +9,12 @@ import 'package:sqflite/sqflite.dart';
 /// PocketSync database service for managing local database operations
 /// with the ability to track changes and sync them with a remote server
 class PocketSyncDatabase {
+  final DatabaseChangeManager _changeManager;
   Database? _db;
 
-  final DatabaseChangeManager changeManager = DatabaseChangeManager();
+  PocketSyncDatabase({
+    DatabaseChangeManager? changeManager,
+  }) : _changeManager = changeManager ?? DatabaseChangeManager();
 
   /// Opens and initializes the database
   Future<Database> initialize({
@@ -238,7 +241,7 @@ class PocketSyncDatabase {
 
   /// Closes the database
   Future<void> close() async {
-    changeManager.dispose();
+    _changeManager.dispose();
     await _db?.close();
     _db = null;
   }
@@ -280,31 +283,15 @@ class PocketSyncDatabase {
     // Get all recent changes from the change
 
     if (force) {
-      changeManager.notifyAll();
+      _changeManager.notifyAll();
     } else {
       if (tables.isNotEmpty) {
         for (final table in tables) {
-          changeManager.notifyChange(table);
+          _changeManager.notifyChange(table);
         }
       }
     }
   }
-
-  /// Adds a listener for changes to a specific table
-  void addTableListener(String table, DatabaseChangeListener listener) =>
-      changeManager.addTableListener(table, listener);
-
-  /// Removes a table-specific listener
-  void removeTableListener(String table, DatabaseChangeListener listener) =>
-      changeManager.removeTableListener(table, listener);
-
-  /// Adds a listener for all database changes
-  void addGlobalListener(DatabaseChangeListener listener) =>
-      changeManager.addGlobalListener(listener);
-
-  /// Removes a global listener
-  void removeGlobalListener(DatabaseChangeListener listener) =>
-      changeManager.removeGlobalListener(listener);
 
   /// Generates a new ps_global_id
   Future<String> _generatePsGlobalId() async {
@@ -670,7 +657,7 @@ extension WatchExtension on PocketSyncDatabase {
 
     // Add listeners for each table
     for (final table in tables) {
-      changeManager.addTableListener(table, handleChange);
+      _changeManager.addTableListener(table, handleChange);
     }
 
     return watcher.stream.transform(
@@ -678,7 +665,7 @@ extension WatchExtension on PocketSyncDatabase {
         handleDone: (sink) {
           // Remove table listeners
           for (final table in tables) {
-            changeManager.removeTableListener(table, handleChange);
+            _changeManager.removeTableListener(table, handleChange);
           }
 
           // Remove watcher

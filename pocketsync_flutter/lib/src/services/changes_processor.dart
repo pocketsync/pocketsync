@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'dart:isolate';
 
 import 'package:pocketsync_flutter/pocketsync_flutter.dart';
+import 'package:pocketsync_flutter/src/database/database_change_manager.dart';
 import 'package:pocketsync_flutter/src/models/batch_info.dart';
 import 'package:pocketsync_flutter/src/models/change_log.dart';
 import 'package:pocketsync_flutter/src/models/change_set.dart';
@@ -11,11 +12,17 @@ import 'package:sqflite/sqflite.dart';
 
 class ChangesProcessor {
   final PocketSyncDatabase _db;
+  final DatabaseChangeManager _databaseChangeManager;
   final ConflictResolver _conflictResolver;
   final _logger = LoggerService.instance;
 
-  ChangesProcessor(this._db, {ConflictResolver? conflictResolver})
-      : _conflictResolver = conflictResolver ?? const ConflictResolver();
+  ChangesProcessor(
+    this._db, {
+    ConflictResolver? conflictResolver,
+    DatabaseChangeManager? databaseChangeManager,
+  })  : _conflictResolver = conflictResolver ?? const ConflictResolver(),
+        _databaseChangeManager =
+            databaseChangeManager ?? DatabaseChangeManager();
 
   /// Gets local changes formatted as a ChangeSet
   /// Uses batch processing for better performance with large datasets
@@ -231,7 +238,7 @@ class ChangesProcessor {
       String operation,
     ) {
       for (final entry in changes.entries) {
-        _db.changeManager.notifyChange(entry.key);
+        _databaseChangeManager.notifyChange(entry.key);
       }
     }
 
