@@ -127,39 +127,49 @@ class PocketSyncNetworkService {
     }
   }
 
-  Future<ChangeProcessingResponse> sendChanges(ChangeSet changes) async {
-    try {
-      _logger.info(
-          'Sending changes to server: ${changes.changeIds.length} changes');
-      if (_userId == null) {
-        throw InitializationError('User ID not set');
-      }
-      if (_deviceId == null) {
-        throw InitializationError('Device ID not set');
-      }
+  Future<ChangeProcessingResponse> sendChanges(ChangeSet changes) {
+    final completer = Completer<ChangeProcessingResponse>();
 
-      final url = '$_serverUrl/sdk/changes';
+    // Execute network operations in a non-blocking way
+    Future.microtask(() async {
       try {
-        final response = await _dio.post(
-          url,
-          options: _getRequestOptions(),
-          data: {
-            'changeSets': [changes.toJson()],
-          },
-        );
+        _logger.info(
+            'Sending changes to server: ${changes.changeIds.length} changes');
+        if (_userId == null) {
+          completer.completeError(InitializationError('User ID not set'));
+          return;
+        }
+        if (_deviceId == null) {
+          completer.completeError(InitializationError('Device ID not set'));
+          return;
+        }
 
-        return ChangeProcessingResponse.fromJson(response.data);
-      } on DioException catch (e) {
-        final statusCode = e.response?.statusCode;
-        final message = e.response?.statusMessage ?? 'Network request failed';
-        throw NetworkError(message, statusCode: statusCode, cause: e);
+        final url = '$_serverUrl/sdk/changes';
+        try {
+          final response = await _dio.post(
+            url,
+            options: _getRequestOptions(),
+            data: {
+              'changeSets': [changes.toJson()],
+            },
+          );
+
+          completer.complete(ChangeProcessingResponse.fromJson(response.data));
+        } on DioException catch (e) {
+          final statusCode = e.response?.statusCode;
+          final message = e.response?.statusMessage ?? 'Network request failed';
+          completer.completeError(
+              NetworkError(message, statusCode: statusCode, cause: e));
+        } catch (e) {
+          completer.completeError(NetworkError('Failed to send changes', cause: e));
+        }
       } catch (e) {
-        throw NetworkError('Failed to send changes', cause: e);
+        _logger.error('Error sending changes to server', error: e);
+        completer.completeError(e);
       }
-    } catch (e) {
-      _logger.error('Error sending changes to server', error: e);
-      rethrow;
-    }
+    });
+
+    return completer.future;
   }
 
   Options _getRequestOptions() {

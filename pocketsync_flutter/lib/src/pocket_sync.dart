@@ -2,14 +2,14 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:pocketsync_flutter/src/database/database_change.dart';
 import 'package:pocketsync_flutter/src/database/pocket_sync_database.dart';
-import 'package:pocketsync_flutter/src/errors/sync_error.dart';
 import 'package:pocketsync_flutter/src/models/change_set.dart';
-import 'package:pocketsync_flutter/src/services/debouncer.dart';
 import 'package:pocketsync_flutter/src/services/logger_service.dart';
 import 'models/pocket_sync_options.dart';
 import 'models/change_processing_response.dart';
 import 'services/pocket_sync_network_service.dart';
 import 'services/changes_processor.dart';
+import 'services/sync_task_queue.dart';
+import 'state/sync_state_machine.dart';
 
 class PocketSync {
   static final PocketSync instance = PocketSync._internal();
@@ -22,20 +22,16 @@ class PocketSync {
 
   late PocketSyncNetworkService _networkService;
   late ChangesProcessor _changesProcessor;
-  bool _isSyncing = false;
-  bool _isInitialized = false;
-  bool _isPaused = false;
-  bool _isManuallyPaused = false;
-  bool _isSyncStarted = false;
+  final SyncStateMachine _stateMachine = SyncStateMachine();
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
-  final Debouncer _debouncer = Debouncer();
+  late final SyncTaskQueue _syncQueue;
 
   /// Returns the database instance
   /// Throws [StateError] if PocketSync is not initialized
   PocketSyncDatabase get database => _runGuarded(() => _database);
 
   T _runGuarded<T>(T Function() callback) {
-    if (!_isInitialized) {
+    if (_stateMachine.currentState == SyncState.uninitialized) {
       throw StateError(
         'You should call PocketSync.instance.initialize before any other call.',
       );
@@ -55,12 +51,17 @@ class PocketSync {
     required PocketSyncOptions options,
     required DatabaseOptions databaseOptions,
   }) async {
-    if (_isInitialized) return;
+    if (_stateMachine.currentState != SyncState.uninitialized) return;
 
     _networkService = PocketSyncNetworkService(
       serverUrl: options.serverUrl ?? 'https://api.pocketsync.dev',
       projectId: options.projectId,
       authToken: options.authToken,
+    );
+
+    _syncQueue = SyncTaskQueue(
+      processChanges: _processChanges,
+      debounceDuration: const Duration(milliseconds: 500),
     );
 
     _database = PocketSyncDatabase();
@@ -88,7 +89,7 @@ class PocketSync {
 
     // Initialize connectivity monitoring
     _setupConnectivityMonitoring();
-    _isInitialized = true;
+    await _stateMachine.transition(SyncEvent.initialize);
   }
 
   /// Sets up connectivity monitoring
@@ -102,10 +103,10 @@ class PocketSync {
     List<ConnectivityResult> result,
   ) async {
     if (result.contains(ConnectivityResult.none) || result.isEmpty) {
-      _isPaused = true;
+      await _stateMachine.transition(SyncEvent.connectionLost);
       _networkService.disconnect();
-    } else if (!_isManuallyPaused) {
-      _isPaused = false;
+    } else if (_stateMachine.currentState == SyncState.offline) {
+      await _stateMachine.transition(SyncEvent.connectionRestored);
       _networkService.reconnect();
       await _sync();
     }
@@ -129,52 +130,80 @@ class PocketSync {
   Future<void> startSync() async {
     await _runGuarded(() async {
       if (_userId == null) throw StateError('User ID not set');
-      _isPaused = false;
-      _isManuallyPaused = false;
-      _isSyncStarted = true;
-      _networkService.isSyncEnabled = true;
 
+      if (_stateMachine.currentState == SyncState.manuallyPaused) {
+        return;
+      }
+
+      _networkService.isSyncEnabled = true;
+      await _stateMachine.transition(SyncEvent.startSync);
       await _sync();
     });
   }
 
-  void _syncChanges(PsDatabaseChange changes) => _sync();
+  void _syncChanges(PsDatabaseChange changes) {
+    // Use a microtask to ensure we're not blocking the main thread
+    // but still maintain operation order
+    scheduleMicrotask(() => _sync());
+  }
 
   /// Internal sync method
   Future<void> _sync() async {
-    if (_isSyncing ||
-        _userId == null ||
-        _isPaused ||
-        _isManuallyPaused ||
-        !_isSyncStarted) {
+    if (_userId == null ||
+        _stateMachine.currentState == SyncState.syncing ||
+        _stateMachine.currentState == SyncState.offline ||
+        _stateMachine.currentState == SyncState.manuallyPaused) {
       _logger.debug(
-          'Sync skipped: already in progress, user ID not set, sync is paused, or sync not started');
+          'Sync skipped: user ID not set or inappropriate state: ${_stateMachine.currentState}');
       return;
     }
-    _isSyncing = true;
 
-    _debouncer.run(() async {
-      try {
-        final changeSet = await _changesProcessor.getUnSyncedChanges();
-        if (changeSet.insertions.changes.isNotEmpty ||
-            changeSet.updates.changes.isNotEmpty ||
-            changeSet.deletions.changes.isNotEmpty) {
-          _logger.info(
-              'Processing changes: ${changeSet.changeIds.length} changes found');
-          final processedResponse = await _sendChanges(changeSet);
+    if (!await _stateMachine.transition(SyncEvent.startSync)) {
+      _logger.debug('Could not transition to syncing state');
+      return;
+    }
 
-          if (processedResponse.status == 'success' &&
-              processedResponse.processed) {
-            await _markChangesSynced(changeSet.changeIds);
-            _logger.info('Changes successfully synced');
-          }
-        }
-      } on SyncError catch (e) {
-        _logger.error('Sync error occurred', error: e);
-      } finally {
-        _isSyncing = false;
+    try {
+      // Fetch changes in a non-blocking way
+      final changeSet =
+          await Future(() => _changesProcessor.getUnSyncedChanges());
+
+      if (changeSet.insertions.changes.isNotEmpty ||
+          changeSet.updates.changes.isNotEmpty ||
+          changeSet.deletions.changes.isNotEmpty) {
+        _logger.info(
+            'Queueing changes: ${changeSet.changeIds.length} changes found');
+
+        // Queue the changes for processing
+        await _syncQueue.enqueue(changeSet);
       }
-    });
+
+      await _stateMachine.transition(SyncEvent.pauseSync);
+    } catch (e) {
+      _logger.error('Error during sync', error: e);
+      await _stateMachine.transition(SyncEvent.error);
+      rethrow;
+    }
+  }
+
+  /// Processes a batch of changes
+  Future<void> _processChanges(ChangeSet changeSet) async {
+    try {
+      _logger.info('Processing batch: ${changeSet.changeIds.length} changes');
+
+      // Send changes asynchronously
+      final processedResponse = await Future(() => _sendChanges(changeSet));
+
+      if (processedResponse.status == 'success' &&
+          processedResponse.processed) {
+        // Mark changes as synced in a non-blocking way
+        await Future(() => _markChangesSynced(changeSet.changeIds));
+        _logger.info('Changes successfully synced');
+      }
+    } catch (e) {
+      _logger.error('Error processing changes', error: e);
+      rethrow;
+    }
   }
 
   /// Sends changes to the server
@@ -190,9 +219,8 @@ class PocketSync {
   ///
   /// Throws [StateError] if PocketSync is not initialized
   void pauseSync() {
-    _runGuarded(() {
-      _isPaused = true;
-      _isManuallyPaused = true;
+    _runGuarded(() async {
+      await _stateMachine.transition(SyncEvent.manualPause);
       _networkService.isSyncEnabled = false;
       _networkService.disconnect();
       _logger.info('Sync manually paused');
@@ -205,22 +233,27 @@ class PocketSync {
   /// Throws [StateError] if PocketSync is not initialized
   Future<void> resumeSync() async {
     _runGuarded(() async {
-      _isPaused = false;
-      _isManuallyPaused = false;
-      _networkService.isSyncEnabled = true;
-      _networkService.reconnect();
-      _logger.info('Sync resumed');
-      await _sync();
+      if (_stateMachine.currentState == SyncState.manuallyPaused) {
+        await _stateMachine.transition(SyncEvent.manualResume);
+        _networkService.isSyncEnabled = true;
+        _networkService.reconnect();
+        _logger.info('Sync resumed');
+        await _sync();
+      }
     });
   }
 
   /// Returns whether sync is currently paused
-  bool get isPaused => _runGuarded(() => _isPaused);
+  bool get isPaused => _runGuarded(() =>
+      _stateMachine.currentState == SyncState.paused ||
+      _stateMachine.currentState == SyncState.manuallyPaused ||
+      _stateMachine.currentState == SyncState.offline);
 
   /// Cleans up resources
   Future<void> dispose() async {
     await _connectivitySubscription?.cancel();
     await _database.close();
-    _networkService.dispose();
+    _networkService.disconnect();
+    _syncQueue.dispose();
   }
 }
