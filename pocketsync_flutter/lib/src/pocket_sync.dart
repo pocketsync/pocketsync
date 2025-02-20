@@ -6,6 +6,9 @@ import 'package:pocketsync_flutter/src/errors/sync_error.dart';
 import 'package:pocketsync_flutter/src/models/change_set.dart';
 import 'package:pocketsync_flutter/src/services/debouncer.dart';
 import 'package:pocketsync_flutter/src/services/logger_service.dart';
+import 'package:pocketsync_flutter/src/services/pocket_sync_background_service.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:uuid/uuid.dart';
 import 'models/pocket_sync_options.dart';
 import 'models/change_processing_response.dart';
 import 'services/pocket_sync_network_service.dart';
@@ -57,27 +60,39 @@ class PocketSync {
   }) async {
     if (_isInitialized) return;
 
-    _networkService = PocketSyncNetworkService(
-      serverUrl: options.serverUrl ?? 'https://api.pocketsync.dev',
-      projectId: options.projectId,
-      authToken: options.authToken,
-    );
-
-    _database = PocketSyncDatabase();
-    final db = await _database.initialize(
-      dbPath: dbPath,
+    // First create database
+    _database = PocketSyncDatabase(
       options: databaseOptions,
     );
+    final db = await _database.initialize(dbPath: dbPath);
 
-    // Set device ID in network service
-    final deviceState = await db.query('__pocketsync_device_state', limit: 1);
-    if (deviceState.isNotEmpty) {
-      final deviceId = deviceState.first['device_id'] as String;
-      _networkService.setDeviceId(deviceId);
-    }
+    // Get or create device ID
+    final deviceId = await _fetchOrCreateDeviceId(db);
+
+    // Initialize network service
+    _networkService = PocketSyncNetworkService(
+      serverUrl: options.serverUrl,
+      projectId: options.projectId,
+      authToken: options.authToken,
+      deviceId: deviceId,
+    );
+
+    // Initialize background service
+    final backgroundService = PocketSyncBackgroundService();
+    await backgroundService.initialize(
+      dbPath: dbPath,
+      dbVersion: databaseOptions.version,
+      serverUrl: options.serverUrl,
+      projectId: options.projectId,
+      authToken: options.authToken,
+      deviceId: deviceId,
+    );
+
+    // Connect background service to database
+    _database.setBackgroundService(backgroundService);
 
     _changesProcessor = ChangesProcessor(
-      _database,
+      _database.db!,
       conflictResolver: options.conflictResolver,
     );
 
@@ -89,6 +104,20 @@ class PocketSync {
     // Initialize connectivity monitoring
     _setupConnectivityMonitoring();
     _isInitialized = true;
+  }
+
+  Future<String> _fetchOrCreateDeviceId(Database db) async {
+    final deviceState = await db.query('__pocketsync_device_state', limit: 1);
+    if (deviceState.isNotEmpty) {
+      return deviceState.first['device_id'] as String;
+    } else {
+      final deviceId = Uuid().v4();
+      await db.insert(
+        '__pocketsync_device_state',
+        {'device_id': deviceId},
+      );
+      return deviceId;
+    }
   }
 
   /// Sets up connectivity monitoring

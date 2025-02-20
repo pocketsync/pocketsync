@@ -16,7 +16,7 @@ class PocketSyncOptions {
 
   /// The URL of the PocketSync server. This is required.
   /// Default value is 'https://api.pocketsync.dev'.
-  final String? serverUrl;
+  final String serverUrl;
 
   /// The conflict resolver to use when local and remote changes conflict.
   /// By default, conflicts are ignored and remote changes are applied.

@@ -1,10 +1,9 @@
 import 'dart:async';
-import 'dart:convert';
-
-import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:pocketsync_flutter/pocketsync_flutter.dart';
 import 'package:pocketsync_flutter/src/database/database_change.dart';
 import 'package:pocketsync_flutter/src/database/database_change_manager.dart';
+import 'package:pocketsync_flutter/src/database/pocket_sync_schema.dart';
+import 'package:pocketsync_flutter/src/services/pocket_sync_background_service.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
@@ -12,23 +11,25 @@ import 'package:uuid/uuid.dart';
 /// with the ability to track changes and sync them with a remote server
 class PocketSyncDatabase {
   Database? _db;
-
+  PocketSyncBackgroundService? _backgroundService;
   final DatabaseChangeManager changeManager = DatabaseChangeManager();
+  final DatabaseOptions _options;
 
-  /// Background service instance
-  final FlutterBackgroundService _backgroundService =
-      FlutterBackgroundService();
+  PocketSyncDatabase({
+    required DatabaseOptions options,
+  }) : _options = options;
+
+  Database? get db => _db;
+
+  /// Sets the background service instance
+  void setBackgroundService(PocketSyncBackgroundService service) {
+    _backgroundService = service;
+  }
 
   /// Notifies the background service of database changes
   Future<void> _notifyBackgroundService(PsDatabaseChange change) async {
     try {
-      _backgroundService.invoke('onDatabaseChange', {
-        'table': change.tableName,
-        'operation': change.operation.toString(),
-        'record_id': change.recordId,
-        'data': jsonEncode(change.data),
-        'timestamp': change.timestamp.millisecondsSinceEpoch,
-      });
+      await _backgroundService?.requestSync();
     } catch (e) {
       print('Failed to notify background service: $e');
     }
@@ -48,23 +49,22 @@ class PocketSyncDatabase {
   /// Opens and initializes the database
   Future<Database> initialize({
     required String dbPath,
-    required DatabaseOptions options,
   }) async {
     _db = await openDatabase(
       dbPath,
-      version: options.version,
-      onOpen: options.onOpen,
-      onUpgrade: options.onUpgrade,
-      onConfigure: options.onConfigure,
-      onDowngrade: options.onDowngrade,
+      version: _options.version,
+      onOpen: _options.onOpen,
+      onUpgrade: _options.onUpgrade,
+      onConfigure: _options.onConfigure,
+      onDowngrade: _options.onDowngrade,
       singleInstance: true,
       onCreate: (db, version) async {
-        await options.onCreate(db, version);
-
+        await _options.onCreate(db, version);
         await _initializePocketSyncTables(db);
         await _setupChangeTracking(db, version);
       },
     );
+
     return _db!;
   }
 

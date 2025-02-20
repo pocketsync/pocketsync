@@ -71,6 +71,8 @@ class TableChanges {
       ),
     );
   }
+
+  bool get isEmpty => changes.isEmpty;
 }
 
 class ChangeSet {
@@ -128,4 +130,9 @@ class ChangeSet {
       insertions.changes.isNotEmpty ||
       updates.changes.isNotEmpty ||
       deletions.changes.isNotEmpty;
+
+  bool get isEmpty =>
+      insertions.changes.isEmpty &&
+      updates.changes.isEmpty &&
+      deletions.changes.isEmpty;
 }

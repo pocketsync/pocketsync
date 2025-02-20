@@ -25,13 +25,13 @@ class PocketSyncNetworkService {
 
   bool isSyncEnabled = false;
 
-  PocketSyncNetworkService(
-      {required String serverUrl,
-      required String projectId,
-      required String authToken,
-      String? deviceId,
-      Dio? dio})
-      : _dio = dio ?? Dio(),
+  PocketSyncNetworkService({
+    required String serverUrl,
+    required String projectId,
+    required String authToken,
+    String? deviceId,
+    Dio? dio,
+  })  : _dio = dio ?? Dio(),
         _serverUrl = serverUrl,
         _projectId = projectId,
         _authToken = authToken,

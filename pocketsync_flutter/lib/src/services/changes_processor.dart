@@ -9,7 +9,7 @@ import 'package:pocketsync_flutter/src/services/logger_service.dart';
 import 'package:sqflite/sqflite.dart';
 
 class ChangesProcessor {
-  final PocketSyncDatabase _db;
+  final Database _db;
   final ConflictResolver _conflictResolver;
   final _logger = LoggerService.instance;
 
@@ -240,7 +240,8 @@ class ChangesProcessor {
             recordId: row.primaryKey,
             timestamp: DateTime.fromMillisecondsSinceEpoch(row.timestamp),
           );
-          _db.changeManager.notifyChange(change);
+          // TODO: fix this
+          // _db.notifyChange(change);
         }
       }
     }

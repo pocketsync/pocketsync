@@ -36,6 +36,18 @@ class ChangeLog {
     return jsonList.map((json) => ChangeLog.fromJson(json)).toList();
   }
 
+  /// Converts the ChangeLog to a JSON map
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'userIdentifier': userIdentifier,
+      'deviceId': deviceId,
+      'changeSet': changeSet.toJson(),
+      'receivedAt': receivedAt.toIso8601String(),
+      'processedAt': processedAt?.toIso8601String(),
+    };
+  }
+
   @override
   String toString() {
     return 'ChangeLog{id: $id, userIdentifier: $userIdentifier, deviceId: $deviceId, '
