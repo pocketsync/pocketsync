@@ -21,9 +21,10 @@ class PocketSync {
 
   late PocketSyncNetworkService _networkService;
   late ChangesProcessor _changesProcessor;
-  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   late final SyncTaskQueue _syncQueue;
   late final DatabaseChangeManager _dbChangeManager;
+
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   bool _isInitialized = false;
   bool _isSyncing = false;
