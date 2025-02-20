@@ -135,7 +135,6 @@ class PocketSync {
         return;
       }
 
-      _networkService.isSyncEnabled = true;
       await _stateMachine.transition(SyncEvent.startSync);
       await _sync();
     });
@@ -176,9 +175,13 @@ class PocketSync {
 
         // Queue the changes for processing
         await _syncQueue.enqueue(changeSet);
+        
+        // Keep syncing until all changes are processed
+        await Future.delayed(Duration(seconds: 1));
+        await _sync();
+      } else {
+        await _stateMachine.transition(SyncEvent.pauseSync);
       }
-
-      await _stateMachine.transition(SyncEvent.pauseSync);
     } catch (e) {
       _logger.error('Error during sync', error: e);
       await _stateMachine.transition(SyncEvent.error);
@@ -221,7 +224,6 @@ class PocketSync {
   void pauseSync() {
     _runGuarded(() async {
       await _stateMachine.transition(SyncEvent.manualPause);
-      _networkService.isSyncEnabled = false;
       _networkService.disconnect();
       _logger.info('Sync manually paused');
     });
@@ -235,7 +237,6 @@ class PocketSync {
     _runGuarded(() async {
       if (_stateMachine.currentState == SyncState.manuallyPaused) {
         await _stateMachine.transition(SyncEvent.manualResume);
-        _networkService.isSyncEnabled = true;
         _networkService.reconnect();
         _logger.info('Sync resumed');
         await _sync();

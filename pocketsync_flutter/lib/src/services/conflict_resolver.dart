@@ -15,7 +15,7 @@ enum ConflictResolutionStrategy {
 
 /// Handles conflict resolution between local and remote changes.
 /// The default strategy is to ignore conflicts and apply remote changes.
-/// 
+///
 class ConflictResolver {
   final ConflictResolutionStrategy strategy;
   final Future<Map<String, dynamic>> Function(
@@ -33,9 +33,10 @@ class ConflictResolver {
           'Custom resolver must be provided when using custom strategy',
         );
 
-  /// Resolves conflicts between local and remote row data
-  Future<Map<String, dynamic>> resolveConflict(String tableName,
-      Map<String, dynamic> localRow, Map<String, dynamic> remoteRow) async {
+  /// Resolves conflicts synchronously - for use in isolates
+  /// Note: This does not support custom resolvers that require async operations
+  Map<String, dynamic> resolveConflict(String tableName,
+      Map<String, dynamic> localRow, Map<String, dynamic> remoteRow) {
     switch (strategy) {
       case ConflictResolutionStrategy.ignore:
       case ConflictResolutionStrategy.serverWins:
@@ -43,10 +44,8 @@ class ConflictResolver {
       case ConflictResolutionStrategy.clientWins:
         return localRow;
       case ConflictResolutionStrategy.custom:
-        if (customResolver != null) {
-          return await customResolver!(tableName, localRow, remoteRow);
-        }
-        throw Exception('Custom resolver not provided');
+        throw UnsupportedError(
+            'Custom conflict resolution is not supported in isolates');
     }
   }
 }
