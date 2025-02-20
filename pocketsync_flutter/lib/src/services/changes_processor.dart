@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'dart:isolate';
 
 import 'package:pocketsync_flutter/pocketsync_flutter.dart';
+import 'package:pocketsync_flutter/src/models/batch_info.dart';
 import 'package:pocketsync_flutter/src/models/change_log.dart';
 import 'package:pocketsync_flutter/src/models/change_set.dart';
 import 'package:pocketsync_flutter/src/services/logger_service.dart';
@@ -243,10 +244,13 @@ class ChangesProcessor {
   }
 
   /// Applies remote changes to local database
-  Future<void> applyRemoteChanges(Iterable<ChangeLog> changeLogs) async {
+  Future<void> applyRemoteChanges(
+      Iterable<ChangeLog> changeLogs, BatchInfo batchInfo) async {
     if (changeLogs.isEmpty) return;
 
-    _logger.info('Processing ${changeLogs.length} changes');
+    _logger.info(
+      'Processing ${changeLogs.length} changes: Batch ${batchInfo.current}/${batchInfo.total}',
+    );
 
     // Pre-fetch existing rows on main thread since it requires DB access
     final changeSet = _computeChangeSetFromChangeLogs(changeLogs);

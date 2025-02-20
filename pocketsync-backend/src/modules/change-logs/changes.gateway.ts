@@ -87,6 +87,9 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
         this.logger.log(`Device ${deviceId} acknowledged ${payload.changeIds.length} changes`);
     }
 
+    private readonly BATCH_SIZE = 50;
+    private readonly BATCH_DELAY = 1000; // 1 second delay between batches
+
     private async sendMissedChanges(deviceId: string, userIdentifier: string, lastSyncedAt: Date | null) {
         const device = await this.prisma.device.findFirst({
             where: { deviceId, userIdentifier }
@@ -108,10 +111,27 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
         if (changes.length > 0) {
             const socketId = this.connectedDevices.get(deviceId);
             if (socketId) {
-                this.server.to(socketId).emit('changes', {
-                    changes,
-                    requiresAck: true
-                });
+                // Split changes into batches
+                for (let i = 0; i < changes.length; i += this.BATCH_SIZE) {
+                    const batch = changes.slice(i, i + this.BATCH_SIZE);
+                    
+                    // Send batch and wait for acknowledgment or delay
+                    this.server.to(socketId).emit('changes', {
+                        changes: batch,
+                        requiresAck: true,
+                        batchInfo: {
+                            current: Math.floor(i / this.BATCH_SIZE) + 1,
+                            total: Math.ceil(changes.length / this.BATCH_SIZE)
+                        } 
+                    });
+
+                    // Add delay between batches
+                    if (i + this.BATCH_SIZE < changes.length) {
+                        await new Promise(resolve => setTimeout(resolve, this.BATCH_DELAY));
+                    }
+                }
+
+                this.logger.log(`Sent ${changes.length} changes in ${Math.ceil(changes.length / this.BATCH_SIZE)} batches to device ${deviceId}`);
             }
         }
     }

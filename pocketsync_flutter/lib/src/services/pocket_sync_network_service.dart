@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:pocketsync_flutter/src/errors/sync_error.dart';
+import 'package:pocketsync_flutter/src/models/batch_info.dart';
 import 'package:pocketsync_flutter/src/models/change_log.dart';
 import 'package:pocketsync_flutter/src/models/change_processing_response.dart';
 import 'package:pocketsync_flutter/src/models/change_set.dart';
@@ -23,7 +24,7 @@ class PocketSyncNetworkService {
   DateTime? _lastSyncedAt;
 
   // Callback for handling incoming changes
-  Future<void> Function(Iterable<ChangeLog>)? onChangesReceived;
+  Future<void> Function(Iterable<ChangeLog>, BatchInfo)? onChangesReceived;
 
   PocketSyncNetworkService({
     required String serverUrl,
@@ -97,9 +98,13 @@ class PocketSyncNetworkService {
       _socket!.on('changes', (data) async {
         if (onChangesReceived != null) {
           final changesData = data as Map<String, dynamic>;
-          final changelogs = List.from(changesData['changes'])
-              .map((raw) => ChangeLog.fromJson(raw));
-          await onChangesReceived!(changelogs);
+          final batchInfos = BatchInfo.fromJson(
+            changesData['batchInfo'] as Map<String, dynamic>,
+          );
+          final changelogs = List.from(changesData['changes']).map(
+            (raw) => ChangeLog.fromJson(raw),
+          );
+          await onChangesReceived!(changelogs, batchInfos);
           // Acknowledge receipt of changes
           if (changesData['requiresAck'] == true) {
             _socket!.emit('acknowledge-changes', {
