@@ -5,7 +5,9 @@ import 'package:pocketsync_flutter/pocketsync_flutter.dart';
 import 'package:pocketsync_flutter/src/models/change_log.dart';
 import 'package:pocketsync_flutter/src/models/change_set.dart';
 import 'package:pocketsync_flutter/src/services/changes_processor.dart';
+import 'package:pocketsync_flutter/src/services/logger_service.dart';
 import 'package:pocketsync_flutter/src/services/pocket_sync_network_service.dart';
+import 'package:pocketsync_flutter/src/utils/sync_performance_monitor.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../database/pocket_sync_schema.dart';
@@ -15,6 +17,8 @@ class PocketSyncBackgroundService {
   static const String _syncRequestAction = 'syncNow';
   static const String _onRemoteChangeAction = 'onRemoteChange';
 
+  static final LoggerService _logger = LoggerService.instance;
+
   final FlutterBackgroundService _service;
 
   bool _isInitialized = false;
@@ -23,6 +27,11 @@ class PocketSyncBackgroundService {
 
   /// Get the underlying background service instance
   FlutterBackgroundService get service => _service;
+
+  /// Get performance metrics for the background service
+  Map<String, String> getPerformanceMetrics() {
+    return SyncPerformanceMonitor().getPerformanceReport();
+  }
 
   /// Initialize the background service
   Future<void> initialize({
@@ -85,7 +94,14 @@ class PocketSyncBackgroundService {
     bool isInitialized = false;
 
     /// Notifies the main app about database changes
-    void notifyDatabaseChange(String tableName, String operation, Map<String, dynamic> data, String recordId, int timestamp) {
+    void notifyDatabaseChange(
+      String tableName,
+      String operation,
+      Map<String, dynamic> data,
+      String recordId,
+      int timestamp,
+    ) {
+      // Send simple change notification to main isolate
       service.invoke('onDatabaseChange', {
         'tableName': tableName,
         'operation': operation,
@@ -95,122 +111,156 @@ class PocketSyncBackgroundService {
       });
     }
 
-    /// Internal method to apply changes to the database
-    Future<void> applyChanges(Database db, ChangeSet changeSet, Iterable<ChangeLog> changeLogs) async {
-      final affectedTables = <String>{};
-      await db.transaction((txn) async {
-        Future<void> applyTableOperation(
-          String tableName,
-          Row row,
-          String operation,
-          Transaction txn,
-        ) async {
-          try {
-            // Get existing row if any
-            final existingRow = await txn.query(
-              tableName,
-              where: "ps_global_id = ?",
-              whereArgs: [row.primaryKey],
-            );
+    /// Apply a table operation with conflict resolution
+    Future<void> applyTableOperation(
+      String tableName,
+      Row row,
+      String operation,
+      Transaction txn,
+      ConflictResolver? conflictResolver,
+    ) async {
+      try {
+        // Disable all triggers temporarily
+        await txn.execute('PRAGMA recursive_triggers = OFF;');
 
-            // Apply last-write-wins conflict resolution
-            if (existingRow.isNotEmpty) {
-              final existingTimestamp = existingRow.first['timestamp'] as int?;
-              final incomingTimestamp = row.timestamp;
-              if (existingTimestamp != null &&
-                  existingTimestamp >= incomingTimestamp) {
-                // Skip this change as we already have a newer version
-                return;
-              }
-            }
-
-            // Disable all triggers temporarily
-            await txn.execute('PRAGMA recursive_triggers = OFF;');
-
-            // Apply the change operation
-            switch (operation) {
-              case 'INSERT':
-                try {
-                  await txn.insert(tableName, row.data);
-                  notifyDatabaseChange(tableName, 'INSERT', row.data, row.primaryKey, row.timestamp);
-                } catch (e) {
-                  // Handle insert conflict by attempting to update instead
-                  final existingRow = await txn.query(
-                    tableName,
-                    where: 'ps_global_id = ?',
-                    whereArgs: [row.primaryKey],
-                  );
-                  if (existingRow.isNotEmpty) {
-                    final resolvedRow = await conflictResolver!.resolveConflict(
-                      tableName,
-                      existingRow.first,
-                      row.data,
-                    );
-                    await txn.update(
-                      tableName,
-                      resolvedRow,
-                      where: 'ps_global_id = ?',
-                      whereArgs: [row.primaryKey],
-                    );
-                    notifyDatabaseChange(tableName, 'UPDATE', resolvedRow, row.primaryKey, row.timestamp);
-                  } else {
-                    rethrow;
-                  }
-                }
-                break;
-              case 'UPDATE':
+        try {
+          // Apply the change operation
+          switch (operation) {
+            case 'INSERT':
+              try {
+                await txn.insert(tableName, row.data);
+                notifyDatabaseChange(
+                  tableName,
+                  'INSERT',
+                  row.data,
+                  row.primaryKey,
+                  row.timestamp,
+                );
+              } catch (e) {
+                // Handle insert conflict by attempting to update instead
                 final existingRow = await txn.query(
                   tableName,
                   where: 'ps_global_id = ?',
                   whereArgs: [row.primaryKey],
                 );
+
                 if (existingRow.isNotEmpty) {
-                  final resolvedRow = await conflictResolver!.resolveConflict(
-                    tableName,
-                    existingRow.first,
-                    row.data,
-                  );
+                  // Resolve conflict
+                  final resolvedRow = await conflictResolver?.resolveConflict(
+                          tableName, row.data, existingRow.first) ??
+                      row.data;
+
+                  // Update with resolved data
                   await txn.update(
                     tableName,
                     resolvedRow,
                     where: 'ps_global_id = ?',
                     whereArgs: [row.primaryKey],
                   );
-                  notifyDatabaseChange(tableName, 'UPDATE', resolvedRow, row.primaryKey, row.timestamp);
+                  notifyDatabaseChange(
+                    tableName,
+                    'UPDATE',
+                    resolvedRow,
+                    row.primaryKey,
+                    row.timestamp,
+                  );
                 } else {
-                  // Row does not exist, ignore
+                  rethrow;
                 }
-                break;
-              case 'DELETE':
-                await txn.delete(
+              }
+              break;
+
+            case 'UPDATE':
+              final existingRow = await txn.query(
+                tableName,
+                where: 'ps_global_id = ?',
+                whereArgs: [row.primaryKey],
+              );
+              if (existingRow.isNotEmpty) {
+                // Resolve conflict
+                final resolvedRow = await conflictResolver?.resolveConflict(
+                        tableName, row.data, existingRow.first) ??
+                    row.data;
+
+                // Update with resolved data
+                await txn.update(
                   tableName,
+                  resolvedRow,
                   where: 'ps_global_id = ?',
                   whereArgs: [row.primaryKey],
                 );
-                notifyDatabaseChange(tableName, 'DELETE', row.data, row.primaryKey, row.timestamp);
-                break;
-            }
-          } finally {
-            await txn.execute('PRAGMA recursive_triggers = ON;');
-          }
-        }
+                notifyDatabaseChange(
+                  tableName,
+                  'UPDATE',
+                  resolvedRow,
+                  row.primaryKey,
+                  row.timestamp,
+                );
+              }
+              break;
 
+            case 'DELETE':
+              await txn.delete(
+                tableName,
+                where: 'ps_global_id = ?',
+                whereArgs: [row.primaryKey],
+              );
+              notifyDatabaseChange(
+                tableName,
+                'DELETE',
+                row.data,
+                row.primaryKey,
+                row.timestamp,
+              );
+              break;
+          }
+        } finally {
+          await txn.execute('PRAGMA recursive_triggers = ON;');
+        }
+      } catch (e) {
+        rethrow;
+      }
+    }
+
+    /// Internal method to apply changes to the database
+    Future<void> applyChanges(Database db, ChangeSet changeSet,
+        Iterable<ChangeLog> changeLogs) async {
+      final affectedTables = <String>{};
+      await db.transaction((txn) async {
         // Apply all changes
         for (final entry in changeSet.insertions.changes.entries) {
           for (final row in entry.value.rows) {
-            await applyTableOperation(entry.key, row, 'INSERT', txn);
+            await applyTableOperation(
+              entry.key,
+              row,
+              'INSERT',
+              txn,
+              conflictResolver,
+            );
           }
         }
 
         for (final entry in changeSet.updates.changes.entries) {
           for (final row in entry.value.rows) {
-            await applyTableOperation(entry.key, row, 'UPDATE', txn);
+            await applyTableOperation(
+              entry.key,
+              row,
+              'UPDATE',
+              txn,
+              conflictResolver,
+            );
           }
         }
 
         for (final entry in changeSet.deletions.changes.entries) {
           for (final row in entry.value.rows) {
-            await applyTableOperation(entry.key, row, 'DELETE', txn);
+            await applyTableOperation(
+              entry.key,
+              row,
+              'DELETE',
+              txn,
+              conflictResolver,
+            );
           }
         }
 
@@ -272,7 +322,8 @@ class PocketSyncBackgroundService {
 
           while (retryCount < maxRetries) {
             try {
-              final changeSet = processor!.computeChangeSetFromChangeLogs(changes);
+              final changeSet =
+                  processor!.computeChangeSetFromChangeLogs(changes);
               await applyChanges(db!, changeSet, changes);
 
               // Notify main isolate of applied changes
@@ -285,19 +336,21 @@ class PocketSyncBackgroundService {
               break;
             } catch (e) {
               retryCount++;
-              print('Error applying remote changes (attempt $retryCount/$maxRetries): $e');
-              
+              _logger.error(
+                  'Error applying remote changes (attempt $retryCount/$maxRetries): $e');
+
               if (retryCount >= maxRetries) {
-                print('Failed to apply remote changes after $maxRetries attempts');
+                _logger.error(
+                    'Failed to apply remote changes after $maxRetries attempts');
                 break;
               }
-              
+
               await Future.delayed(retryDelay * retryCount);
             }
           }
         };
       } catch (e) {
-        print('Error during initialization: $e');
+        _logger.error('Error during initialization: $e');
         isInitialized = false;
       }
     });
@@ -330,17 +383,19 @@ class PocketSyncBackgroundService {
             break;
           } catch (e) {
             retryCount++;
-            print('Error sending changes (attempt $retryCount/$maxRetries): $e');
-            
+            _logger.error(
+                'Error sending changes (attempt $retryCount/$maxRetries): $e');
+
             if (retryCount >= maxRetries) {
-              throw SyncStateError('Failed to send changes after $maxRetries attempts');
+              throw SyncStateError(
+                  'Failed to send changes after $maxRetries attempts');
             }
-            
+
             await Future.delayed(retryDelay * retryCount);
           }
         }
       } catch (e) {
-        print('Error processing sync request: $e');
+        _logger.error('Error processing sync request: $e');
       }
     });
 

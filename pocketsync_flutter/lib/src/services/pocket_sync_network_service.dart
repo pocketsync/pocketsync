@@ -103,17 +103,68 @@ class PocketSyncNetworkService {
       _socket!.onDisconnect((_) => log('Socket.IO disconnected'));
 
       _socket!.on('changes', (data) async {
-        if (onChangesReceived != null) {
-          final changesData = data as Map<String, dynamic>;
-          final changelogs = List.from(changesData['changes'])
-              .map((raw) => ChangeLog.fromJson(raw));
+        try {
+          if (onChangesReceived == null) return;
+          if (data == null) {
+            _logger.error('Received null data from WebSocket');
+            return;
+          }
+
+          // Validate data structure
+          if (data is! Map<String, dynamic>) {
+            _logger.error('Invalid data type from WebSocket: ${data.runtimeType}');
+            return;
+          }
+
+          final changes = data['changes'];
+          if (changes == null) {
+            _logger.error('No changes field in WebSocket data');
+            return;
+          }
+          if (changes is! List) {
+            _logger.error('Changes is not a list: ${changes.runtimeType}');
+            return;
+          }
+
+          // Process changes
+          final changelogs = <ChangeLog>[];
+          for (final raw in changes) {
+            try {
+              if (raw is Map<String, dynamic>) {
+                changelogs.add(ChangeLog.fromJson(raw));
+              } else {
+                _logger.error('Invalid change log format: ${raw.runtimeType}');
+              }
+            } catch (e, stackTrace) {
+              _logger.error(
+                'Error parsing change log',
+                error: e,
+                stackTrace: stackTrace,
+              );
+            }
+          }
+
+          if (changelogs.isEmpty) {
+            _logger.info('No valid changes to process');
+            return;
+          }
+
+          // Process valid changes
           await onChangesReceived!(changelogs);
-          // Acknowledge receipt of changes
-          if (changesData['requiresAck'] == true) {
+
+          // Acknowledge if required
+          final requiresAck = data['requiresAck'];
+          if (requiresAck == true) {
             _socket!.emit('acknowledge-changes', {
               'changeIds': changelogs.map((log) => log.id).toList(),
             });
           }
+        } catch (e, stackTrace) {
+          _logger.error(
+            'Error processing WebSocket changes',
+            error: e,
+            stackTrace: stackTrace,
+          );
         }
       });
 

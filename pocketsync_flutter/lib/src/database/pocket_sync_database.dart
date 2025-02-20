@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:pocketsync_flutter/pocketsync_flutter.dart';
 import 'package:pocketsync_flutter/src/database/database_change.dart';
 import 'package:pocketsync_flutter/src/database/database_change_manager.dart';
+import 'package:pocketsync_flutter/src/services/logger_service.dart';
 import 'package:pocketsync_flutter/src/services/pocket_sync_background_service.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
@@ -14,6 +15,8 @@ class PocketSyncDatabase {
   final DatabaseChangeManager changeManager = DatabaseChangeManager();
   final DatabaseOptions _options;
   StreamSubscription? _backgroundServiceSubscription;
+
+  final LoggerService _logger = LoggerService.instance;
 
   PocketSyncDatabase({
     required DatabaseOptions options,
@@ -38,25 +41,48 @@ class PocketSyncDatabase {
       if (event == null) return;
 
       try {
-        final tableName = event['tableName'] as String;
-        final operation = event['operation'] as String;
-        final data = event['data'] as Map<String, dynamic>;
-        final recordId = event['recordId'] as String;
-        final timestamp =
-            DateTime.fromMillisecondsSinceEpoch(event['timestamp'] as int);
+        // Validate required fields
+        final tableName = event['tableName'];
+        final operation = event['operation'];
+        final data = event['data'];
+        final recordId = event['recordId'];
+        final timestamp = event['timestamp'];
+
+        if (tableName == null ||
+            operation == null ||
+            data == null ||
+            recordId == null ||
+            timestamp == null) {
+          throw FormatException(
+              'Missing required fields in database change notification');
+        }
+
+        // Type checking
+        if (tableName is! String ||
+            operation is! String ||
+            data is! Map<String, dynamic> ||
+            recordId is! String ||
+            timestamp is! int) {
+          throw FormatException(
+              'Invalid field types in database change notification');
+        }
 
         final change = PsDatabaseChange(
           tableName: tableName,
           operation: operation,
           data: data,
           recordId: recordId,
-          timestamp: timestamp,
+          timestamp: DateTime.fromMillisecondsSinceEpoch(timestamp),
         );
 
         // Notify local listeners
         changeManager.notifyChange(change);
-      } catch (e) {
-        print('Error processing background service notification: $e');
+      } catch (e, stackTrace) {
+        _logger.error(
+          'Error processing background service notification',
+          error: e,
+          stackTrace: stackTrace,
+        );
       }
     });
   }
@@ -66,7 +92,7 @@ class PocketSyncDatabase {
     try {
       await _backgroundService?.requestSync();
     } catch (e) {
-      print('Failed to notify background service: $e');
+      _logger.error('Failed to notify background service: $e');
     }
   }
 

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:meta/meta.dart';
 import 'package:pocketsync_flutter/src/database/database_change.dart';
 import 'package:pocketsync_flutter/src/database/pocket_sync_database.dart';
 import 'package:pocketsync_flutter/src/errors/sync_error.dart';
@@ -31,6 +32,9 @@ class PocketSync {
   bool _isSyncStarted = false;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   final Debouncer _debouncer = Debouncer();
+
+  @visibleForTesting
+  PocketSyncNetworkService get networkService => _networkService;
 
   /// Returns the database instance
   /// Throws [StateError] if PocketSync is not initialized
