@@ -55,9 +55,12 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
         this.connectedDevices.set(device_id, client.id);
         this.logger.log(`Device ${device_id} connected to project ${project_id}`);
 
+        // Convert milliseconds timestamp to Date object
+        const lastSyncedDate = last_synced_at ? new Date(parseInt(last_synced_at)) : null;
+        
         // Send any missed changes to the newly connected device
-        await this.sendMissedChanges(device_id, user_id, last_synced_at ? new Date(last_synced_at) : null);
-    }
+        await this.sendMissedChanges(device_id, user_id, lastSyncedDate);
+}
 
     handleDisconnect(client: any) {
         const deviceId = Array.from(this.connectedDevices.entries())

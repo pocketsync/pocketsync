@@ -83,7 +83,7 @@ class PocketSyncNetworkService {
           'project_id': _projectId,
           'user_id': _userId,
           'device_id': _deviceId,
-          'last_synced_at': _lastSyncedAt?.toIso8601String(),
+          'last_synced_at': _lastSyncedAt?.millisecondsSinceEpoch,
         },
         'extraHeaders': {
           'Authorization': 'Bearer $_authToken',
