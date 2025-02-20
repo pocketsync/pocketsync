@@ -9,7 +9,6 @@ import 'models/change_processing_response.dart';
 import 'services/pocket_sync_network_service.dart';
 import 'services/changes_processor.dart';
 import 'services/sync_task_queue.dart';
-import 'state/sync_state_machine.dart';
 
 class PocketSync {
   static final PocketSync instance = PocketSync._internal();
@@ -22,21 +21,24 @@ class PocketSync {
 
   late PocketSyncNetworkService _networkService;
   late ChangesProcessor _changesProcessor;
-  final SyncStateMachine _stateMachine = SyncStateMachine();
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   late final SyncTaskQueue _syncQueue;
+
+  bool _isInitialized = false;
+  bool _isSyncing = false;
+  bool _isConnected = true;
+  bool _isManuallyPaused = false;
 
   /// Returns the database instance
   /// Throws [StateError] if PocketSync is not initialized
   PocketSyncDatabase get database => _runGuarded(() => _database);
 
   T _runGuarded<T>(T Function() callback) {
-    if (_stateMachine.currentState == SyncState.uninitialized) {
+    if (!_isInitialized) {
       throw StateError(
         'You should call PocketSync.instance.initialize before any other call.',
       );
     }
-
     return callback();
   }
 
@@ -51,7 +53,7 @@ class PocketSync {
     required PocketSyncOptions options,
     required DatabaseOptions databaseOptions,
   }) async {
-    if (_stateMachine.currentState != SyncState.uninitialized) return;
+    if (_isInitialized) return;
 
     _networkService = PocketSyncNetworkService(
       serverUrl: options.serverUrl ?? 'https://api.pocketsync.dev',
@@ -89,7 +91,7 @@ class PocketSync {
 
     // Initialize connectivity monitoring
     _setupConnectivityMonitoring();
-    await _stateMachine.transition(SyncEvent.initialize);
+    _isInitialized = true;
   }
 
   /// Sets up connectivity monitoring
@@ -103,10 +105,10 @@ class PocketSync {
     List<ConnectivityResult> result,
   ) async {
     if (result.contains(ConnectivityResult.none) || result.isEmpty) {
-      await _stateMachine.transition(SyncEvent.connectionLost);
+      _isConnected = false;
       _networkService.disconnect();
-    } else if (_stateMachine.currentState == SyncState.offline) {
-      await _stateMachine.transition(SyncEvent.connectionRestored);
+    } else if (!_isConnected) {
+      _isConnected = true;
       _networkService.reconnect();
       await _sync();
     }
@@ -117,9 +119,10 @@ class PocketSync {
   /// This method should be called before [startSync].
   /// Throws [StateError] if PocketSync is not initialized
   Future<void> setUserId({required String userId}) async {
-    _runGuarded(() {
+    await _runGuarded(() async {
       _userId = userId;
       _networkService.setUserId(userId);
+      await startSync();
     });
   }
 
@@ -130,37 +133,28 @@ class PocketSync {
   Future<void> startSync() async {
     await _runGuarded(() async {
       if (_userId == null) throw StateError('User ID not set');
-
-      if (_stateMachine.currentState == SyncState.manuallyPaused) {
-        return;
-      }
-
-      await _stateMachine.transition(SyncEvent.startSync);
+      if (_isManuallyPaused) return;
       await _sync();
     });
   }
 
   void _syncChanges(PsDatabaseChange changes) {
-    // Use a microtask to ensure we're not blocking the main thread
-    // but still maintain operation order
-    scheduleMicrotask(() => _sync());
+    if (!_isSyncing && _isConnected && !_isManuallyPaused) {
+      scheduleMicrotask(() => _sync());
+    } else {
+      _logger.debug('Skipping syncChanges: inappropriate state');
+    }
   }
 
   /// Internal sync method
   Future<void> _sync() async {
-    if (_userId == null ||
-        _stateMachine.currentState == SyncState.syncing ||
-        _stateMachine.currentState == SyncState.offline ||
-        _stateMachine.currentState == SyncState.manuallyPaused) {
+    if (_userId == null || _isSyncing || !_isConnected || _isManuallyPaused) {
       _logger.debug(
-          'Sync skipped: user ID not set or inappropriate state: ${_stateMachine.currentState}');
+          'Sync skipped: user ID not set or inappropriate state');
       return;
     }
 
-    if (!await _stateMachine.transition(SyncEvent.startSync)) {
-      _logger.debug('Could not transition to syncing state');
-      return;
-    }
+    _isSyncing = true;
 
     try {
       // Fetch changes in a non-blocking way
@@ -175,16 +169,11 @@ class PocketSync {
 
         // Queue the changes for processing
         await _syncQueue.enqueue(changeSet);
-        
-        // Keep syncing until all changes are processed
-        await Future.delayed(Duration(seconds: 1));
-        await _sync();
-      } else {
-        await _stateMachine.transition(SyncEvent.pauseSync);
       }
+      _isSyncing = false;
     } catch (e) {
       _logger.error('Error during sync', error: e);
-      await _stateMachine.transition(SyncEvent.error);
+      _isSyncing = false;
       rethrow;
     }
   }
@@ -222,8 +211,8 @@ class PocketSync {
   ///
   /// Throws [StateError] if PocketSync is not initialized
   void pauseSync() {
-    _runGuarded(() async {
-      await _stateMachine.transition(SyncEvent.manualPause);
+    _runGuarded(() {
+      _isManuallyPaused = true;
       _networkService.disconnect();
       _logger.info('Sync manually paused');
     });
@@ -235,8 +224,8 @@ class PocketSync {
   /// Throws [StateError] if PocketSync is not initialized
   Future<void> resumeSync() async {
     _runGuarded(() async {
-      if (_stateMachine.currentState == SyncState.manuallyPaused) {
-        await _stateMachine.transition(SyncEvent.manualResume);
+      if (_isManuallyPaused) {
+        _isManuallyPaused = false;
         _networkService.reconnect();
         _logger.info('Sync resumed');
         await _sync();
@@ -246,9 +235,7 @@ class PocketSync {
 
   /// Returns whether sync is currently paused
   bool get isPaused => _runGuarded(() =>
-      _stateMachine.currentState == SyncState.paused ||
-      _stateMachine.currentState == SyncState.manuallyPaused ||
-      _stateMachine.currentState == SyncState.offline);
+      !_isConnected || _isManuallyPaused);
 
   /// Cleans up resources
   Future<void> dispose() async {
