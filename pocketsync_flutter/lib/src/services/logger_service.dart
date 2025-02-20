@@ -20,7 +20,6 @@ class LoggerService {
 
     developer.log(
       logMessage,
-      time: DateTime.now(),
       error: error,
       stackTrace: stackTrace,
       level: level.index,

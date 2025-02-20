@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer';
 
 import 'package:pocketsync_flutter/src/errors/sync_error.dart';
 import 'package:pocketsync_flutter/src/models/batch_info.dart';
@@ -91,9 +90,9 @@ class PocketSyncNetworkService {
         }
       });
 
-      _socket!.onConnect((_) => log('Socket.IO connected'));
+      _socket!.onConnect((_) => _logger.info('Socket.IO connected'));
 
-      _socket!.onDisconnect((_) => log('Socket.IO disconnected'));
+      _socket!.onDisconnect((_) => _logger.info('Socket.IO disconnected'));
 
       _socket!.on('changes', (data) async {
         if (onChangesReceived != null) {
@@ -115,7 +114,7 @@ class PocketSyncNetworkService {
       });
 
       _socket!.onError((error) {
-        log('Socket.IO error: $error');
+        _logger.debug('Socket.IO error: $error');
       });
 
       _socket!.connect();

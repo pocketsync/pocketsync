@@ -24,7 +24,7 @@ class PocketSyncOptions {
   final ConflictResolver conflictResolver;
 
   /// Whether to run in silent mode. In silent mode, no logs are printed to the console.
-  /// Defaults to true in release mode and false in debug mode, which means that logs are only printed in debug mode.
+  /// Defaults to true in release mode and false in debug mode.
   final bool silent;
 
   PocketSyncOptions({
@@ -32,7 +32,7 @@ class PocketSyncOptions {
     required this.authToken,
     this.serverUrl = 'https://api.pocketsync.dev',
     this.conflictResolver = const ConflictResolver(),
-    this.silent = kDebugMode,
+    this.silent = !kDebugMode,
   });
 }
 

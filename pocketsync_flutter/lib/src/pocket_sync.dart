@@ -137,7 +137,7 @@ class PocketSync {
   Future<void> start() async {
     await _runGuarded(() async {
       if (_userId == null) throw StateError('User ID not set');
-      if (!_isPaused) return;
+      _isPaused = false;
 
       // Set up real-time change notification
       _dbChangeManager.addGlobalListener(_syncChanges);
@@ -153,14 +153,14 @@ class PocketSync {
     if (!_isSyncing && _isConnected && !_isPaused) {
       scheduleMicrotask(() => _sync());
     } else {
-      _logger.debug('Skipping syncChanges: inappropriate state');
+      _logger.info('Skipping syncChanges: inappropriate state');
     }
   }
 
   /// Internal sync method
   Future<void> _sync() async {
     if (_userId == null || _isSyncing || !_isConnected || _isPaused) {
-      _logger.debug('Sync skipped: user ID not set or inappropriate state');
+      _logger.info('Sync skipped: user ID not set or inappropriate state');
       return;
     }
 

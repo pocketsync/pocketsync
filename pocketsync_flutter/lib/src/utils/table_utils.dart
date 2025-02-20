@@ -14,8 +14,9 @@ Set<String> extractAffectedTables(String sql) {
     RegExp(r'update\s+([a-zA-Z_][a-zA-Z0-9_]*)', caseSensitive: false),
     // Insert or replace into statements
     RegExp(
-        r'(?:insert\s+or\s+replace\s+into|insert\s+into)\s+([a-zA-Z_][a-zA-Z0-9_]*)',
-        caseSensitive: false),
+      r'(?:insert\s+or\s+replace\s+into|insert\s+into)\s+([a-zA-Z_][a-zA-Z0-9_]*)',
+      caseSensitive: false,
+    ),
     // Delete statements
     RegExp(r'delete\s+from\s+([a-zA-Z_][a-zA-Z0-9_]*)', caseSensitive: false),
   ];

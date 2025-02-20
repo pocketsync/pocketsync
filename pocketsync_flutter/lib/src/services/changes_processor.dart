@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:developer';
 import 'dart:isolate';
 
 import 'package:pocketsync_flutter/pocketsync_flutter.dart';
@@ -78,7 +77,7 @@ class ChangesProcessor {
                       ? (rawData['old'] as Map<String, dynamic>)
                       : rawData;
             } catch (e) {
-              log('Error parsing change data for id $id: $e');
+              _logger.error('Error parsing change data for id $id: $e');
               throw SyncStateError(
                   'Failed to parse change data: ${e.toString()}');
             }
@@ -104,7 +103,7 @@ class ChangesProcessor {
                 deletions.putIfAbsent(tableName, () => []).add(row);
                 break;
               default:
-                log('Invalid operation type: $operation');
+                _logger.error('Invalid operation type: $operation');
                 throw SyncStateError('Invalid operation type: $operation');
             }
 
@@ -113,7 +112,7 @@ class ChangesProcessor {
             if (version > lastVersion) lastVersion = version;
           } catch (e) {
             if (e is SyncError) rethrow;
-            log('Error processing change: $e');
+            _logger.error('Error processing change: $e');
             throw SyncStateError('Failed to process change: ${e.toString()}');
           }
         }
@@ -138,7 +137,7 @@ class ChangesProcessor {
       );
     } catch (e) {
       if (e is SyncError) rethrow;
-      log('Unexpected error in getUnSyncedChanges: $e');
+      _logger.error('Unexpected error in getUnSyncedChanges: $e');
       throw SyncStateError('Failed to get unsynced changes: ${e.toString()}');
     }
   }
