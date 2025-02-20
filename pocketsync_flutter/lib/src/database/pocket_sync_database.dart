@@ -91,8 +91,8 @@ class PocketSyncDatabase {
       )
     ''');
 
-    final deviceFingerprintService = DeviceFingerprintService(this);
-    final deviceId = await deviceFingerprintService.getDeviceFingerprint();
+    final deviceFingerprintService = DeviceFingerprintService(db);
+    final deviceId = await deviceFingerprintService.getDeviceFingerprint(db);
     await db.insert(
       '__pocketsync_device_state',
       {

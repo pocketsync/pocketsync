@@ -6,15 +6,10 @@ class LoggerService {
   static final LoggerService instance = LoggerService._internal();
   LoggerService._internal();
 
-  LogLevel _minLevel = LogLevel.info;
+  bool _isSilent = false;
+  set isSilent(bool value) => _isSilent = value;
 
-  void setLogLevel(LogLevel level) {
-    _minLevel = level;
-  }
-
-  bool _shouldLog(LogLevel level) {
-    return level.index >= _minLevel.index;
-  }
+  bool _shouldLog(LogLevel level) => !_isSilent;
 
   void _log(LogLevel level, String message,
       {Object? error, StackTrace? stackTrace}) {

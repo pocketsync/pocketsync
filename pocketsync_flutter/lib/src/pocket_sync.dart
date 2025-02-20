@@ -56,6 +56,8 @@ class PocketSync {
   }) async {
     if (_isInitialized) return;
 
+    LoggerService.instance.isSilent = options.silent;
+
     _dbChangeManager = DatabaseChangeManager();
     _networkService = PocketSyncNetworkService(
       serverUrl: options.serverUrl ?? 'https://api.pocketsync.dev',
