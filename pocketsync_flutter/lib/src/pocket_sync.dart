@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:pocketsync_flutter/src/database/database_change.dart';
 import 'package:pocketsync_flutter/src/database/pocket_sync_database.dart';
 import 'package:pocketsync_flutter/src/models/change_set.dart';
 import 'package:pocketsync_flutter/src/services/logger_service.dart';
@@ -85,12 +84,6 @@ class PocketSync {
     );
 
     _networkService.onChangesReceived = _changesProcessor.applyRemoteChanges;
-
-    // Set up real-time change notification
-    _database.addGlobalListener(_syncChanges);
-
-    // Initialize connectivity monitoring
-    _setupConnectivityMonitoring();
     _isInitialized = true;
   }
 
@@ -122,7 +115,6 @@ class PocketSync {
     await _runGuarded(() async {
       _userId = userId;
       _networkService.setUserId(userId);
-      await startSync();
     });
   }
 
@@ -134,11 +126,19 @@ class PocketSync {
     await _runGuarded(() async {
       if (_userId == null) throw StateError('User ID not set');
       if (_isManuallyPaused) return;
+      
+      // Set up real-time change notification
+      _database.addGlobalListener(_syncChanges);
+      
+      // Initialize connectivity monitoring
+      _setupConnectivityMonitoring();
+      
+      _networkService.isSyncEnabled = true;
       await _sync();
     });
   }
 
-  void _syncChanges(PsDatabaseChange changes) {
+  void _syncChanges(String table) {
     if (!_isSyncing && _isConnected && !_isManuallyPaused) {
       scheduleMicrotask(() => _sync());
     } else {
@@ -149,8 +149,7 @@ class PocketSync {
   /// Internal sync method
   Future<void> _sync() async {
     if (_userId == null || _isSyncing || !_isConnected || _isManuallyPaused) {
-      _logger.debug(
-          'Sync skipped: user ID not set or inappropriate state');
+      _logger.debug('Sync skipped: user ID not set or inappropriate state');
       return;
     }
 
@@ -214,6 +213,8 @@ class PocketSync {
     _runGuarded(() {
       _isManuallyPaused = true;
       _networkService.disconnect();
+      _database.removeGlobalListener(_syncChanges);
+      _connectivitySubscription?.cancel();
       _logger.info('Sync manually paused');
     });
   }
@@ -234,14 +235,12 @@ class PocketSync {
   }
 
   /// Returns whether sync is currently paused
-  bool get isPaused => _runGuarded(() =>
-      !_isConnected || _isManuallyPaused);
+  bool get isPaused => _runGuarded(() => !_isConnected || _isManuallyPaused);
 
   /// Cleans up resources
   Future<void> dispose() async {
-    await _connectivitySubscription?.cancel();
+    _isInitialized = false;
     await _database.close();
-    _networkService.disconnect();
     _syncQueue.dispose();
   }
 }
