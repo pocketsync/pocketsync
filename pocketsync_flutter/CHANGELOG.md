@@ -1,4 +1,6 @@
 ## 0.0.5
+### New Features
+- Add `silent` option to `PocketSyncOptions` to disable sync logs
 
 ### Breaking Changes
 - Renamed `startSync` method to `start`
