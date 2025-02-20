@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:pocketsync_flutter/pocketsync_flutter.dart';
 import 'package:pocketsync_flutter/src/database/database_change.dart';
 import 'package:pocketsync_flutter/src/database/database_change_manager.dart';
-import 'package:pocketsync_flutter/src/database/pocket_sync_schema.dart';
 import 'package:pocketsync_flutter/src/services/pocket_sync_background_service.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';

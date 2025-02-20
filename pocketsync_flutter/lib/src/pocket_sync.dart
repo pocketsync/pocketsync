@@ -3,14 +3,12 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:pocketsync_flutter/src/database/database_change.dart';
 import 'package:pocketsync_flutter/src/database/pocket_sync_database.dart';
 import 'package:pocketsync_flutter/src/errors/sync_error.dart';
-import 'package:pocketsync_flutter/src/models/change_set.dart';
 import 'package:pocketsync_flutter/src/services/debouncer.dart';
 import 'package:pocketsync_flutter/src/services/logger_service.dart';
 import 'package:pocketsync_flutter/src/services/pocket_sync_background_service.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 import 'models/pocket_sync_options.dart';
-import 'models/change_processing_response.dart';
 import 'services/pocket_sync_network_service.dart';
 import 'services/changes_processor.dart';
 
@@ -25,6 +23,7 @@ class PocketSync {
 
   late PocketSyncNetworkService _networkService;
   late ChangesProcessor _changesProcessor;
+  late PocketSyncBackgroundService _backgroundService;
   bool _isSyncing = false;
   bool _isInitialized = false;
   bool _isPaused = false;
@@ -78,23 +77,21 @@ class PocketSync {
     );
 
     // Initialize background service
-    final backgroundService = PocketSyncBackgroundService();
-    await backgroundService.initialize(
+    _backgroundService = PocketSyncBackgroundService();
+    await _backgroundService.initialize(
       dbPath: dbPath,
       dbVersion: databaseOptions.version,
       serverUrl: options.serverUrl,
       projectId: options.projectId,
       authToken: options.authToken,
       deviceId: deviceId,
+      conflictResolver: options.conflictResolver,
     );
 
     // Connect background service to database
-    _database.setBackgroundService(backgroundService);
+    _database.setBackgroundService(_backgroundService);
 
-    _changesProcessor = ChangesProcessor(
-      _database.db!,
-      conflictResolver: options.conflictResolver,
-    );
+    _changesProcessor = ChangesProcessor(_database.db!);
 
     _networkService.onChangesReceived = _changesProcessor.applyRemoteChanges;
 
@@ -184,20 +181,9 @@ class PocketSync {
 
     _debouncer.run(() async {
       try {
-        final changeSet = await _changesProcessor.getUnSyncedChanges();
-        if (changeSet.insertions.changes.isNotEmpty ||
-            changeSet.updates.changes.isNotEmpty ||
-            changeSet.deletions.changes.isNotEmpty) {
-          _logger.info(
-              'Processing changes: ${changeSet.changeIds.length} changes found');
-          final processedResponse = await _sendChanges(changeSet);
-
-          if (processedResponse.status == 'success' &&
-              processedResponse.processed) {
-            await _markChangesSynced(changeSet.changeIds);
-            _logger.info('Changes successfully synced');
-          }
-        }
+        // Forward sync request to background service
+        await _changesProcessor.processUnSyncedChanges();
+        _logger.info('Changes forwarded to background service');
       } on SyncError catch (e) {
         _logger.error('Sync error occurred', error: e);
       } finally {
@@ -205,14 +191,6 @@ class PocketSync {
       }
     });
   }
-
-  /// Sends changes to the server
-  Future<ChangeProcessingResponse> _sendChanges(ChangeSet changes) async =>
-      await _networkService.sendChanges(changes);
-
-  /// Marks changes as synced
-  Future<void> _markChangesSynced(List<int> changeIds) async =>
-      await _changesProcessor.markChangesSynced(changeIds);
 
   /// Pauses the synchronization process
   /// This method can be called to pause the synchronization process
@@ -251,5 +229,6 @@ class PocketSync {
     await _connectivitySubscription?.cancel();
     await _database.close();
     _networkService.dispose();
+    await _backgroundService.stop();
   }
 }

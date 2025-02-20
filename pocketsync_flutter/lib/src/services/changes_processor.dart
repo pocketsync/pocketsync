@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:developer';
 
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:pocketsync_flutter/pocketsync_flutter.dart';
-import 'package:pocketsync_flutter/src/database/database_change.dart';
 import 'package:pocketsync_flutter/src/models/change_log.dart';
 import 'package:pocketsync_flutter/src/models/change_set.dart';
 import 'package:pocketsync_flutter/src/services/logger_service.dart';
@@ -10,15 +10,49 @@ import 'package:sqflite/sqflite.dart';
 
 class ChangesProcessor {
   final Database _db;
-  final ConflictResolver _conflictResolver;
+
   final _logger = LoggerService.instance;
+  final FlutterBackgroundService _backgroundService;
+  static const int _maxRetries = 3;
+  static const Duration _retryDelay = Duration(seconds: 5);
 
-  ChangesProcessor(this._db, {ConflictResolver? conflictResolver})
-      : _conflictResolver = conflictResolver ?? const ConflictResolver();
+  ChangesProcessor(this._db, {FlutterBackgroundService? backgroundService})
+      : _backgroundService = backgroundService ?? FlutterBackgroundService();
 
-  /// Gets local changes formatted as a ChangeSet
+  /// Gets local changes formatted as a ChangeSet and forwards them to the background service
   /// Uses batch processing for better performance with large datasets
-  Future<ChangeSet> getUnSyncedChanges({int batchSize = 1000}) async {
+  Future<void> processUnSyncedChanges({int batchSize = 1000}) async {
+    int retryCount = 0;
+    while (retryCount < _maxRetries) {
+      try {
+        final changeSet = await _getUnSyncedChanges(batchSize: batchSize);
+        _logger.info('Forwarding local changes to background service');
+
+        // Forward changes to background service
+        _backgroundService.invoke('syncNow', {
+          'changeSet': changeSet.toJson(),
+        });
+        return;
+      } catch (e) {
+        retryCount++;
+        _logger.error(
+          'Error processing local changes (attempt $retryCount/$_maxRetries)',
+          error: e,
+        );
+
+        if (retryCount < _maxRetries) {
+          await Future.delayed(_retryDelay * retryCount);
+          continue;
+        }
+
+        throw SyncStateError(
+            'Failed to process local changes after $_maxRetries attempts: ${e.toString()}');
+      }
+    }
+  }
+
+  /// Internal method to get unsynced changes
+  Future<ChangeSet> _getUnSyncedChanges({int batchSize = 1000}) async {
     try {
       final insertions = <String, List<Row>>{};
       final updates = <String, List<Row>>{};
@@ -149,7 +183,7 @@ class ChangesProcessor {
     await batch.commit();
   }
 
-  ChangeSet _computeChangeSetFromChangeLogs(Iterable<ChangeLog> changeLogs) {
+  ChangeSet computeChangeSetFromChangeLogs(Iterable<ChangeLog> changeLogs) {
     final insertions = <String, List<Row>>{};
     final updates = <String, List<Row>>{};
     final deletions = <String, List<Row>>{};
@@ -228,170 +262,35 @@ class ChangesProcessor {
     );
   }
 
-  /// Notifies database changes to registered listeners
-  void _notifyChanges(ChangeSet changeSet) {
-    void notifyChangesForOperation(Map<String, TableRows> changes, String operation) {
-      for (final entry in changes.entries) {
-        for (final row in entry.value.rows) {
-          final change = PsDatabaseChange(
-            tableName: entry.key,
-            operation: operation,
-            data: row.data,
-            recordId: row.primaryKey,
-            timestamp: DateTime.fromMillisecondsSinceEpoch(row.timestamp),
-          );
-          // TODO: fix this
-          // _db.notifyChange(change);
-        }
-      }
-    }
-
-    if (changeSet.isNotEmpty) {
-      _logger.info('Notifying ${changeSet.length} changes');
-      notifyChangesForOperation(changeSet.insertions.changes, 'INSERT');
-      notifyChangesForOperation(changeSet.updates.changes, 'UPDATE');
-      notifyChangesForOperation(changeSet.deletions.changes, 'DELETE');
-    }
-  }
-
   /// Applies remote changes to local database
   Future<void> applyRemoteChanges(Iterable<ChangeLog> changeLogs) async {
     if (changeLogs.isEmpty) return;
 
-    final changeSet = _computeChangeSetFromChangeLogs(changeLogs);
-    log('Applying change set: ${changeSet.toJson()}');
-    
-    final affectedTables = <String>{};
-    await _db.transaction((txn) async {
-      Future<void> applyTableOperation(
-        String tableName,
-        Row row,
-        String operation,
-        Transaction txn,
-      ) async {
-        try {
-          // Get existing row if any
-          final existingRow = await txn.query(
-            tableName,
-            where: "ps_global_id = ?",
-            whereArgs: [row.primaryKey],
-          );
+    int retryCount = 0;
+    while (retryCount < _maxRetries) {
+      try {
+        _logger.info('Forwarding remote changes to background service');
 
-          // Apply last-write-wins conflict resolution
-          if (existingRow.isNotEmpty) {
-            final existingTimestamp = existingRow.first['timestamp'] as int?;
-            final incomingTimestamp = row.timestamp;
-            if (existingTimestamp != null &&
-                existingTimestamp >= incomingTimestamp) {
-              // Skip this change as we already have a newer version
-              return;
-            }
-          }
-
-          // Disable all triggers temporarily
-          await txn.execute('PRAGMA recursive_triggers = OFF;');
-
-          // Apply the change operation
-          switch (operation) {
-            case 'INSERT':
-              try {
-                await txn.insert(tableName, row.data);
-              } catch (e) {
-                // Handle insert conflict by attempting to update instead
-                final existingRow = await txn.query(
-                  tableName,
-                  where: 'ps_global_id = ?',
-                  whereArgs: [row.primaryKey],
-                );
-                if (existingRow.isNotEmpty) {
-                  final resolvedRow = await _conflictResolver.resolveConflict(
-                    tableName,
-                    existingRow.first,
-                    row.data,
-                  );
-                  await txn.update(
-                    tableName,
-                    resolvedRow,
-                    where: 'ps_global_id = ?',
-                    whereArgs: [row.primaryKey],
-                  );
-                } else {
-                  rethrow;
-                }
-              }
-              break;
-            case 'UPDATE':
-              final existingRow = await txn.query(
-                tableName,
-                where: 'ps_global_id = ?',
-                whereArgs: [row.primaryKey],
-              );
-              if (existingRow.isNotEmpty) {
-                final resolvedRow = await _conflictResolver.resolveConflict(
-                  tableName,
-                  existingRow.first,
-                  row.data,
-                );
-                await txn.update(
-                  tableName,
-                  resolvedRow,
-                  where: 'ps_global_id = ?',
-                  whereArgs: [row.primaryKey],
-                );
-              } else {
-                // Row does not exist, ignore
-              }
-              break;
-            case 'DELETE':
-              await txn.delete(
-                tableName,
-                where: 'ps_global_id = ?',
-                whereArgs: [row.primaryKey],
-              );
-              break;
-          }
-        } finally {
-          await txn.execute('PRAGMA recursive_triggers = ON;');
-        }
-      }
-
-      // Apply all changes
-      for (final entry in changeSet.insertions.changes.entries) {
-        for (final row in entry.value.rows) {
-          await applyTableOperation(entry.key, row, 'INSERT', txn);
-        }
-      }
-
-      for (final entry in changeSet.updates.changes.entries) {
-        for (final row in entry.value.rows) {
-          await applyTableOperation(entry.key, row, 'UPDATE', txn);
-        }
-      }
-
-      for (final entry in changeSet.deletions.changes.entries) {
-        for (final row in entry.value.rows) {
-          await applyTableOperation(entry.key, row, 'DELETE', txn);
-        }
-      }
-
-      // Mark these changes as processed only if all operations succeed
-      final now = DateTime.now().toIso8601String();
-      for (final log in changeLogs) {
-        await txn.insert('__pocketsync_processed_changes', {
-          'change_log_id': log.id,
-          'processed_at': now,
+        // Forward changes to background service
+        _backgroundService.invoke('onRemoteChange', {
+          'changeLogs': changeLogs.map((log) => log.toJson()).toList(),
         });
+        return;
+      } catch (e) {
+        retryCount++;
+        _logger.error(
+          'Error forwarding remote changes (attempt $retryCount/$_maxRetries)',
+          error: e,
+        );
+
+        if (retryCount < _maxRetries) {
+          await Future.delayed(_retryDelay * retryCount);
+          continue;
+        }
+
+        throw SyncStateError(
+            'Failed to forward remote changes after $_maxRetries attempts: ${e.toString()}');
       }
-
-      // Collect affected tables
-      affectedTables.addAll(changeSet.insertions.changes.keys);
-      affectedTables.addAll(changeSet.updates.changes.keys);
-      affectedTables.addAll(changeSet.deletions.changes.keys);
-    });
-
-    if (changeSet.isNotEmpty) {
-      _logger.info('Applied ${changeSet.length} remote changes');
-      _notifyChanges(changeSet);
     }
   }
 }
