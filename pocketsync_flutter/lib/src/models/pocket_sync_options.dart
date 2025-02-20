@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:pocketsync_flutter/pocketsync_flutter.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -22,11 +23,16 @@ class PocketSyncOptions {
   /// By default, conflicts are ignored and remote changes are applied.
   final ConflictResolver conflictResolver;
 
+  /// Whether to run in silent mode. In silent mode, no logs are printed to the console.
+  /// Defaults to true in release mode and false in debug mode, which means that logs are only printed in debug mode.
+  final bool silent;
+
   PocketSyncOptions({
     required this.projectId,
     required this.authToken,
     this.serverUrl = 'https://api.pocketsync.dev',
     this.conflictResolver = const ConflictResolver(),
+    this.silent = kDebugMode,
   });
 }
 

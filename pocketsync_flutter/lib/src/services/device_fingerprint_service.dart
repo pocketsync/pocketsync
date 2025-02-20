@@ -1,18 +1,16 @@
 import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:crypto/crypto.dart';
-import 'package:pocketsync_flutter/pocketsync_flutter.dart';
 import 'dart:convert';
 
+import 'package:sqflite/sqflite.dart';
+
 class DeviceFingerprintService {
-  final PocketSyncDatabase database;
-  final Future<String> deviceFingerprint;
+  final Database database;
 
-  DeviceFingerprintService(this.database)
-      : deviceFingerprint = _initializeDeviceFingerprint(database);
+  DeviceFingerprintService(this.database);
 
-  static Future<String> _initializeDeviceFingerprint(
-      PocketSyncDatabase database) async {
+  Future<String> getDeviceFingerprint(Database database) async {
     final deviceState =
         await database.query('__pocketsync_device_state', limit: 1);
 
@@ -60,9 +58,5 @@ class DeviceFingerprintService {
     final bytes = utf8.encode(input);
     final digest = sha256.convert(bytes);
     return digest.toString();
-  }
-
-  Future<String> getDeviceFingerprint() async {
-    return deviceFingerprint;
   }
 }
