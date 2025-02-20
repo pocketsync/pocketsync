@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer';
 
 import 'package:pocketsync_flutter/src/errors/sync_error.dart';
 import 'package:pocketsync_flutter/src/models/change_log.dart';
@@ -73,10 +72,10 @@ class PocketSyncNetworkService {
       return;
     }
 
-    if (!isSyncEnabled) {
-      _logger.info('Skipping WebSocket connection: sync is disabled');
-      return;
-    }
+    // if (!isSyncEnabled) {
+    //   _logger.info('Skipping WebSocket connection: sync is disabled');
+    //   return;
+    // }
 
     _logger.info('Connecting to WebSocket server');
     if (_socket != null || _userId == null || _deviceId == null) return;
@@ -98,9 +97,12 @@ class PocketSyncNetworkService {
         }
       });
 
-      _socket!.onConnect((_) => log('Socket.IO connected'));
+      _socket!.onConnect((_) {
+        _logger.info('Socket.IO connected');
+        _logger.debug('Connection params: projectId=$_projectId, userId=$_userId, deviceId=$_deviceId');
+      });
 
-      _socket!.onDisconnect((_) => log('Socket.IO disconnected'));
+      _socket!.onDisconnect((_) => _logger.info('Socket.IO disconnected'));
 
       _socket!.on('changes', (data) async {
         try {
@@ -169,7 +171,7 @@ class PocketSyncNetworkService {
       });
 
       _socket!.onError((error) {
-        log('Socket.IO error: $error');
+        _logger.error('Socket.IO error', error: error);
       });
 
       _socket!.connect();
@@ -181,7 +183,7 @@ class PocketSyncNetworkService {
   Future<ChangeProcessingResponse> sendChanges(ChangeSet changes) async {
     try {
       _logger.info(
-          'Sending changes to server: ${changes.changeIds.length} changes');
+          'Sending changes to server: ${changes.length} changes');
       if (_userId == null) {
         throw InitializationError('User ID not set');
       }

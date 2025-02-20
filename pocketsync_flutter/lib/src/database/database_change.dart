@@ -22,7 +22,7 @@ class PsDatabaseChange {
       operation: map['operation'] as String,
       data: Map<String, dynamic>.from(jsonDecode(map['data'] as String)),
       recordId: map['record_rowid'] as String,
-      timestamp: DateTime.parse(map['timestamp'] as String),
+      timestamp: DateTime.fromMillisecondsSinceEpoch(map['timestamp'] as int),
     );
   }
 }

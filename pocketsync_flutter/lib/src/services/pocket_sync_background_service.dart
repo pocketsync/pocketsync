@@ -41,7 +41,7 @@ class PocketSyncBackgroundService {
     required String projectId,
     required String authToken,
     required String deviceId,
-    required ConflictResolver conflictResolver,
+    String? userId,
   }) async {
     if (_isInitialized) return;
 
@@ -52,6 +52,9 @@ class PocketSyncBackgroundService {
         autoStart: true,
         isForegroundMode: true,
         foregroundServiceNotificationId: 888,
+        initialNotificationTitle: 'PocketSync',
+        initialNotificationContent: 'Syncing data...',
+        foregroundServiceTypes: [AndroidForegroundType.dataSync],
       ),
       iosConfiguration: IosConfiguration(
         autoStart: true,
@@ -70,7 +73,7 @@ class PocketSyncBackgroundService {
       'projectId': projectId,
       'authToken': authToken,
       'deviceId': deviceId,
-      'conflictResolver': conflictResolver,
+      'userId': userId,
     });
 
     _isInitialized = true;
@@ -90,7 +93,6 @@ class PocketSyncBackgroundService {
     Database? db;
     PocketSyncNetworkService? networkService;
     ChangesProcessor? processor;
-    ConflictResolver? conflictResolver;
     bool isInitialized = false;
 
     /// Notifies the main app about database changes
@@ -117,7 +119,6 @@ class PocketSyncBackgroundService {
       Row row,
       String operation,
       Transaction txn,
-      ConflictResolver? conflictResolver,
     ) async {
       try {
         // Disable all triggers temporarily
@@ -145,10 +146,8 @@ class PocketSyncBackgroundService {
                 );
 
                 if (existingRow.isNotEmpty) {
-                  // Resolve conflict
-                  final resolvedRow = await conflictResolver?.resolveConflict(
-                          tableName, row.data, existingRow.first) ??
-                      row.data;
+                  // For now, we'll use a simple last-write-wins strategy
+                  final resolvedRow = row.data;
 
                   // Update with resolved data
                   await txn.update(
@@ -177,10 +176,8 @@ class PocketSyncBackgroundService {
                 whereArgs: [row.primaryKey],
               );
               if (existingRow.isNotEmpty) {
-                // Resolve conflict
-                final resolvedRow = await conflictResolver?.resolveConflict(
-                        tableName, row.data, existingRow.first) ??
-                    row.data;
+                // For now, we'll use a simple last-write-wins strategy
+                final resolvedRow = row.data;
 
                 // Update with resolved data
                 await txn.update(
@@ -235,7 +232,6 @@ class PocketSyncBackgroundService {
               row,
               'INSERT',
               txn,
-              conflictResolver,
             );
           }
         }
@@ -247,7 +243,6 @@ class PocketSyncBackgroundService {
               row,
               'UPDATE',
               txn,
-              conflictResolver,
             );
           }
         }
@@ -259,7 +254,6 @@ class PocketSyncBackgroundService {
               row,
               'DELETE',
               txn,
-              conflictResolver,
             );
           }
         }
@@ -299,15 +293,18 @@ class PocketSyncBackgroundService {
         );
 
         // Initialize network service
+        final userId = config['userId'] as String?;
+        if (userId == null) {
+          throw StateError('User ID not set');
+        }
+
         networkService = PocketSyncNetworkService(
           serverUrl: config['serverUrl'] as String,
           projectId: config['projectId'] as String,
           authToken: config['authToken'] as String,
           deviceId: config['deviceId'] as String,
         );
-
-        // Initialize conflict resolver
-        conflictResolver = config['conflictResolver'] as ConflictResolver;
+        networkService!.setUserId(config['userId'] as String);
 
         processor = ChangesProcessor(db!);
         isInitialized = true;

@@ -17,6 +17,10 @@ class PocketSync {
   static final PocketSync instance = PocketSync._internal();
   PocketSync._internal();
 
+  late final PocketSyncOptions _syncOptions;
+  late final DatabaseOptions _dbOptions;
+  late final String _dbPath;
+
   final _logger = LoggerService.instance;
 
   late PocketSyncDatabase _database;
@@ -63,34 +67,35 @@ class PocketSync {
   }) async {
     if (_isInitialized) return;
 
+    // Store options for later use
+    _dbPath = dbPath;
+    _syncOptions = options;
+    _dbOptions = databaseOptions;
+
     // First create database
     _database = PocketSyncDatabase(
-      options: databaseOptions,
+      options: _dbOptions,
     );
-    final db = await _database.initialize(dbPath: dbPath);
+    final db = await _database.initialize(dbPath: _dbPath);
 
     // Get or create device ID
     final deviceId = await _fetchOrCreateDeviceId(db);
 
     // Initialize network service
     _networkService = PocketSyncNetworkService(
-      serverUrl: options.serverUrl,
-      projectId: options.projectId,
-      authToken: options.authToken,
+      serverUrl: _syncOptions.serverUrl,
+      projectId: _syncOptions.projectId,
+      authToken: _syncOptions.authToken,
       deviceId: deviceId,
     );
 
     // Initialize background service
     _backgroundService = PocketSyncBackgroundService();
-    await _backgroundService.initialize(
-      dbPath: dbPath,
-      dbVersion: databaseOptions.version,
-      serverUrl: options.serverUrl,
-      projectId: options.projectId,
-      authToken: options.authToken,
-      deviceId: deviceId,
-      conflictResolver: options.conflictResolver,
-    );
+
+    // Only initialize background service if user ID is set
+    if (_userId != null) {
+      await _initializeBackgroundService(deviceId);
+    }
 
     // Connect background service to database
     _database.setBackgroundService(_backgroundService);
@@ -146,10 +151,29 @@ class PocketSync {
   /// This method should be called before [startSync].
   /// Throws [StateError] if PocketSync is not initialized
   Future<void> setUserId({required String userId}) async {
-    _runGuarded(() {
+    await _runGuarded(() async {
       _userId = userId;
       _networkService.setUserId(userId);
+
+      // Restart background service with new user ID
+      await _backgroundService.stop();
+      await _initializeBackgroundService(
+        await _fetchOrCreateDeviceId(_database.db!),
+      );
     });
+  }
+
+  /// Internal method to initialize or reinitialize background service
+  Future<void> _initializeBackgroundService(String deviceId) async {
+    await _backgroundService.initialize(
+      dbPath: _dbPath,
+      dbVersion: _dbOptions.version,
+      serverUrl: _syncOptions.serverUrl,
+      projectId: _syncOptions.projectId,
+      authToken: _syncOptions.authToken,
+      deviceId: deviceId,
+      userId: _userId,
+    );
   }
 
   /// Starts the synchronization process
@@ -164,6 +188,11 @@ class PocketSync {
       _isSyncStarted = true;
       _networkService.isSyncEnabled = true;
 
+      await _backgroundService.stop();
+      await _initializeBackgroundService(
+        await _fetchOrCreateDeviceId(_database.db!),
+      );
+
       await _sync();
     });
   }
@@ -172,13 +201,15 @@ class PocketSync {
 
   /// Internal sync method
   Future<void> _sync() async {
-    if (_isSyncing ||
+    final canSync = _isSyncing ||
         _userId == null ||
         _isPaused ||
         _isManuallyPaused ||
-        !_isSyncStarted) {
+        !_isSyncStarted;
+    if (canSync) {
       _logger.debug(
-          'Sync skipped: already in progress, user ID not set, sync is paused, or sync not started');
+        'Sync skipped: already in progress, user ID not set, sync is paused, or sync not started',
+      );
       return;
     }
     _isSyncing = true;
