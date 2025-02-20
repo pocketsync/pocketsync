@@ -84,16 +84,13 @@ await PocketSync.instance.setUserId(userId: 'user-id');
 
 ### **Start Syncing**  
 ```dart
-await PocketSync.instance.startSync();
+await PocketSync.instance.start();
 ```  
 
 ### **Pause & Resume Sync**  
 ```dart
 // Pause synchronization
-await PocketSync.instance.pauseSync();
-
-// Resume synchronization
-await PocketSync.instance.resumeSync();
+await PocketSync.instance.pause();
 ```  
 
 ### **Cleanup**  

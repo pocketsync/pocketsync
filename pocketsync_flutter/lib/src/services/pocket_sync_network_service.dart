@@ -23,8 +23,6 @@ class PocketSyncNetworkService {
   // Callback for handling incoming changes
   Future<void> Function(Iterable<ChangeLog>)? onChangesReceived;
 
-  bool isSyncEnabled = false;
-
   PocketSyncNetworkService({
     required String serverUrl,
     required String projectId,
@@ -40,19 +38,11 @@ class PocketSyncNetworkService {
   void setUserId(String userId) {
     _logger.debug('Setting user ID: $userId');
     _userId = userId;
-    _attemptReconnection();
-  }
-
-  void _attemptReconnection() {
-    if (isSyncEnabled) {
-      _connectWebSocket();
-    }
   }
 
   void setDeviceId(String deviceId) {
     _logger.debug('Setting device ID: $deviceId');
     _deviceId = deviceId;
-    _attemptReconnection();
   }
 
   void disconnect() {
@@ -62,7 +52,6 @@ class PocketSyncNetworkService {
   }
 
   void reconnect() {
-    _logger.info('Reconnecting to WebSocket server: $isSyncEnabled');
     _connectWebSocket();
   }
 
@@ -70,11 +59,6 @@ class PocketSyncNetworkService {
     if (_userId == null || _deviceId == null) {
       _logger
           .info('Skipping WebSocket connection: missing user ID or device ID');
-      return;
-    }
-
-    if (!isSyncEnabled) {
-      _logger.info('Skipping WebSocket connection: sync is disabled');
       return;
     }
 

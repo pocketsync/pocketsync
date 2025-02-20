@@ -26,7 +26,7 @@ class PocketSync {
   bool _isInitialized = false;
   bool _isSyncing = false;
   bool _isConnected = true;
-  bool _isManuallyPaused = false;
+  bool _isPaused = true;
 
   /// Returns the database instance
   /// Throws [StateError] if PocketSync is not initialized
@@ -109,7 +109,7 @@ class PocketSync {
 
   /// Sets the user ID for synchronization
   /// [userId] - User ID
-  /// This method should be called before [startSync].
+  /// This method should be called before [start].
   /// Throws [StateError] if PocketSync is not initialized
   Future<void> setUserId({required String userId}) async {
     await _runGuarded(() async {
@@ -122,24 +122,23 @@ class PocketSync {
   ///
   /// Throws [StateError] if user ID is not set
   /// Throws [StateError] if PocketSync is not initialized
-  Future<void> startSync() async {
+  Future<void> start() async {
     await _runGuarded(() async {
       if (_userId == null) throw StateError('User ID not set');
-      if (_isManuallyPaused) return;
-      
+      if (!_isPaused) return;
+
       // Set up real-time change notification
       _database.addGlobalListener(_syncChanges);
-      
+
       // Initialize connectivity monitoring
       _setupConnectivityMonitoring();
-      
-      _networkService.isSyncEnabled = true;
+      _networkService.reconnect();
       await _sync();
     });
   }
 
   void _syncChanges(String table) {
-    if (!_isSyncing && _isConnected && !_isManuallyPaused) {
+    if (!_isSyncing && _isConnected && !_isPaused) {
       scheduleMicrotask(() => _sync());
     } else {
       _logger.debug('Skipping syncChanges: inappropriate state');
@@ -148,7 +147,7 @@ class PocketSync {
 
   /// Internal sync method
   Future<void> _sync() async {
-    if (_userId == null || _isSyncing || !_isConnected || _isManuallyPaused) {
+    if (_userId == null || _isSyncing || !_isConnected || _isPaused) {
       _logger.debug('Sync skipped: user ID not set or inappropriate state');
       return;
     }
@@ -209,9 +208,9 @@ class PocketSync {
   /// This method can be called to pause the synchronization process
   ///
   /// Throws [StateError] if PocketSync is not initialized
-  void pauseSync() {
+  void pause() {
     _runGuarded(() {
-      _isManuallyPaused = true;
+      _isPaused = true;
       _networkService.disconnect();
       _database.removeGlobalListener(_syncChanges);
       _connectivitySubscription?.cancel();
@@ -219,23 +218,8 @@ class PocketSync {
     });
   }
 
-  /// Resumes the synchronization process
-  /// This method can be called to resume the synchronization process
-  ///
-  /// Throws [StateError] if PocketSync is not initialized
-  Future<void> resumeSync() async {
-    _runGuarded(() async {
-      if (_isManuallyPaused) {
-        _isManuallyPaused = false;
-        _networkService.reconnect();
-        _logger.info('Sync resumed');
-        await _sync();
-      }
-    });
-  }
-
   /// Returns whether sync is currently paused
-  bool get isPaused => _runGuarded(() => !_isConnected || _isManuallyPaused);
+  bool get isPaused => _runGuarded(() => !_isConnected || _isPaused);
 
   /// Cleans up resources
   Future<void> dispose() async {
