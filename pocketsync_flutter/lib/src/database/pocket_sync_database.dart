@@ -13,6 +13,7 @@ class PocketSyncDatabase {
   PocketSyncBackgroundService? _backgroundService;
   final DatabaseChangeManager changeManager = DatabaseChangeManager();
   final DatabaseOptions _options;
+  StreamSubscription? _backgroundServiceSubscription;
 
   PocketSyncDatabase({
     required DatabaseOptions options,
@@ -20,9 +21,44 @@ class PocketSyncDatabase {
 
   Database? get db => _db;
 
-  /// Sets the background service instance
+  /// Sets the background service instance and sets up listeners
   void setBackgroundService(PocketSyncBackgroundService service) {
     _backgroundService = service;
+    _setupBackgroundServiceListeners();
+  }
+
+  /// Sets up listeners for background service notifications
+  void _setupBackgroundServiceListeners() {
+    // Cancel any existing subscription
+    _backgroundServiceSubscription?.cancel();
+
+    // Listen for changes from background service
+    _backgroundServiceSubscription =
+        _backgroundService?.service.on('onDatabaseChange').listen((event) {
+      if (event == null) return;
+
+      try {
+        final tableName = event['tableName'] as String;
+        final operation = event['operation'] as String;
+        final data = event['data'] as Map<String, dynamic>;
+        final recordId = event['recordId'] as String;
+        final timestamp =
+            DateTime.fromMillisecondsSinceEpoch(event['timestamp'] as int);
+
+        final change = PsDatabaseChange(
+          tableName: tableName,
+          operation: operation,
+          data: data,
+          recordId: recordId,
+          timestamp: timestamp,
+        );
+
+        // Notify local listeners
+        changeManager.notifyChange(change);
+      } catch (e) {
+        print('Error processing background service notification: $e');
+      }
+    });
   }
 
   /// Notifies the background service of database changes
@@ -42,6 +78,7 @@ class PocketSyncDatabase {
 
   /// Disposes of the database resources
   Future<void> dispose() async {
+    await _backgroundServiceSubscription?.cancel();
     await _db?.close();
   }
 

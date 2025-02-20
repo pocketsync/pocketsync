@@ -21,6 +21,9 @@ class PocketSyncBackgroundService {
 
   PocketSyncBackgroundService() : _service = FlutterBackgroundService();
 
+  /// Get the underlying background service instance
+  FlutterBackgroundService get service => _service;
+
   /// Initialize the background service
   Future<void> initialize({
     required String dbPath,
@@ -81,6 +84,17 @@ class PocketSyncBackgroundService {
     ConflictResolver? conflictResolver;
     bool isInitialized = false;
 
+    /// Notifies the main app about database changes
+    void notifyDatabaseChange(String tableName, String operation, Map<String, dynamic> data, String recordId, int timestamp) {
+      service.invoke('onDatabaseChange', {
+        'tableName': tableName,
+        'operation': operation,
+        'data': data,
+        'recordId': recordId,
+        'timestamp': timestamp,
+      });
+    }
+
     /// Internal method to apply changes to the database
     Future<void> applyChanges(Database db, ChangeSet changeSet, Iterable<ChangeLog> changeLogs) async {
       final affectedTables = <String>{};
@@ -118,6 +132,7 @@ class PocketSyncBackgroundService {
               case 'INSERT':
                 try {
                   await txn.insert(tableName, row.data);
+                  notifyDatabaseChange(tableName, 'INSERT', row.data, row.primaryKey, row.timestamp);
                 } catch (e) {
                   // Handle insert conflict by attempting to update instead
                   final existingRow = await txn.query(
@@ -137,6 +152,7 @@ class PocketSyncBackgroundService {
                       where: 'ps_global_id = ?',
                       whereArgs: [row.primaryKey],
                     );
+                    notifyDatabaseChange(tableName, 'UPDATE', resolvedRow, row.primaryKey, row.timestamp);
                   } else {
                     rethrow;
                   }
@@ -160,6 +176,7 @@ class PocketSyncBackgroundService {
                     where: 'ps_global_id = ?',
                     whereArgs: [row.primaryKey],
                   );
+                  notifyDatabaseChange(tableName, 'UPDATE', resolvedRow, row.primaryKey, row.timestamp);
                 } else {
                   // Row does not exist, ignore
                 }
@@ -170,6 +187,7 @@ class PocketSyncBackgroundService {
                   where: 'ps_global_id = ?',
                   whereArgs: [row.primaryKey],
                 );
+                notifyDatabaseChange(tableName, 'DELETE', row.data, row.primaryKey, row.timestamp);
                 break;
             }
           } finally {
