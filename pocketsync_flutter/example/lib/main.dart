@@ -33,7 +33,7 @@ void main() async {
   await PocketSync.instance.setUserId(userId: 'test-user');
 
   // Start syncing
-  await PocketSync.instance.startSync();
+  await PocketSync.instance.start();
 
   runApp(const MyApp());
 }

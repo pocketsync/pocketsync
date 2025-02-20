@@ -28,9 +28,9 @@ class _TodoListViewState extends State<TodoListView> {
       _isSyncPaused = !_isSyncPaused;
     });
     if (_isSyncPaused) {
-      PocketSync.instance.pauseSync();
+      PocketSync.instance.pause();
     } else {
-      await PocketSync.instance.resumeSync();
+      await PocketSync.instance.start();
     }
   }
 

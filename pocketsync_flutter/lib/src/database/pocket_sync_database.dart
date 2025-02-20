@@ -410,7 +410,6 @@ class PocketSyncDatabase {
     if (isInsertOperation ||
         normalizedSql.startsWith('UPDATE') ||
         normalizedSql.startsWith('DELETE')) {
-      print(tables);
       await _notifyChanges(tables);
     }
 
