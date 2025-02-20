@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:pocketsync_flutter/pocketsync_flutter.dart';
 import 'package:pocketsync_flutter/src/database/database_change.dart';
 import 'package:pocketsync_flutter/src/database/database_change_manager.dart';
@@ -12,6 +14,36 @@ class PocketSyncDatabase {
   Database? _db;
 
   final DatabaseChangeManager changeManager = DatabaseChangeManager();
+
+  /// Background service instance
+  final FlutterBackgroundService _backgroundService =
+      FlutterBackgroundService();
+
+  /// Notifies the background service of database changes
+  Future<void> _notifyBackgroundService(PsDatabaseChange change) async {
+    try {
+      _backgroundService.invoke('onDatabaseChange', {
+        'table': change.tableName,
+        'operation': change.operation.toString(),
+        'record_id': change.recordId,
+        'data': jsonEncode(change.data),
+        'timestamp': change.timestamp.millisecondsSinceEpoch,
+      });
+    } catch (e) {
+      print('Failed to notify background service: $e');
+    }
+  }
+
+  /// Extends change manager notification to include background service
+  void notifyChange(PsDatabaseChange change) {
+    changeManager.notifyChange(change);
+    _notifyBackgroundService(change);
+  }
+
+  /// Disposes of the database resources
+  Future<void> dispose() async {
+    await _db?.close();
+  }
 
   /// Opens and initializes the database
   Future<Database> initialize({

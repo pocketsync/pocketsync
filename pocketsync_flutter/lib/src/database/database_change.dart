@@ -6,12 +6,14 @@ class PsDatabaseChange {
   final String operation;
   final Map<String, dynamic> data;
   final String recordId;
+  final DateTime timestamp;
 
   PsDatabaseChange({
     required this.tableName,
     required this.operation,
     required this.data,
     required this.recordId,
+    required this.timestamp,
   });
 
   factory PsDatabaseChange.fromJson(Map<String, dynamic> map) {
@@ -20,6 +22,7 @@ class PsDatabaseChange {
       operation: map['operation'] as String,
       data: Map<String, dynamic>.from(jsonDecode(map['data'] as String)),
       recordId: map['record_rowid'] as String,
+      timestamp: DateTime.parse(map['timestamp'] as String),
     );
   }
 }

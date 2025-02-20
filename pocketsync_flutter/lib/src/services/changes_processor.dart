@@ -238,6 +238,7 @@ class ChangesProcessor {
             operation: operation,
             data: row.data,
             recordId: row.primaryKey,
+            timestamp: DateTime.fromMillisecondsSinceEpoch(row.timestamp),
           );
           _db.changeManager.notifyChange(change);
         }
