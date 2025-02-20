@@ -1,15 +1,14 @@
 import 'dart:async';
-import 'package:pocketsync_flutter/src/database/database_change.dart';
 
 /// Callback type for database change listeners
-typedef DatabaseChangeListener = void Function(PsDatabaseChange change);
+typedef DatabaseChangeListener = void Function(String table);
 
 /// Manages database change listeners with table-specific subscriptions
 class DatabaseChangeManager {
   final Map<String, Set<DatabaseChangeListener>> _tableListeners = {};
   final Set<DatabaseChangeListener> _globalListeners = {};
   Timer? _debounceTimer;
-  final _pendingChanges = <PsDatabaseChange>[];
+
   static const _debounceDuration = Duration(milliseconds: 100);
 
   /// Adds a listener for all database changes
@@ -35,35 +34,36 @@ class DatabaseChangeManager {
     }
   }
 
-  /// Notifies relevant listeners of a database change
-  void notifyChange(PsDatabaseChange change) {
-    _pendingChanges.add(change);
-
+  void notifyAll() {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(_debounceDuration, () {
-      if (_pendingChanges.isEmpty) return;
-
-      final changes = List<PsDatabaseChange>.from(_pendingChanges);
-      _pendingChanges.clear();
-
-      // Group changes by table
-      final changesByTable = <String, List<PsDatabaseChange>>{};
-      for (final change in changes) {
-        changesByTable.putIfAbsent(change.tableName, () => []).add(change);
-      }
-
-      // Notify global listeners with all changes at once
+      // Notify global listeners
       for (final listener in _globalListeners) {
-        listener(change);
+        listener('*');
+      }
+      // Notify table-specific listeners
+      for (final tableListeners in _tableListeners.values) {
+        for (final listener in tableListeners) {
+          listener('*');
+        }
+      }
+    });
+  }
+
+  /// Notifies relevant listeners of a table change
+  void notifyChange(String table) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(_debounceDuration, () {
+      // Notify global listeners
+      for (final listener in _globalListeners) {
+        listener(table);
       }
 
-      // Notify table-specific listeners with their relevant changes
-      for (final entry in changesByTable.entries) {
-        final tableListeners = _tableListeners[entry.key];
-        if (tableListeners != null) {
-          for (final listener in tableListeners) {
-            listener(change);
-          }
+      // Notify table-specific listeners
+      final tableListeners = _tableListeners[table];
+      if (tableListeners != null) {
+        for (final listener in tableListeners) {
+          listener(table);
         }
       }
     });
@@ -72,7 +72,7 @@ class DatabaseChangeManager {
   /// Removes all listeners
   void dispose() {
     _debounceTimer?.cancel();
-    _pendingChanges.clear();
+
     _tableListeners.clear();
     _globalListeners.clear();
   }
