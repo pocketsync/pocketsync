@@ -184,6 +184,47 @@ try {
 }
 ```
 
+## Best Practices
+
+### Use UUIDs Instead of Integer IDs
+
+When designing your database schema for use with PocketSync, it's crucial to use UUIDs (or similar globally unique identifiers) instead of auto-incrementing integer IDs for your primary keys. Here's why:
+
+- **Avoid Data Loss**: Auto-incrementing IDs can cause conflicts when syncing data from multiple devices, potentially leading to data loss or incorrect relationships.
+- **Prevent Collisions**: UUIDs virtually eliminate the risk of ID collisions when multiple devices create records offline.
+- **Simplify Conflict Resolution**: Unique IDs make it easier to track and merge changes from different sources.
+
+Example of recommended schema and ID usage:
+
+```dart
+// In your database initialization (typically in onCreate)
+await db.execute('''
+  CREATE TABLE todos (
+    id TEXT PRIMARY KEY NOT NULL, // UUID as primary key
+    title TEXT NOT NULL,
+    is_completed INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )
+''');
+
+// When inserting records
+import 'package:uuid/uuid.dart';
+
+await db.insert('todos', {
+  'id': const Uuid().v4(), // Generates a unique UUID
+  'title': 'Buy groceries',
+  'is_completed': 0,
+  'created_at': DateTime.now().millisecondsSinceEpoch,
+  'updated_at': DateTime.now().millisecondsSinceEpoch,
+});
+```
+
+Key points about the schema:
+- Use `TEXT` type for UUID columns instead of `INTEGER`
+- Always declare the ID column as `NOT NULL` and `PRIMARY KEY`
+- Include `created_at` and `updated_at` timestamps for better sync conflict resolution
+
 ## Known Limitations
 
 - The SDK is in early alpha, breaking changes may occur
@@ -208,5 +249,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 <p align="center">
-  Made with ❤️ by <a href="https://x.com/nossesteve">Steve Nossé</a>
+  Made with ❤️ by <a href="https://x.com/nossesteve">Steve NOSSE</a>
 </p>
