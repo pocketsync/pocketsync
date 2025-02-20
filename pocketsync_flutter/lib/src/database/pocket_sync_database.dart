@@ -68,7 +68,7 @@ class PocketSyncDatabase {
     await db.execute('''
       CREATE TABLE __pocketsync_device_state (
         device_id TEXT PRIMARY KEY,
-        last_sync_timestamp INTEGER NOT NULL
+        last_sync_timestamp INTEGER NULL
       )
     ''');
 
@@ -90,12 +90,11 @@ class PocketSyncDatabase {
 
     final deviceFingerprintService = DeviceFingerprintService(this);
     final deviceId = await deviceFingerprintService.getDeviceFingerprint();
-    final now = DateTime.now().millisecondsSinceEpoch;
     await db.insert(
       '__pocketsync_device_state',
       {
         'device_id': deviceId,
-        'last_sync_timestamp': now,
+        'last_sync_timestamp': null,
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );

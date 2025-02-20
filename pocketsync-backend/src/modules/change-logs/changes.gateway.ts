@@ -28,7 +28,7 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
     ) { }
 
     async handleConnection(client: any) {
-        const { device_id, user_id, project_id } = client.handshake.query;
+        const { device_id, user_id, project_id, last_synced_at } = client.handshake.query;
 
         if (!device_id || !user_id || !project_id) {
             this.logger.warn('Connection rejected: Missing required parameters');
@@ -56,7 +56,7 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
         this.logger.log(`Device ${device_id} connected to project ${project_id}`);
 
         // Send any missed changes to the newly connected device
-        await this.sendMissedChanges(device_id, user_id);
+        await this.sendMissedChanges(device_id, user_id, last_synced_at ? new Date(last_synced_at) : null);
     }
 
     handleDisconnect(client: any) {
@@ -87,7 +87,7 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
         this.logger.log(`Device ${deviceId} acknowledged ${payload.changeIds.length} changes`);
     }
 
-    private async sendMissedChanges(deviceId: string, userIdentifier: string) {
+    private async sendMissedChanges(deviceId: string, userIdentifier: string, lastSyncedAt: Date | null) {
         const device = await this.prisma.device.findFirst({
             where: { deviceId, userIdentifier }
         });
@@ -97,7 +97,7 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
         const changes = await this.prisma.changeLog.findMany({
             where: {
                 userIdentifier: device.userIdentifier,
-                processedAt: device.lastSeenAt ? { gte: device.lastSeenAt } : undefined,
+                processedAt: lastSyncedAt ? { gte: lastSyncedAt } : undefined,
                 deviceId: { not: device.deviceId },
             },
             orderBy: {

@@ -207,23 +207,17 @@ class ChangesProcessor {
       changeIds: changeLogs.map((log) => log.id).toList(),
       insertions: TableChanges(
         Map.fromEntries(
-          insertions.entries.map(
-            (e) => MapEntry(e.key, TableRows(e.value)),
-          ),
+          insertions.entries.map((e) => MapEntry(e.key, TableRows(e.value))),
         ),
       ),
       updates: TableChanges(
         Map.fromEntries(
-          updates.entries.map(
-            (e) => MapEntry(e.key, TableRows(e.value)),
-          ),
+          updates.entries.map((e) => MapEntry(e.key, TableRows(e.value))),
         ),
       ),
       deletions: TableChanges(
         Map.fromEntries(
-          deletions.entries.map(
-            (e) => MapEntry(e.key, TableRows(e.value)),
-          ),
+          deletions.entries.map((e) => MapEntry(e.key, TableRows(e.value))),
         ),
       ),
     );
@@ -270,6 +264,12 @@ class ChangesProcessor {
     await _applyProcessedChanges(result);
 
     if (result.changeSet.isNotEmpty) {
+      // Update last sync timestamp
+      await _db.update(
+        '__pocketsync_device_state',
+        {'last_sync_timestamp': DateTime.now().millisecondsSinceEpoch},
+      );
+
       _logger.info(
           'Successfully applied ${result.changeSet.length} remote changes');
       _notifyChanges(result.changeSet);
@@ -462,7 +462,11 @@ class _IsolateMessage {
   final ConflictResolver conflictResolver;
 
   _IsolateMessage(
-      this.changeLogs, this.existingRows, this.sendPort, this.conflictResolver);
+    this.changeLogs,
+    this.existingRows,
+    this.sendPort,
+    this.conflictResolver,
+  );
 }
 
 /// Result from isolate processing
