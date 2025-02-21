@@ -51,7 +51,7 @@
         <!-- Create Project Modal -->
         <CreateProjectModal
             :show="showCreateProjectModal" 
-            @close="showCreateProjectModal = false"
+            @close="closeModal()"
             @project-created="projects.push($event)"
         />
     </div>
@@ -64,13 +64,16 @@ import CreateProjectModal from '~/components/projects/create-project-modal.vue'
 import ProjectCard from '~/components/projects/project-card.vue'
 import { useProjects } from '~/composables/useProjects'
 import ErrorAlert from '~/components/common/error-alert.vue'
+import { useRoute } from 'vue-router'
 
 definePageMeta({
     layout: 'dashboard'
 })
 
 const FolderIcon = PhFolder
-const showCreateProjectModal = ref(false)
+const route = useRoute()
+const router = useRouter()
+const showCreateProjectModal = ref(route.query.action === 'create')
 
 const { projects, isLoading, error, fetchProjects } = useProjects()
 
@@ -80,4 +83,10 @@ onMounted(async () => {
     } catch (err) {
     }
 })
+
+const closeModal = () => {
+    showCreateProjectModal.value = false
+    
+    router.replace({ query: {} })
+}
 </script>

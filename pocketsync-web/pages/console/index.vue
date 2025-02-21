@@ -85,7 +85,7 @@
 await PocketSync.instance.setUserId(userId: 'your-user-id');
 
 // Start syncing
-await PocketSync.instance.startSync();
+await PocketSync.instance.start();
 </code></pre>
                                         <button @click="copyCode('flutter-init')"
                                             class="absolute right-2 top-2 rounded-md bg-white/10 p-2 text-white hover:bg-white/20">
@@ -145,7 +145,7 @@ useHead({
 
 const createProject = () => {
     const router = useRouter()
-    router.push('/console/projects')
+    router.push('/console/projects?action=create')
 }
 
 const copyCode = (section) => {

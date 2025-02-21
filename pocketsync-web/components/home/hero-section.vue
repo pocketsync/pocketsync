@@ -53,7 +53,7 @@ await PocketSync.instance.initialize(
 await PocketSync.instance.setUserId(userId: 'your-user-id');
 
 // Start syncing
-await PocketSync.instance.startSync();
+await PocketSync.instance.start();
 </code></pre>
                         </div>
                     </div>
