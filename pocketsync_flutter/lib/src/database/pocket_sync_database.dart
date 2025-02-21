@@ -608,7 +608,7 @@ extension WatchExtension on PocketSyncDatabase {
     watcher.notify(this);
 
     // Set up change listeners for relevant tables
-    void handleChange(String table) {
+    void handleChange(String table, bool isRemote) {
       if (tables.contains(table)) {
         _debounceTimer?.cancel();
         _debounceTimer = Timer(const Duration(milliseconds: _debounceMs), () {

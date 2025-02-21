@@ -68,7 +68,7 @@ class PocketSync {
     );
 
     _syncQueue = SyncTaskQueue(
-      processChanges: _processChanges,
+      processChanges: _processSync,
       debounceDuration: const Duration(milliseconds: 500),
     );
 
@@ -151,12 +151,11 @@ class PocketSync {
     });
   }
 
-  bool _isApplyingRemoteChanges = false;
   final _syncLock = Lock();
 
-  void _syncChanges(String table) {
-    if (_isApplyingRemoteChanges) return;
-    
+  void _syncChanges(String table, bool isRemote) {
+    if (isRemote) return;
+
     if (!_isSyncing && _isConnected && !_isPaused) {
       scheduleMicrotask(() => _sync());
     } else {
@@ -170,7 +169,7 @@ class PocketSync {
       _logger.info('Sync skipped: user ID not set or inappropriate state');
       return;
     }
-    
+
     await _syncLock.synchronized(() async {
       if (_isSyncing) return;
       _isSyncing = true;
@@ -186,20 +185,16 @@ class PocketSync {
   }
 
   /// Processes a batch of changes
-  Future<void> _processChanges(ChangeSet changeSet) async {
+  Future<void> _processSync(ChangeSet changeSet) async {
     try {
       _logger.info('Processing batch: ${changeSet.length} changes');
 
       final processedResponse = await _sendChanges(changeSet);
 
-      if (processedResponse.status == 'success' && processedResponse.processed) {
-        _isApplyingRemoteChanges = true;
-        try {
-          await _markChangesSynced(changeSet.changeIds);
-          _logger.info('Changes successfully synced');
-        } finally {
-          _isApplyingRemoteChanges = false;
-        }
+      if (processedResponse.status == 'success' &&
+          processedResponse.processed) {
+        await _markChangesSynced(changeSet.changeIds);
+        _logger.info('Changes successfully synced');
       }
     } catch (e) {
       _logger.error('Error processing changes', error: e);

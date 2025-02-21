@@ -13,6 +13,7 @@ class ChangesProcessor {
   final DatabaseChangeManager _databaseChangeManager;
   final ConflictResolver _conflictResolver;
   final _logger = LoggerService.instance;
+  bool _isApplyingRemoteChanges = false;
 
   ChangesProcessor(
     this._db, {
@@ -241,7 +242,10 @@ class ChangesProcessor {
       _logger.info('Notifying changes for ${changedTables.length} tables');
 
       for (final table in changedTables) {
-        _databaseChangeManager.notifyChange(table);
+        _databaseChangeManager.notifyChange(
+          table,
+          isRemote: _isApplyingRemoteChanges,
+        );
       }
     }
   }
@@ -254,32 +258,37 @@ class ChangesProcessor {
       'Processing ${changeLogs.length} changes',
     );
 
-    // Pre-fetch existing rows on main thread since it requires DB access
-    final changeSet = _computeChangeSetFromChangeLogs(changeLogs);
-    final existingRows = await _db.transaction((txn) async {
-      return await _preloadExistingRows(changeSet, txn);
-    });
+    _isApplyingRemoteChanges = true;
+    try {
+      // Pre-fetch existing rows on main thread since it requires DB access
+      final changeSet = _computeChangeSetFromChangeLogs(changeLogs);
+      final existingRows = await _db.transaction((txn) async {
+        return await _preloadExistingRows(changeSet, txn);
+      });
 
-    // Process changes in background isolate
-    final result = await _processChangesInIsolate(
-      changeLogs.toList(),
-      existingRows,
-    );
-
-    // Apply processed changes to database on main thread
-    await _applyProcessedChanges(result);
-
-    if (result.changeSet.isNotEmpty) {
-      // Update last sync timestamp
-      await _db.update(
-        '__pocketsync_device_state',
-        {'last_sync_timestamp': DateTime.now().millisecondsSinceEpoch},
+      // Process changes in background isolate
+      final result = await _processChangesInIsolate(
+        changeLogs.toList(),
+        existingRows,
       );
 
-      _logger.info(
-        'Successfully applied ${result.changeSet.length} remote changes',
-      );
-      _notifyChanges(result.changeSet);
+      // Apply processed changes to database on main thread
+      await _applyProcessedChanges(result);
+
+      if (result.changeSet.isNotEmpty) {
+        // Update last sync timestamp
+        await _db.update(
+          '__pocketsync_device_state',
+          {'last_sync_timestamp': DateTime.now().millisecondsSinceEpoch},
+        );
+
+        _logger.info(
+          'Successfully applied ${result.changeSet.length} remote changes',
+        );
+        _notifyChanges(result.changeSet);
+      }
+    } finally {
+      _isApplyingRemoteChanges = false;
     }
   }
 
