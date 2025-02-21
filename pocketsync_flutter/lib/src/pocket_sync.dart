@@ -4,6 +4,7 @@ import 'package:pocketsync_flutter/src/database/database_change_manager.dart';
 import 'package:pocketsync_flutter/src/database/pocket_sync_database.dart';
 import 'package:pocketsync_flutter/src/models/change_set.dart';
 import 'package:pocketsync_flutter/src/services/logger_service.dart';
+import 'package:pocketsync_flutter/src/services/sync_retry_manager.dart';
 import 'package:synchronized/synchronized.dart';
 import 'models/pocket_sync_options.dart';
 import 'models/change_processing_response.dart';
@@ -24,6 +25,7 @@ class PocketSync {
   late ChangesProcessor _changesProcessor;
   late final SyncTaskQueue _syncQueue;
   late final DatabaseChangeManager _dbChangeManager;
+  final _retryManager = SyncRetryManager();
 
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
@@ -172,15 +174,18 @@ class PocketSync {
 
     await _syncLock.synchronized(() async {
       if (_isSyncing) return;
-      _isSyncing = true;
-      try {
-        final changeSet = await _changesProcessor.getUnSyncedChanges();
-        if (changeSet.isNotEmpty) {
-          await _syncQueue.enqueue(changeSet);
+
+      await _retryManager.executeWithRetry(() async {
+        _isSyncing = true;
+        try {
+          final changeSet = await _changesProcessor.getUnSyncedChanges();
+          if (changeSet.isNotEmpty) {
+            await _syncQueue.enqueue(changeSet);
+          }
+        } finally {
+          _isSyncing = false;
         }
-      } finally {
-        _isSyncing = false;
-      }
+      });
     });
   }
 

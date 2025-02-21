@@ -9,6 +9,8 @@ import 'package:pocketsync_flutter/src/services/logger_service.dart';
 import 'package:sqflite/sqflite.dart';
 
 class ChangesProcessor {
+  static const _maxQueueSize = 10000;
+
   final Database _db;
   final DatabaseChangeManager _databaseChangeManager;
   final ConflictResolver _conflictResolver;
@@ -25,7 +27,30 @@ class ChangesProcessor {
 
   /// Gets local changes formatted as a ChangeSet
   /// Uses batch processing for better performance with large datasets
+  Future<void> _pruneChangeQueue() async {
+    final count = await _db.rawQuery('SELECT COUNT(*) FROM __pocketsync_changes WHERE synced = 0')
+      .then((result) => result.first.values.first as int? ?? 0);
+    
+    if (count > _maxQueueSize) {
+      await _db.transaction((txn) async {
+        await txn.execute('''
+          UPDATE __pocketsync_changes 
+          SET synced = -1 
+          WHERE id NOT IN (
+            SELECT id FROM __pocketsync_changes 
+            WHERE synced = 0 
+            ORDER BY timestamp DESC 
+            LIMIT $_maxQueueSize
+          ) AND synced = 0
+        ''');
+      });
+      
+      _logger.warning('Pruned change queue to $_maxQueueSize items');
+    }
+  }
+
   Future<ChangeSet> getUnSyncedChanges({int batchSize = 1000}) async {
+    await _pruneChangeQueue();
     return await _db.transaction((txn) async {
       final insertions = <String, List<Row>>{};
       final updates = <String, List<Row>>{};

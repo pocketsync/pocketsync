@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:pocketsync_flutter/pocketsync_flutter.dart';
 import 'package:path/path.dart';
@@ -14,14 +13,15 @@ void main() async {
   const serverUrl = String.fromEnvironment('PS_SERVER_URL',
       defaultValue: 'https://api.pocketsync.dev');
 
+  // Server url for local backend:
+  // serverUrl: defaultTargetPlatform == TargetPlatform.android ? 'http://10.0.2.2:3000' : 'http://127.0.0.1:3000'
+
   await PocketSync.instance.initialize(
     dbPath: path,
     options: PocketSyncOptions(
       projectId: projectId,
       authToken: authToken,
-      serverUrl: defaultTargetPlatform == TargetPlatform.android
-          ? 'http://10.0.2.2:3000'
-          : 'http://127.0.0.1:3000',
+      serverUrl: serverUrl,
     ),
     databaseOptions: DatabaseOptions(
       onCreate: (db, version) async {
