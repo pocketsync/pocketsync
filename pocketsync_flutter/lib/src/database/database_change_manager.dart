@@ -5,36 +5,31 @@ typedef DatabaseChangeListener = void Function(String table, bool isRemote);
 
 /// Manages database change listeners with table-specific subscriptions
 class DatabaseChangeManager {
-  final Map<String, Map<Object, DatabaseChangeListener>> _tableListeners = {};
-  final Map<Object, DatabaseChangeListener> _globalListeners = {};
+  final Map<String, Map<int, DatabaseChangeListener>> _tableListeners = {};
+  final Map<int, DatabaseChangeListener> _globalListeners = {};
   final Map<String, Timer> _debounceTimers = {};
 
   static const _debounceDuration = Duration(milliseconds: 100);
 
-  /// Adds a listener for all database changes
-  Object addGlobalListener(DatabaseChangeListener listener) {
-    final key = Object();
-    _globalListeners[key] = listener;
-    return key;
+  /// Adds a listener for all database changes (prevents duplicates)
+  void addGlobalListener(DatabaseChangeListener listener) {
+    _globalListeners[listener.hashCode] = listener;
   }
 
   /// Removes a global listener
-  void removeGlobalListener(Object key) {
-    _globalListeners.remove(key);
+  void removeGlobalListener(DatabaseChangeListener listener) {
+    _globalListeners.remove(listener.hashCode);
   }
 
-  /// Adds a listener for changes to a specific table
-  Object addTableListener(String table, DatabaseChangeListener listener) {
-    final key = Object();
-    _tableListeners
-        .putIfAbsent(table, () => {})
-        .putIfAbsent(key, () => listener);
-    return key;
+  /// Adds a listener for changes to a specific table (prevents duplicates)
+  void addTableListener(String table, DatabaseChangeListener listener) {
+    _tableListeners.putIfAbsent(table, () => {});
+    _tableListeners[table]![listener.hashCode] = listener;
   }
 
   /// Removes a table-specific listener
-  void removeTableListener(String table, Object key) {
-    _tableListeners[table]?.remove(key);
+  void removeTableListener(String table, DatabaseChangeListener listener) {
+    _tableListeners[table]?.remove(listener.hashCode);
     if (_tableListeners[table]?.isEmpty ?? false) {
       _tableListeners.remove(table);
     }

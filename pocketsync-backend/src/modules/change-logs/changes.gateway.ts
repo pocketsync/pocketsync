@@ -15,6 +15,8 @@ import { SocketAuthGuard } from '../../common/guards/socket-auth.guard';
 @UseGuards(SocketAuthGuard)
 export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly logger = new Logger(ChangesGateway.name);
+    private readonly BATCH_SIZE = 50;
+    private readonly BATCH_DELAY = 1000; // 1 second delay between batches
 
     @WebSocketServer()
     private server: Server;
@@ -89,9 +91,6 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
 
         this.logger.log(`Device ${deviceId} acknowledged ${payload.changeIds.length} changes`);
     }
-
-    private readonly BATCH_SIZE = 50;
-    private readonly BATCH_DELAY = 1000; // 1 second delay between batches
 
     private async sendMissedChanges(deviceId: string, userIdentifier: string, lastSyncedAt: Date | null) {
         const device = await this.prisma.device.findFirst({
