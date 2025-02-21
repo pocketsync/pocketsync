@@ -1,3 +1,6 @@
+## 0.0.6
+- Fix: Changes we sometimes sent twice to the server
+- Fix readme
 ## 0.0.5
 ### New Features
 - Add `silent` option to `PocketSyncOptions` to disable sync logs

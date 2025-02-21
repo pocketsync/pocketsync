@@ -6,7 +6,7 @@
 <p align="center">
   <a href="https://pocketsync.dev">Website</a> ·
   <a href="https://docs.pocketsync.dev">Documentation</a> ·
-  <a href="https://github.com/stevenosse/pocketsync_flutter/issues">Report Bug</a>
+  <a href="https://x.com/nossesteve">Report Bug</a>
 </p>
 
 ---
@@ -30,7 +30,7 @@ PocketSync is a powerful Flutter package that enables seamless data synchronizat
 
 ```yaml
 dependencies:
-  pocketsync_flutter: ^0.0.5
+  pocketsync_flutter: ^0.0.6
 ```
 
 Or install via command line:
@@ -66,7 +66,7 @@ void main() async {
     );
 
     await PocketSync.instance.setUserId(userId: 'user-123');
-    await PocketSync.instance.startSync();
+    await PocketSync.instance.start();
   } catch (e) {
     print('Failed to initialize PocketSync: $e');
   }
