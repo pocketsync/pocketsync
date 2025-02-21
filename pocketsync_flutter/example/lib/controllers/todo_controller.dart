@@ -29,4 +29,8 @@ class TodoController {
   Future<void> deleteTodo(int id) async {
     await db.rawQuery('DELETE FROM todos WHERE id = ?', [id]);
   }
+
+  void dispose() {
+    db.close();
+  }
 }

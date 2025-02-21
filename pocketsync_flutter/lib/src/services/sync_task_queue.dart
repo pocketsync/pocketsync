@@ -115,8 +115,9 @@ class SyncTaskQueue {
 
       final delay = _calculateRetryDelay(_retryAttempt);
       _logger.warning(
-          'Sync attempt $_retryAttempt failed. Retrying in ${delay.inSeconds}s',
-          error: e);
+        'Sync attempt $_retryAttempt failed. Retrying in ${delay.inSeconds}s',
+        error: e,
+      );
 
       await Future.delayed(delay);
       _retryAttempt++;

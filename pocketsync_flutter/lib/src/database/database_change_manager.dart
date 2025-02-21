@@ -13,7 +13,9 @@ class DatabaseChangeManager {
 
   /// Adds a listener for all database changes
   void addGlobalListener(DatabaseChangeListener listener) {
-    _globalListeners.add(listener);
+    if (!_globalListeners.contains(listener)) {
+      _globalListeners.add(listener);
+    }
   }
 
   /// Removes a global listener
@@ -23,7 +25,9 @@ class DatabaseChangeManager {
 
   /// Adds a listener for changes to a specific table
   void addTableListener(String table, DatabaseChangeListener listener) {
-    _tableListeners.putIfAbsent(table, () => {}).add(listener);
+    if (!(_tableListeners[table]?.contains(listener) ?? false)) {
+      _tableListeners.putIfAbsent(table, () => {}).add(listener);
+    }
   }
 
   /// Removes a table-specific listener
@@ -34,18 +38,12 @@ class DatabaseChangeManager {
     }
   }
 
-  void notifyAll() {
+  void notifySync() {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(_debounceDuration, () {
       // Notify global listeners
       for (final listener in _globalListeners) {
         listener('*');
-      }
-      // Notify table-specific listeners
-      for (final tableListeners in _tableListeners.values) {
-        for (final listener in tableListeners) {
-          listener('*');
-        }
       }
     });
   }
@@ -54,11 +52,6 @@ class DatabaseChangeManager {
   void notifyChange(String table) {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(_debounceDuration, () {
-      // Notify global listeners
-      for (final listener in _globalListeners) {
-        listener(table);
-      }
-
       // Notify table-specific listeners
       final tableListeners = _tableListeners[table];
       if (tableListeners != null) {

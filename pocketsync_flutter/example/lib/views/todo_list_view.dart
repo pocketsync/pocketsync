@@ -19,6 +19,7 @@ class _TodoListViewState extends State<TodoListView> {
   @override
   void dispose() {
     _textController.dispose();
+    _todoController.dispose();
 
     super.dispose();
   }

@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:pocketsync_flutter/pocketsync_flutter.dart';
 import 'package:pocketsync_flutter/src/database/database_change_manager.dart';
+import 'package:pocketsync_flutter/src/database/query_watcher.dart';
+import 'package:pocketsync_flutter/src/database/transaction_wrapper.dart';
 import 'package:pocketsync_flutter/src/services/device_fingerprint_service.dart';
 import 'package:pocketsync_flutter/src/utils/table_utils.dart';
 import 'package:sqflite/sqflite.dart';
@@ -37,6 +39,24 @@ class PocketSyncDatabase {
       },
     );
     return _db!;
+  }
+
+  Future<T> transaction<T>(Future<T> Function(Transaction txn) action) async {
+    final affectedTables = <String>{};
+    final result = await _db!.transaction((txn) async {
+      try {
+        return await action(TransactionWrapper(txn, affectedTables));
+      } catch (e) {
+        rethrow;
+      }
+    });
+
+    if (affectedTables.isNotEmpty) {
+      for (final table in affectedTables) {
+        _changeManager.notifyChange(table);
+      }
+    }
+    return result;
   }
 
   /// Sets up the initial PocketSync system tables
@@ -273,21 +293,14 @@ class PocketSyncDatabase {
   }
 
   /// Private method to handle change notifications
-  Future<void> _notifyChanges(
-    Iterable<String> tables, {
-    bool force = false,
-  }) async {
+  Future<void> _notifyChanges(Iterable<String> tables) async {
     // Get all recent changes from the change
-
-    if (force) {
-      _changeManager.notifyAll();
-    } else {
-      if (tables.isNotEmpty) {
-        for (final table in tables) {
-          _changeManager.notifyChange(table);
-        }
+    if (tables.isNotEmpty) {
+      for (final table in tables) {
+        _changeManager.notifyChange(table);
       }
     }
+    _changeManager.notifySync();
   }
 
   /// Generates a new ps_global_id
@@ -424,23 +437,6 @@ class PocketSyncDatabase {
     await batch.apply();
     await _notifyChanges((batch as _PocketSyncBatch)._affectedTables);
   }
-
-  /// Executes a transaction
-  ///
-  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
-  Future<T> transaction<T>(Future<T> Function(Transaction txn) action) async {
-    final result = await _db!.transaction((txn) async {
-      try {
-        return await action(txn);
-      } catch (e) {
-        rethrow;
-      }
-    });
-
-    await _notifyChanges([], force: true);
-
-    return result;
-  }
 }
 
 /// Wrapper for Batch to handle ps_global_id generation
@@ -575,37 +571,6 @@ class _PocketSyncBatch implements Batch {
   @override
   void rawUpdate(String sql, [List<Object?>? arguments]) =>
       _batch.rawUpdate(sql, arguments);
-}
-
-class QueryWatcher {
-  final String sql;
-  final List<Object?>? arguments;
-  final StreamController<List<Map<String, dynamic>>> _controller;
-  final Set<String> tables;
-  bool _isActive = true;
-
-  QueryWatcher(this.sql, this.arguments, this.tables)
-      : _controller = StreamController<List<Map<String, dynamic>>>.broadcast();
-
-  Stream<List<Map<String, dynamic>>> get stream => _controller.stream;
-
-  void dispose() {
-    _isActive = false;
-    _controller.close();
-  }
-
-  Future<void> notify(PocketSyncDatabase db) async {
-    if (!_isActive) return;
-
-    try {
-      final results = await db.rawQuery(sql, arguments);
-      if (!_isActive) return;
-      _controller.add(results);
-    } catch (e) {
-      if (!_isActive) return;
-      _controller.addError(e);
-    }
-  }
 }
 
 extension WatchExtension on PocketSyncDatabase {

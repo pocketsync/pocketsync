@@ -9,7 +9,7 @@ import 'package:pocketsync_flutter/src/services/logger_service.dart';
 import 'package:sqflite/sqflite.dart';
 
 class ChangesProcessor {
-  final PocketSyncDatabase _db;
+  final Database _db;
   final DatabaseChangeManager _databaseChangeManager;
   final ConflictResolver _conflictResolver;
   final _logger = LoggerService.instance;
@@ -25,7 +25,7 @@ class ChangesProcessor {
   /// Gets local changes formatted as a ChangeSet
   /// Uses batch processing for better performance with large datasets
   Future<ChangeSet> getUnSyncedChanges({int batchSize = 1000}) async {
-    try {
+    return await _db.transaction((txn) async {
       final insertions = <String, List<Row>>{};
       final updates = <String, List<Row>>{};
       final deletions = <String, List<Row>>{};
@@ -34,12 +34,13 @@ class ChangesProcessor {
       final changeIds = <int>[];
 
       _logger.debug(
-          'Starting to fetch unsynced changes with batch size: $batchSize');
+        'Starting to fetch unsynced changes with batch size: $batchSize',
+      );
 
       while (true) {
         List<Map<String, dynamic>> changes;
         try {
-          changes = await _db.query(
+          changes = await txn.query(
             '__pocketsync_changes',
             where: 'synced = 0 AND id > ?',
             whereArgs: [lastId],
@@ -78,7 +79,8 @@ class ChangesProcessor {
             } catch (e) {
               _logger.error('Error parsing change data for id $id: $e');
               throw SyncStateError(
-                  'Failed to parse change data: ${e.toString()}');
+                'Failed to parse change data: ${e.toString()}',
+              );
             }
 
             // Use rowid as the primary key identifier
@@ -122,37 +124,31 @@ class ChangesProcessor {
         version: lastVersion,
         changeIds: changeIds,
         insertions: TableChanges(
-          Map.fromEntries(insertions.entries
-              .map((e) => MapEntry(e.key, TableRows(e.value)))),
+          Map.fromEntries(
+            insertions.entries.map((e) => MapEntry(e.key, TableRows(e.value))),
+          ),
         ),
         updates: TableChanges(
           Map.fromEntries(
-              updates.entries.map((e) => MapEntry(e.key, TableRows(e.value)))),
+            updates.entries.map((e) => MapEntry(e.key, TableRows(e.value))),
+          ),
         ),
         deletions: TableChanges(
-          Map.fromEntries(deletions.entries
-              .map((e) => MapEntry(e.key, TableRows(e.value)))),
+          Map.fromEntries(
+            deletions.entries.map((e) => MapEntry(e.key, TableRows(e.value))),
+          ),
         ),
       );
-    } catch (e) {
-      if (e is SyncError) rethrow;
-      _logger.error('Unexpected error in getUnSyncedChanges: $e');
-      throw SyncStateError('Failed to get unsynced changes: ${e.toString()}');
-    }
+    });
   }
 
   /// Marks changes as synced
   Future<void> markChangesSynced(List<int> changeIds) async {
-    final batch = _db.batch();
-    for (final id in changeIds) {
-      batch.update(
-        '__pocketsync_changes',
-        {'synced': 1},
-        where: 'id = ?',
-        whereArgs: [id],
-      );
-    }
-    await batch.commit();
+    await _db.update(
+      '__pocketsync_changes',
+      {'synced': 1},
+      where: 'id IN (${changeIds.map((e) => e).join(',')})',
+    );
   }
 
   static ChangeSet _computeChangeSetFromChangeLogs(
@@ -231,20 +227,22 @@ class ChangesProcessor {
 
   /// Notifies database changes to registered listeners
   void _notifyChanges(ChangeSet changeSet) {
-    void notifyChangesForOperation(
-      Map<String, TableRows> changes,
-      String operation,
-    ) {
-      for (final entry in changes.entries) {
-        _databaseChangeManager.notifyChange(entry.key);
-      }
-    }
-
     if (changeSet.isNotEmpty) {
-      _logger.info('Notifying ${changeSet.length} changes');
-      notifyChangesForOperation(changeSet.insertions.changes, 'INSERT');
-      notifyChangesForOperation(changeSet.updates.changes, 'UPDATE');
-      notifyChangesForOperation(changeSet.deletions.changes, 'DELETE');
+      final changedTables = <String>{};
+
+      void collectChangedTables(Map<String, TableRows> changes) {
+        changedTables.addAll(changes.keys);
+      }
+
+      collectChangedTables(changeSet.insertions.changes);
+      collectChangedTables(changeSet.updates.changes);
+      collectChangedTables(changeSet.deletions.changes);
+
+      _logger.info('Notifying changes for ${changedTables.length} tables');
+
+      for (final table in changedTables) {
+        _databaseChangeManager.notifyChange(table);
+      }
     }
   }
 
@@ -279,7 +277,8 @@ class ChangesProcessor {
       );
 
       _logger.info(
-          'Successfully applied ${result.changeSet.length} remote changes');
+        'Successfully applied ${result.changeSet.length} remote changes',
+      );
       _notifyChanges(result.changeSet);
     }
   }

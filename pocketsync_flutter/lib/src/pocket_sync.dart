@@ -4,6 +4,7 @@ import 'package:pocketsync_flutter/src/database/database_change_manager.dart';
 import 'package:pocketsync_flutter/src/database/pocket_sync_database.dart';
 import 'package:pocketsync_flutter/src/models/change_set.dart';
 import 'package:pocketsync_flutter/src/services/logger_service.dart';
+import 'package:synchronized/synchronized.dart';
 import 'models/pocket_sync_options.dart';
 import 'models/change_processing_response.dart';
 import 'services/pocket_sync_network_service.dart';
@@ -91,7 +92,7 @@ class PocketSync {
     }
 
     _changesProcessor = ChangesProcessor(
-      _database,
+      db,
       databaseChangeManager: _dbChangeManager,
       conflictResolver: options.conflictResolver,
     );
@@ -150,7 +151,12 @@ class PocketSync {
     });
   }
 
+  bool _isApplyingRemoteChanges = false;
+  final _syncLock = Lock();
+
   void _syncChanges(String table) {
+    if (_isApplyingRemoteChanges) return;
+    
     if (!_isSyncing && _isConnected && !_isPaused) {
       scheduleMicrotask(() => _sync());
     } else {
@@ -160,48 +166,40 @@ class PocketSync {
 
   /// Internal sync method
   Future<void> _sync() async {
-    if (_userId == null || _isSyncing || !_isConnected || _isPaused) {
+    if (_userId == null || !_isConnected || _isPaused) {
       _logger.info('Sync skipped: user ID not set or inappropriate state');
       return;
     }
-
-    _isSyncing = true;
-
-    try {
-      // Fetch changes in a non-blocking way
-      final changeSet =
-          await Future(() => _changesProcessor.getUnSyncedChanges());
-
-      if (changeSet.insertions.changes.isNotEmpty ||
-          changeSet.updates.changes.isNotEmpty ||
-          changeSet.deletions.changes.isNotEmpty) {
-        _logger.info(
-            'Queueing changes: ${changeSet.changeIds.length} changes found');
-
-        // Queue the changes for processing
-        await _syncQueue.enqueue(changeSet);
+    
+    await _syncLock.synchronized(() async {
+      if (_isSyncing) return;
+      _isSyncing = true;
+      try {
+        final changeSet = await _changesProcessor.getUnSyncedChanges();
+        if (changeSet.isNotEmpty) {
+          await _syncQueue.enqueue(changeSet);
+        }
+      } finally {
+        _isSyncing = false;
       }
-      _isSyncing = false;
-    } catch (e) {
-      _logger.error('Error during sync', error: e);
-      _isSyncing = false;
-      rethrow;
-    }
+    });
   }
 
   /// Processes a batch of changes
   Future<void> _processChanges(ChangeSet changeSet) async {
     try {
-      _logger.info('Processing batch: ${changeSet.changeIds.length} changes');
+      _logger.info('Processing batch: ${changeSet.length} changes');
 
-      // Send changes asynchronously
-      final processedResponse = await Future(() => _sendChanges(changeSet));
+      final processedResponse = await _sendChanges(changeSet);
 
-      if (processedResponse.status == 'success' &&
-          processedResponse.processed) {
-        // Mark changes as synced in a non-blocking way
-        await Future(() => _markChangesSynced(changeSet.changeIds));
-        _logger.info('Changes successfully synced');
+      if (processedResponse.status == 'success' && processedResponse.processed) {
+        _isApplyingRemoteChanges = true;
+        try {
+          await _markChangesSynced(changeSet.changeIds);
+          _logger.info('Changes successfully synced');
+        } finally {
+          _isApplyingRemoteChanges = false;
+        }
       }
     } catch (e) {
       _logger.error('Error processing changes', error: e);
