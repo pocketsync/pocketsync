@@ -30,7 +30,7 @@ PocketSync is a powerful Flutter package that enables seamless data synchronizat
 
 ```yaml
 dependencies:
-  pocketsync_flutter: ^0.0.6
+  pocketsync_flutter: ^0.0.7
 ```
 
 Or install via command line:
@@ -73,6 +73,8 @@ void main() async {
 ```
 
 ## Database Operations
+
+PocketSyncDatabase is a wrapper around the `sqflite` package, providing additional features for syncing data across devices. 
 
 ### CRUD Operations
 

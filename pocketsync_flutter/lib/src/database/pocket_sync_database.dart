@@ -10,7 +10,7 @@ import 'package:sqflite/sqflite.dart';
 
 /// PocketSync database service for managing local database operations
 /// with the ability to track changes and sync them with a remote server
-class PocketSyncDatabase {
+class PocketSyncDatabase extends DatabaseExecutor {
   final DatabaseChangeManager _changeManager;
   Database? _db;
 
@@ -56,6 +56,238 @@ class PocketSyncDatabase {
         _changeManager.notifyChange(table);
       }
     }
+    return result;
+  }
+
+  /// Closes the database
+  Future<void> close() async {
+    _changeManager.dispose();
+    await _db?.close();
+    _db = null;
+  }
+
+  /// Executes a raw SQL query
+  ///
+  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
+  @override
+  Future<List<Map<String, dynamic>>> query(
+    String table, {
+    bool? distinct,
+    List<String>? columns,
+    String? where,
+    List<Object?>? whereArgs,
+    String? groupBy,
+    String? having,
+    String? orderBy,
+    int? limit,
+    int? offset,
+  }) async {
+    return await _db!.query(
+      table,
+      distinct: distinct,
+      columns: columns,
+      where: where,
+      whereArgs: whereArgs,
+      groupBy: groupBy,
+      having: having,
+      orderBy: orderBy,
+      limit: limit,
+      offset: offset,
+    );
+  }
+
+  @override
+  Future<void> execute(String sql, [List<Object?>? arguments]) {
+    return _db!.execute(sql, arguments);
+  }
+
+  /// Inserts a row into the specified table
+  ///
+  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
+  @override
+  Future<int> insert(
+    String table,
+    Map<String, Object?> values, {
+    String? nullColumnHack,
+    ConflictAlgorithm? conflictAlgorithm,
+  }) async {
+    values = await _ensurePsGlobalId(values);
+
+    final result = await _db!.insert(
+      table,
+      values,
+      nullColumnHack: nullColumnHack,
+      conflictAlgorithm: conflictAlgorithm,
+    );
+
+    await _notifyChanges([table]);
+
+    return result;
+  }
+
+  /// Updates rows in the specified table
+  ///
+  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
+  @override
+  Future<int> update(
+    String table,
+    Map<String, Object?> values, {
+    String? where,
+    List<Object?>? whereArgs,
+    ConflictAlgorithm? conflictAlgorithm,
+  }) async {
+    final result = await _db!.update(
+      table,
+      values,
+      where: where,
+      whereArgs: whereArgs,
+      conflictAlgorithm: conflictAlgorithm,
+    );
+
+    await _notifyChanges([table]);
+
+    return result;
+  }
+
+  /// Deletes rows from the specified table
+  ///
+  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
+  @override
+  Future<int> delete(
+    String table, {
+    String? where,
+    List<Object?>? whereArgs,
+  }) async {
+    final result = await _db!.delete(
+      table,
+      where: where,
+      whereArgs: whereArgs,
+    );
+
+    await _notifyChanges([table]);
+
+    return result;
+  }
+
+  /// Executes a raw SQL query with optional arguments
+  ///
+  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
+  @override
+  Future<List<Map<String, dynamic>>> rawQuery(
+    String sql, [
+    List<Object?>? arguments,
+  ]) async {
+    final tables = extractAffectedTables(sql);
+    final isInsertOperation = sql.trim().toUpperCase().startsWith('INSERT');
+
+    if (isInsertOperation) {
+      // Inject ps_global_id for INSERT operations
+      final psGlobalId = await _generatePsGlobalId();
+      sql = sql.replaceFirst(')', ', ps_global_id)');
+      sql = sql.replaceFirst('?)', '?, ?)');
+      arguments = (arguments ?? [])..add(psGlobalId);
+    }
+
+    final result = await _db!.rawQuery(sql, arguments);
+
+    // Check if the query modifies data
+    final normalizedSql = sql.trim().toUpperCase();
+    if (isInsertOperation ||
+        normalizedSql.startsWith('UPDATE') ||
+        normalizedSql.startsWith('DELETE')) {
+      await _notifyChanges(tables);
+    }
+
+    return result;
+  }
+
+  /// Starts a batch operation
+  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
+  @override
+  Batch batch() {
+    final batch = _db!.batch();
+    return _PocketSyncBatch(batch);
+  }
+
+  /// Commits a batch operation and notifies changes
+  ///
+  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
+  Future<List<Object?>> commit(Batch batch) async {
+    final result = await batch.commit();
+    await _notifyChanges((batch as _PocketSyncBatch)._affectedTables);
+    return result;
+  }
+
+  /// Applies a batch operation without reading the results and notifies changes
+  ///
+  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
+  Future<void> apply(Batch batch) async {
+    await batch.apply();
+    await _notifyChanges((batch as _PocketSyncBatch)._affectedTables);
+  }
+
+  @override
+  Database get database => _db!;
+
+  @override
+  Future<QueryCursor> queryCursor(String table,
+      {bool? distinct,
+      List<String>? columns,
+      String? where,
+      List<Object?>? whereArgs,
+      String? groupBy,
+      String? having,
+      String? orderBy,
+      int? limit,
+      int? offset,
+      int? bufferSize}) {
+    return _db!.queryCursor(
+      table,
+      distinct: distinct,
+      columns: columns,
+      where: where,
+      whereArgs: whereArgs,
+      groupBy: groupBy,
+      having: having,
+      orderBy: orderBy,
+      limit: limit,
+      offset: offset,
+      bufferSize: bufferSize,
+    );
+  }
+
+  @override
+  Future<int> rawDelete(String sql, [List<Object?>? arguments]) {
+    final result = _db!.rawDelete(sql, arguments);
+    final tables = extractAffectedTables(sql);
+    _notifyChanges(tables);
+
+    return result;
+  }
+
+  @override
+  Future<int> rawInsert(String sql, [List<Object?>? arguments]) async {
+    final result = await _db!.rawInsert(sql, arguments);
+    final tables = extractAffectedTables(sql);
+    await _notifyChanges(tables);
+    return result;
+  }
+
+  @override
+  Future<QueryCursor> rawQueryCursor(String sql, List<Object?>? arguments,
+      {int? bufferSize}) {
+    return _db!.rawQueryCursor(
+      sql,
+      arguments,
+      bufferSize: bufferSize,
+    );
+  }
+
+  @override
+  Future<int> rawUpdate(String sql, [List<Object?>? arguments]) {
+    final result = _db!.rawUpdate(sql, arguments);
+    final tables = extractAffectedTables(sql);
+    _notifyChanges(tables);
     return result;
   }
 
@@ -256,42 +488,6 @@ class PocketSyncDatabase {
     return "($conditions)";
   }
 
-  /// Closes the database
-  Future<void> close() async {
-    _changeManager.dispose();
-    await _db?.close();
-    _db = null;
-  }
-
-  /// Executes a raw SQL query
-  ///
-  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
-  Future<List<Map<String, dynamic>>> query(
-    String table, {
-    bool? distinct,
-    List<String>? columns,
-    String? where,
-    List<Object?>? whereArgs,
-    String? groupBy,
-    String? having,
-    String? orderBy,
-    int? limit,
-    int? offset,
-  }) async {
-    return await _db!.query(
-      table,
-      distinct: distinct,
-      columns: columns,
-      where: where,
-      whereArgs: whereArgs,
-      groupBy: groupBy,
-      having: having,
-      orderBy: orderBy,
-      limit: limit,
-      offset: offset,
-    );
-  }
-
   /// Private method to handle change notifications
   Future<void> _notifyChanges(Iterable<String> tables) async {
     // Get all recent changes from the change
@@ -316,126 +512,6 @@ class PocketSyncDatabase {
       values['ps_global_id'] = await _generatePsGlobalId();
     }
     return values;
-  }
-
-  /// Inserts a row into the specified table
-  ///
-  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
-  Future<int> insert(
-    String table,
-    Map<String, Object?> values, {
-    String? nullColumnHack,
-    ConflictAlgorithm? conflictAlgorithm,
-  }) async {
-    values = await _ensurePsGlobalId(values);
-
-    final result = await _db!.insert(
-      table,
-      values,
-      nullColumnHack: nullColumnHack,
-      conflictAlgorithm: conflictAlgorithm,
-    );
-
-    await _notifyChanges([table]);
-
-    return result;
-  }
-
-  /// Updates rows in the specified table
-  ///
-  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
-  Future<int> update(
-    String table,
-    Map<String, Object?> values, {
-    String? where,
-    List<Object?>? whereArgs,
-    ConflictAlgorithm? conflictAlgorithm,
-  }) async {
-    final result = await _db!.update(
-      table,
-      values,
-      where: where,
-      whereArgs: whereArgs,
-      conflictAlgorithm: conflictAlgorithm,
-    );
-
-    await _notifyChanges([table]);
-
-    return result;
-  }
-
-  /// Deletes rows from the specified table
-  ///
-  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
-  Future<int> delete(
-    String table, {
-    String? where,
-    List<Object?>? whereArgs,
-  }) async {
-    final result = await _db!.delete(
-      table,
-      where: where,
-      whereArgs: whereArgs,
-    );
-
-    await _notifyChanges([table]);
-
-    return result;
-  }
-
-  /// Executes a raw SQL query with optional arguments
-  ///
-  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
-  Future<List<Map<String, dynamic>>> rawQuery(
-    String sql, [
-    List<Object?>? arguments,
-  ]) async {
-    final tables = extractAffectedTables(sql);
-    final isInsertOperation = sql.trim().toUpperCase().startsWith('INSERT');
-
-    if (isInsertOperation) {
-      // Inject ps_global_id for INSERT operations
-      final psGlobalId = await _generatePsGlobalId();
-      sql = sql.replaceFirst(')', ', ps_global_id)');
-      sql = sql.replaceFirst('?)', '?, ?)');
-      arguments = (arguments ?? [])..add(psGlobalId);
-    }
-
-    final result = await _db!.rawQuery(sql, arguments);
-
-    // Check if the query modifies data
-    final normalizedSql = sql.trim().toUpperCase();
-    if (isInsertOperation ||
-        normalizedSql.startsWith('UPDATE') ||
-        normalizedSql.startsWith('DELETE')) {
-      await _notifyChanges(tables);
-    }
-
-    return result;
-  }
-
-  /// Starts a batch operation
-  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
-  Batch batch() {
-    final batch = _db!.batch();
-    return _PocketSyncBatch(batch);
-  }
-
-  /// Commits a batch operation and notifies changes
-  ///
-  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
-  Future<List<Object?>> commit(Batch batch) async {
-    final result = await batch.commit();
-    await _notifyChanges((batch as _PocketSyncBatch)._affectedTables);
-    return result;
-  }
-
-  /// Applies a batch operation without reading the results and notifies changes
-  ///
-  /// Refer to the [sqflite documentation](https://pub.dev/packages/sqflite) for more information
-  Future<void> apply(Batch batch) async {
-    await batch.apply();
-    await _notifyChanges((batch as _PocketSyncBatch)._affectedTables);
   }
 }
 

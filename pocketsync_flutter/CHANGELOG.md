@@ -1,3 +1,7 @@
+## 0.0.7
+- Add missing wrapper methods around `Database` from sqflite
+- Expose `Database` instance from `sqflite`
+
 ## 0.0.6
 - Fix: Changes we sometimes sent twice to the server
 - Fix readme
