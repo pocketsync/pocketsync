@@ -276,11 +276,34 @@ class ChangesProcessor {
   }
 
   /// Applies remote changes to local database
+  /// Checks which change logs have already been processed
+  Future<List<int>> _getProcessedChangeLogIds(List<int> changeLogIds) async {
+    if (changeLogIds.isEmpty) return [];
+    
+    final result = await _db.query(
+      '__pocketsync_processed_changes',
+      columns: ['change_log_id'],
+      where: 'change_log_id IN (${changeLogIds.map((_) => '?').join(",")})',
+      whereArgs: changeLogIds,
+    );
+    
+    return result.map((row) => row['change_log_id'] as int).toList();
+  }
+
   Future<void> applyRemoteChanges(Iterable<ChangeLog> changeLogs) async {
     if (changeLogs.isEmpty) return;
 
+    final allChangeLogIds = changeLogs.map((log) => log.id).toList();
+    final processedIds = await _getProcessedChangeLogIds(allChangeLogIds);
+    final unprocessedChangeLogs = changeLogs.where((log) => !processedIds.contains(log.id));
+
+    if (unprocessedChangeLogs.isEmpty) {
+      _logger.info('All changes have already been processed');
+      return;
+    }
+
     _logger.info(
-      'Processing ${changeLogs.length} changes',
+      'Processing ${unprocessedChangeLogs.length} changes',
     );
 
     _isApplyingRemoteChanges = true;
