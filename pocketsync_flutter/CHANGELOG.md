@@ -12,6 +12,7 @@
 - Moved changes processing to a separate isolate for better performance
 - Optimized sync queue management
 - Enhanced conflict resolution handling
+- Better retry management
 
 ## 0.0.4
 - Optimize table extraction algo for watching queries
