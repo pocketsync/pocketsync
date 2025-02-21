@@ -126,8 +126,7 @@ class PocketSyncNetworkService {
     // Execute network operations in a non-blocking way
     Future.microtask(() async {
       try {
-        _logger.info(
-            'Sending changes to server: ${changes.length} changes');
+        _logger.info('Sending changes to server: ${changes.length} changes');
         if (_userId == null) {
           completer.completeError(InitializationError('User ID not set'));
           return;

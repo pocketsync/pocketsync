@@ -10,7 +10,7 @@ class DeviceFingerprintService {
 
   DeviceFingerprintService(this.database);
 
-  Future<String> getDeviceFingerprint(Database database) async {
+  static Future<String> getDeviceFingerprint(Database database) async {
     final deviceState =
         await database.query('__pocketsync_device_state', limit: 1);
 

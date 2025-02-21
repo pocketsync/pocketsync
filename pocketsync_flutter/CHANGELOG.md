@@ -1,3 +1,7 @@
+## 0.0.9
+- Fix: error when opening an existing database with missing tables missing`ps_global_id` column
+- Fix device state initialization
+
 ## 0.0.8
 - Fix: Properly schema lifecycle
 

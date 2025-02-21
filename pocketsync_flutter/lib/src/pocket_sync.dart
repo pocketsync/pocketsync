@@ -3,6 +3,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:pocketsync_flutter/src/database/database_change_manager.dart';
 import 'package:pocketsync_flutter/src/database/pocket_sync_database.dart';
 import 'package:pocketsync_flutter/src/models/change_set.dart';
+import 'package:pocketsync_flutter/src/services/device_state_manager.dart';
 import 'package:pocketsync_flutter/src/services/logger_service.dart';
 import 'package:pocketsync_flutter/src/services/sync_retry_manager.dart';
 import 'package:synchronized/synchronized.dart';
@@ -80,12 +81,14 @@ class PocketSync {
       options: databaseOptions,
     );
 
-    // Set device ID in network service
-    final deviceState = await db.query('__pocketsync_device_state', limit: 1);
-    if (deviceState.isNotEmpty) {
-      final deviceId = deviceState.first['device_id'] as String;
-      final lastSyncedAt = deviceState.first['last_sync_timestamp'] as int?;
-      _networkService.setDeviceId(deviceId);
+    // Initialize device state
+    await DeviceStateManager.setupDeviceInfo(db);
+    
+    // Set device info in network service
+    final deviceState = await DeviceStateManager.getDeviceState(db);
+    if (deviceState != null) {
+      _networkService.setDeviceId(deviceState['device_id'] as String);
+      final lastSyncedAt = deviceState['last_sync_timestamp'] as int?;
       _networkService.setLastSyncedAt(
         lastSyncedAt != null
             ? DateTime.fromMillisecondsSinceEpoch(lastSyncedAt)

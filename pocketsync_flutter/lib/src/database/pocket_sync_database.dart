@@ -4,7 +4,6 @@ import 'package:pocketsync_flutter/pocketsync_flutter.dart';
 import 'package:pocketsync_flutter/src/database/database_change_manager.dart';
 import 'package:pocketsync_flutter/src/database/query_watcher.dart';
 import 'package:pocketsync_flutter/src/database/transaction_wrapper.dart';
-import 'package:pocketsync_flutter/src/services/device_fingerprint_service.dart';
 import 'package:pocketsync_flutter/src/utils/table_utils.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -27,16 +26,15 @@ class PocketSyncDatabase extends DatabaseExecutor {
       dbPath,
       version: options.version,
       onConfigure: (db) async {
-        // Configure database before any schema operations
         await options.onConfigure?.call(db);
         await db.execute('PRAGMA foreign_keys = ON');
       },
       onCreate: (db, version) async {
         // 1. Create user tables first
-        await options.onCreate(db, version);
+        await _initializePocketSyncTables(db);
 
         // 2. Initialize PocketSync tables
-        await _initializePocketSyncTables(db);
+        await options.onCreate(db, version);
 
         // 3. Setup change tracking for all tables
         await _setupChangeTracking(db);
@@ -450,14 +448,6 @@ class PocketSyncDatabase extends DatabaseExecutor {
         PRIMARY KEY (table_name, trigger_name)
       )
     ''');
-
-    final deviceFingerprintService = DeviceFingerprintService(db);
-    final deviceId = await deviceFingerprintService.getDeviceFingerprint(db);
-    await db.insert(
-      '__pocketsync_device_state',
-      {'device_id': deviceId, 'last_sync_timestamp': null},
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
   }
 
   /// Sets up change tracking triggers for all user tables
@@ -477,17 +467,25 @@ class PocketSyncDatabase extends DatabaseExecutor {
     final tables = await _getUserTables(db);
 
     for (final tableName in tables) {
-      // Add ps_global_id column to user tables
-      await db.execute('''
-        SELECT CASE 
-          WHEN NOT EXISTS (
-            SELECT 1 FROM pragma_table_info('$tableName') WHERE name = 'ps_global_id'
-          )
-          THEN 'ALTER TABLE $tableName ADD COLUMN ps_global_id TEXT NULL'
-        END as sql_statement
-        WHERE sql_statement IS NOT NULL;
-        CREATE INDEX idx_${tableName}_ps_global_id ON $tableName(ps_global_id);
+      var columnExists = await db.rawQuery('''
+        SELECT 1 FROM pragma_table_info('$tableName') WHERE name = 'ps_global_id'
       ''');
+
+      if (columnExists.isEmpty) {
+        await db.execute(
+            'ALTER TABLE $tableName ADD COLUMN ps_global_id TEXT NULL');
+      }
+
+      var indexExists = await db.rawQuery('''
+        SELECT 1 FROM sqlite_master 
+        WHERE type = 'index' AND name = 'idx_${tableName}_ps_global_id'
+      ''');
+
+      if (indexExists.isEmpty) {
+        await db.execute(
+          'CREATE INDEX idx_${tableName}_ps_global_id ON $tableName(ps_global_id)',
+        );
+      }
 
       await _createTableTriggers(db, tableName);
     }
