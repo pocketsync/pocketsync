@@ -72,7 +72,7 @@ A changeset represents a collection of changes made to the database tables. It i
 - `deletions`: Object containing table names as keys and their corresponding deleted rows
 
 ### Row Level
-- `primaryKey`: Unique identifier for the row within its table
+- `primaryKey`: Uniquely identifies the row accross all devices
 - `timestamp`: Unix timestamp (in milliseconds) when the row was modified
 - `version`: Version number of the row
 - `data`: Object containing the actual row data with field names and their values
