@@ -26,17 +26,47 @@ class PocketSyncDatabase extends DatabaseExecutor {
     _db = await openDatabase(
       dbPath,
       version: options.version,
-      onOpen: options.onOpen,
-      onUpgrade: options.onUpgrade,
-      onConfigure: options.onConfigure,
-      onDowngrade: options.onDowngrade,
-      singleInstance: true,
+      onConfigure: (db) async {
+        // Configure database before any schema operations
+        await options.onConfigure?.call(db);
+        await db.execute('PRAGMA foreign_keys = ON');
+      },
       onCreate: (db, version) async {
+        // 1. Create user tables first
         await options.onCreate(db, version);
 
+        // 2. Initialize PocketSync tables
         await _initializePocketSyncTables(db);
-        await _setupChangeTracking(db, version);
+
+        // 3. Setup change tracking for all tables
+        await _setupChangeTracking(db);
+
+        // 4. Insert initial version records for all tables
+        await _initializeTableVersions(db);
       },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        // 1. Backup existing triggers
+        await _backupTriggers(db);
+
+        // 2. Drop existing change tracking triggers
+        await _dropChangeTracking(db);
+
+        // 3. Perform user schema upgrade
+        await options.onUpgrade?.call(db, oldVersion, newVersion);
+
+        // 4. Re-setup change tracking with updated schema
+        await _setupChangeTracking(db);
+
+        // 5. Increment version for affected tables
+        await _updateTableVersions(db);
+      },
+      onOpen: (db) async {
+        await options.onOpen?.call(db);
+
+        // Verify change tracking integrity
+        await _verifyChangeTracking(db);
+      },
+      singleInstance: true,
     );
     return _db!;
   }
@@ -59,7 +89,85 @@ class PocketSyncDatabase extends DatabaseExecutor {
     return result;
   }
 
-  /// Closes the database
+  /// Updates version numbers for all tables after a schema upgrade
+  Future<void> _updateTableVersions(Database db) async {
+    final tables = await _getUserTables(db);
+    final batch = db.batch();
+
+    for (final table in tables) {
+      batch.rawUpdate(
+        'UPDATE __pocketsync_version SET version = version + 1 WHERE table_name = ?',
+        [table],
+      );
+    }
+
+    await batch.commit();
+  }
+
+  /// Initializes version records for all tables
+  Future<void> _initializeTableVersions(Database db) async {
+    final tables = await _getUserTables(db);
+    final batch = db.batch();
+
+    for (final table in tables) {
+      batch.insert(
+        '__pocketsync_version',
+        {'table_name': table, 'version': 1},
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+    }
+
+    await batch.commit();
+  }
+
+  Future<void> _backupTriggers(Database db) async {
+    final triggers = await db.query('sqlite_master',
+        where: "type = 'trigger' AND name LIKE 'after_%'");
+
+    final batch = db.batch();
+    for (final trigger in triggers) {
+      final tableName = trigger['tbl_name'] as String;
+      final triggerName = trigger['name'] as String;
+      final triggerSql = trigger['sql'] as String;
+
+      batch.insert(
+        '__pocketsync_trigger_backup',
+        {
+          'table_name': tableName,
+          'trigger_name': triggerName,
+          'trigger_sql': triggerSql,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit();
+  }
+
+  Future<void> _dropChangeTracking(Database db) async {
+    final triggers = await db.query('sqlite_master',
+        where: "type = 'trigger' AND name LIKE 'after_%'");
+
+    for (final trigger in triggers) {
+      await db.execute(
+        "DROP TRIGGER IF EXISTS ${trigger['name']}",
+      );
+    }
+  }
+
+  Future<void> _verifyChangeTracking(Database db) async {
+    final tables = await _getUserTables(db);
+    final existingTriggers = await db.query(
+      'sqlite_master',
+      where: "type = 'trigger' AND name LIKE 'after_%'",
+    );
+
+    final expectedTriggerCount = tables.length * 3; // INSERT, UPDATE, DELETE
+    if (existingTriggers.length != expectedTriggerCount) {
+      // Re-setup change tracking if triggers are missing
+      await _setupChangeTracking(db);
+    }
+  }
+
   Future<void> close() async {
     _changeManager.dispose();
     await _db?.close();
@@ -294,7 +402,7 @@ class PocketSyncDatabase extends DatabaseExecutor {
   /// Sets up the initial PocketSync system tables
   Future<void> _initializePocketSyncTables(Database db) async {
     await db.execute('''
-      CREATE TABLE __pocketsync_changes (
+      CREATE TABLE IF NOT EXISTS __pocketsync_changes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         table_name TEXT NOT NULL,
         record_rowid TEXT NOT NULL,
@@ -314,21 +422,21 @@ class PocketSyncDatabase extends DatabaseExecutor {
     ''');
 
     await db.execute('''
-      CREATE TABLE __pocketsync_version (
+      CREATE TABLE IF NOT EXISTS __pocketsync_version (
         table_name TEXT PRIMARY KEY,
         version INTEGER NOT NULL DEFAULT 0
       )
     ''');
 
     await db.execute('''
-      CREATE TABLE __pocketsync_device_state (
+      CREATE TABLE IF NOT EXISTS __pocketsync_device_state (
         device_id TEXT PRIMARY KEY,
         last_sync_timestamp INTEGER NULL
       )
     ''');
 
     await db.execute('''
-      CREATE TABLE __pocketsync_processed_changes (
+      CREATE TABLE IF NOT EXISTS __pocketsync_processed_changes (
         change_log_id INTEGER PRIMARY KEY,
         processed_at INTEGER NOT NULL
       )
@@ -353,29 +461,40 @@ class PocketSyncDatabase extends DatabaseExecutor {
   }
 
   /// Sets up change tracking triggers for all user tables
-  Future<void> _setupChangeTracking(Database db, int version) async {
+  Future<List<String>> _getUserTables(Database db) async {
     final tables = await db.query(
       'sqlite_master',
-      where:
-          "type = 'table' AND name NOT LIKE '__pocketsync_%' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'android_%' AND name NOT LIKE 'ios_%' AND name NOT LIKE '.%' AND name NOT LIKE 'system_%' AND name NOT LIKE 'sys_%'",
+      where: "type = 'table' AND name NOT LIKE '__pocketsync_%' "
+          "AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'android_%' "
+          "AND name NOT LIKE 'ios_%' AND name NOT LIKE '.%' "
+          "AND name NOT LIKE 'system_%' AND name NOT LIKE 'sys_%'",
     );
 
-    for (final table in tables) {
-      final tableName = table['name'] as String;
+    return tables.map((t) => t['name'] as String).toList();
+  }
 
+  Future<void> _setupChangeTracking(Database db) async {
+    final tables = await _getUserTables(db);
+
+    for (final tableName in tables) {
       // Add ps_global_id column to user tables
       await db.execute('''
-        ALTER TABLE $tableName ADD COLUMN ps_global_id TEXT NULL;
+        SELECT CASE 
+          WHEN NOT EXISTS (
+            SELECT 1 FROM pragma_table_info('$tableName') WHERE name = 'ps_global_id'
+          )
+          THEN 'ALTER TABLE $tableName ADD COLUMN ps_global_id TEXT NULL'
+        END as sql_statement
+        WHERE sql_statement IS NOT NULL;
         CREATE INDEX idx_${tableName}_ps_global_id ON $tableName(ps_global_id);
       ''');
 
-      await _createTableTriggers(db, version, tableName);
+      await _createTableTriggers(db, tableName);
     }
   }
 
   /// Creates triggers for a specific table
-  Future<void> _createTableTriggers(
-      Database db, int schemaVersion, String tableName) async {
+  Future<void> _createTableTriggers(Database db, String tableName) async {
     final columns = (await db
             .rawQuery("SELECT name FROM pragma_table_info(?)", [tableName]))
         .map((row) => row['name'] as String)

@@ -1,3 +1,6 @@
+## 0.0.8
+- Fix: Properly schema lifecycle
+
 ## 0.0.7
 - Add missing wrapper methods around `Database` from sqflite
 - Expose `Database` instance from `sqflite`
