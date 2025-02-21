@@ -28,9 +28,10 @@ class ChangesProcessor {
   /// Gets local changes formatted as a ChangeSet
   /// Uses batch processing for better performance with large datasets
   Future<void> _pruneChangeQueue() async {
-    final count = await _db.rawQuery('SELECT COUNT(*) FROM __pocketsync_changes WHERE synced = 0')
-      .then((result) => result.first.values.first as int? ?? 0);
-    
+    final count = await _db
+        .rawQuery('SELECT COUNT(*) FROM __pocketsync_changes WHERE synced = 0')
+        .then((result) => result.first.values.first as int? ?? 0);
+
     if (count > _maxQueueSize) {
       await _db.transaction((txn) async {
         await txn.execute('''
@@ -44,7 +45,7 @@ class ChangesProcessor {
           ) AND synced = 0
         ''');
       });
-      
+
       _logger.warning('Pruned change queue to $_maxQueueSize items');
     }
   }
@@ -148,7 +149,7 @@ class ChangesProcessor {
       return ChangeSet(
         timestamp: DateTime.now().millisecondsSinceEpoch,
         version: lastVersion,
-        changeIds: changeIds,
+        localChangeIds: changeIds,
         insertions: TableChanges(
           Map.fromEntries(
             insertions.entries.map((e) => MapEntry(e.key, TableRows(e.value))),
@@ -232,7 +233,7 @@ class ChangesProcessor {
     return ChangeSet(
       timestamp: DateTime.now().millisecondsSinceEpoch,
       version: changeLogs.isEmpty ? 0 : changeLogs.last.changeSet.version,
-      changeIds: changeLogs.map((log) => log.id).toList(),
+      serverChangeIds: changeLogs.map((log) => log.id).toList(),
       insertions: TableChanges(
         Map.fromEntries(
           insertions.entries.map((e) => MapEntry(e.key, TableRows(e.value))),
@@ -279,14 +280,14 @@ class ChangesProcessor {
   /// Checks which change logs have already been processed
   Future<List<int>> _getProcessedChangeLogIds(List<int> changeLogIds) async {
     if (changeLogIds.isEmpty) return [];
-    
+
     final result = await _db.query(
       '__pocketsync_processed_changes',
       columns: ['change_log_id'],
       where: 'change_log_id IN (${changeLogIds.map((_) => '?').join(",")})',
       whereArgs: changeLogIds,
     );
-    
+
     return result.map((row) => row['change_log_id'] as int).toList();
   }
 
@@ -295,7 +296,8 @@ class ChangesProcessor {
 
     final allChangeLogIds = changeLogs.map((log) => log.id).toList();
     final processedIds = await _getProcessedChangeLogIds(allChangeLogIds);
-    final unprocessedChangeLogs = changeLogs.where((log) => !processedIds.contains(log.id));
+    final unprocessedChangeLogs =
+        changeLogs.where((log) => !processedIds.contains(log.id));
 
     if (unprocessedChangeLogs.isEmpty) {
       _logger.info('All changes have already been processed');
@@ -349,7 +351,11 @@ class ChangesProcessor {
     final isolate = await Isolate.spawn(
       _processChangesIsolate,
       _IsolateMessage(
-          changeLogs, existingRows, receivePort.sendPort, _conflictResolver),
+        changeLogs,
+        existingRows,
+        receivePort.sendPort,
+        _conflictResolver,
+      ),
     );
 
     try {
@@ -362,6 +368,7 @@ class ChangesProcessor {
   }
 
   /// Static method to run in isolate
+  @pragma('vm:entry-point')
   static void _processChangesIsolate(_IsolateMessage message) {
     final changeSet = _computeChangeSetFromChangeLogs(message.changeLogs);
     final processedRows = <String, List<Map<String, dynamic>>>{};
@@ -474,8 +481,8 @@ class ChangesProcessor {
         // Mark changes as processed
         final now = DateTime.now().toIso8601String();
         await txn.rawInsert(
-          'INSERT INTO __pocketsync_processed_changes (change_log_id, processed_at) VALUES ${result.changeSet.changeIds.map((_) => '(?, ?)').join(', ')}',
-          result.changeSet.changeIds.expand((id) => [id, now]).toList(),
+          'INSERT OR REPLACE INTO __pocketsync_processed_changes (change_log_id, processed_at) VALUES ${result.changeSet.serverChangeIds.map((_) => '(?, ?)').join(', ')}',
+          result.changeSet.serverChangeIds.expand((id) => [id, now]).toList(),
         );
       } finally {
         await txn.execute('PRAGMA recursive_triggers = ON;');

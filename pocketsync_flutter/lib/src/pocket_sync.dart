@@ -198,7 +198,7 @@ class PocketSync {
 
       if (processedResponse.status == 'success' &&
           processedResponse.processed) {
-        await _markChangesSynced(changeSet.changeIds);
+        await _markChangesSynced(changeSet.localChangeIds);
         _logger.info('Changes successfully synced');
       }
     } catch (e) {

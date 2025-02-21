@@ -79,7 +79,8 @@ class ChangeSet {
   final TableChanges insertions;
   final TableChanges updates;
   final TableChanges deletions;
-  final List<int> changeIds;
+  final List<int> localChangeIds;
+  final List<int> serverChangeIds;
 
   ChangeSet({
     required this.timestamp,
@@ -87,7 +88,8 @@ class ChangeSet {
     required this.insertions,
     required this.updates,
     required this.deletions,
-    this.changeIds = const [],
+    this.localChangeIds = const [],
+    this.serverChangeIds = const [],
   });
 
   factory ChangeSet.empty() {
@@ -97,7 +99,8 @@ class ChangeSet {
       insertions: TableChanges({}),
       updates: TableChanges({}),
       deletions: TableChanges({}),
-      changeIds: [],
+      localChangeIds: [],
+      serverChangeIds: [],
     );
   }
 

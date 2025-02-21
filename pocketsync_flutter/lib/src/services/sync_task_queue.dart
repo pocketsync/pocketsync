@@ -245,7 +245,7 @@ class SyncTaskQueue {
         }
       });
 
-      allChangeIds.addAll(changeSet.changeIds);
+      allChangeIds.addAll(changeSet.localChangeIds);
     }
 
     return ChangeSet(
@@ -254,7 +254,7 @@ class SyncTaskQueue {
       insertions: TableChanges(allInsertions),
       updates: TableChanges(allUpdates),
       deletions: TableChanges(allDeletions),
-      changeIds: allChangeIds,
+      localChangeIds: allChangeIds,
     );
   }
 
