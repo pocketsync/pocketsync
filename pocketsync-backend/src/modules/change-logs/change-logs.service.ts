@@ -45,9 +45,19 @@ export class ChangeLogsService {
       for (const batch of batches) {
         const batchHash = this.computeChangeSetHash(batch);
         const mergedChangeSet = await this.getCachedOrMergeChanges(batchHash, batch);
+        
+        // Create change log first with processedAt as null
         const changeLog = await this.createChangeLog(projectId, userIdentifier, deviceId, mergedChangeSet);
-        await this.notifyDevicesWithCache(deviceId, changeLog);
         processedLogs.push(changeLog);
+
+        // Process changes and notify devices
+        await this.notifyDevicesWithCache(deviceId, changeLog);
+
+        // Update processedAt timestamp after processing is complete
+        await this.prisma.changeLog.update({
+          where: { id: changeLog.id },
+          data: { processedAt: new Date() }
+        });
       }
 
       const result = processedLogs.length === 1 ? processedLogs[0] : processedLogs;
@@ -73,7 +83,7 @@ export class ChangeLogsService {
         changeSet: JSON.stringify(mergedChangeSet),
         projectId: projectId,
         receivedAt: new Date(),
-        processedAt: new Date(),
+        processedAt: null,
       },
     });
   }

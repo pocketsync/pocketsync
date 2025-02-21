@@ -37,7 +37,7 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
         }
 
         const project = await this.prisma.project.findFirst({
-            where: { 
+            where: {
                 id: project_id,
                 deletedAt: null
             }
@@ -57,10 +57,10 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
 
         // Convert milliseconds timestamp to Date object
         const lastSyncedDate = last_synced_at ? new Date(parseInt(last_synced_at)) : null;
-        
+
         // Send any missed changes to the newly connected device
         await this.sendMissedChanges(device_id, user_id, lastSyncedDate);
-}
+    }
 
     handleDisconnect(client: any) {
         const deviceId = Array.from(this.connectedDevices.entries())
@@ -103,12 +103,18 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
         const changes = await this.prisma.changeLog.findMany({
             where: {
                 userIdentifier: device.userIdentifier,
-                processedAt: lastSyncedAt ? { gte: lastSyncedAt } : undefined,
+                OR: [
+                    // Get changes processed after last sync
+                    { processedAt: lastSyncedAt ? { gte: lastSyncedAt } : undefined },
+                    // Get updates to existing records
+                    { receivedAt: lastSyncedAt ? { gte: lastSyncedAt } : undefined }
+                ],
                 deviceId: { not: device.deviceId },
             },
-            orderBy: {
-                id: 'asc'
-            }
+            orderBy: [
+                { receivedAt: 'asc' },
+                { id: 'asc' }
+            ],
         });
 
         if (changes.length > 0) {
@@ -117,7 +123,7 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
                 // Split changes into batches
                 for (let i = 0; i < changes.length; i += this.BATCH_SIZE) {
                     const batch = changes.slice(i, i + this.BATCH_SIZE);
-                    
+
                     // Send batch and wait for acknowledgment or delay
                     this.server.to(socketId).emit('changes', {
                         changes: batch,
@@ -125,7 +131,7 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
                         batchInfo: {
                             current: Math.floor(i / this.BATCH_SIZE) + 1,
                             total: Math.ceil(changes.length / this.BATCH_SIZE)
-                        } 
+                        }
                     });
 
                     // Add delay between batches
