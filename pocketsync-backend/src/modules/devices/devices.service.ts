@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateDeviceDto } from './dto/create-device.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { AppUsersService } from '../app-users/app-users.service';
 import { Device } from '@prisma/client';
@@ -17,20 +16,6 @@ export class DevicesService {
       where: { 
         deviceId,
         deletedAt: null
-      },
-      include: {
-        appUser: true,
-      },
-    });
-  }
-
-  async create(userId: string, createDeviceDto: CreateDeviceDto) {
-    await this.validateAppUserAccess(userId, createDeviceDto.userIdentifier);
-
-    return this.prisma.device.create({
-      data: {
-        ...createDeviceDto,
-        lastSeenAt: new Date(),
       },
       include: {
         appUser: true,
