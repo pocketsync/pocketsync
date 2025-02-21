@@ -5,7 +5,6 @@ import { ChangeStatsService } from './change-stats.service';
 @Injectable()
 export class ChangeMergerService {
   private readonly logger = new Logger(ChangeMergerService.name);
-  private readonly MAX_TIMESTAMP_DRIFT = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
   private readonly processedChanges = new Set<string>();
   private readonly PROCESSED_CHANGES_CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hour
 
@@ -75,22 +74,53 @@ export class ChangeMergerService {
           const primaryKey = row.primaryKey;
           const timestamp = row.timestamp || changeSet.timestamp;
           const version = row.version || changeSet.version;
+          const currentRecord = recordOperations[tableName][primaryKey];
 
-          if (!recordOperations[tableName][primaryKey] ||
-            timestamp > recordOperations[tableName][primaryKey].timestamp ||
-            (timestamp === recordOperations[tableName][primaryKey].timestamp &&
-              version > recordOperations[tableName][primaryKey].version)) {
-
+          // If no existing record, create a new one
+          if (!currentRecord) {
             recordOperations[tableName][primaryKey] = {
-              operations: [],
+              operations: [operationType],
               row,
               timestamp,
               version,
-              finalOperation: null
+              finalOperation: null,
+              previousVersions: []
             };
+            continue;
           }
 
-          recordOperations[tableName][primaryKey].operations.push(operationType);
+          // Compare timestamps and versions
+          const isMoreRecent = timestamp > currentRecord.timestamp ||
+            (timestamp === currentRecord.timestamp && version > currentRecord.version);
+
+          // If current operation is more recent
+          if (isMoreRecent) {
+            // Store the previous version before updating
+            currentRecord.previousVersions.push({
+              row: currentRecord.row,
+              timestamp: currentRecord.timestamp,
+              version: currentRecord.version,
+              operation: currentRecord.operations[currentRecord.operations.length - 1]
+            });
+
+            // Update the record with new data
+            currentRecord.row = row;
+            currentRecord.timestamp = timestamp;
+            currentRecord.version = version;
+          } else {
+            // If not more recent, store as previous version if it contains different data
+            const isDifferentData = JSON.stringify(row) !== JSON.stringify(currentRecord.row);
+            if (isDifferentData) {
+              currentRecord.previousVersions.push({
+                row,
+                timestamp,
+                version,
+                operation: operationType
+              });
+            }
+          }
+
+          currentRecord.operations.push(operationType);
         }
       }
     }
@@ -120,9 +150,18 @@ export class ChangeMergerService {
 
     const lastOperation = operations[operations.length - 1];
 
+    // If the last operation is delete
     if (lastOperation === 'delete') {
+      // If this is the only operation, it's a straightforward delete
       if (operations.length === 1) return 'delete';
+      
+      // If the record was inserted in this changeset and later deleted,
+      // we can skip broadcasting this change entirely since the net effect
+      // is as if the record never existed
       if (operations.includes('insert')) return null;
+      
+      // For records that existed before this changeset and were deleted,
+      // we need to broadcast the deletion
       return 'delete';
     }
 
@@ -140,7 +179,7 @@ export class ChangeMergerService {
 
   private isValidTimestamp(timestamp: number): boolean {
     const now = Date.now();
-    return timestamp <= now && timestamp > now - this.MAX_TIMESTAMP_DRIFT;
+    return timestamp <= now + (5 * 60 * 1000); // Allow 5 minutes into the future
   }
 
   private computeChangeSetHash(changeSet: ChangeSetDto): string {
