@@ -60,7 +60,6 @@ void main() async {
         projectId: 'your-project-id',
         authToken: 'your-auth-token',
         serverUrl: 'https://api.pocketsync.dev',
-        syncInterval: const Duration(minutes: 5),
       ),
       databaseOptions: databaseOptions,
     );
