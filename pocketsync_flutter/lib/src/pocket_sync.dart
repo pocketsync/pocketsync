@@ -82,7 +82,7 @@ class PocketSync {
 
     // Initialize device state
     await DeviceStateManager.setupDeviceInfo(db);
-    
+
     // Set device info in network service
     final deviceState = await DeviceStateManager.getDeviceState(db);
     if (deviceState != null) {
@@ -227,7 +227,8 @@ class PocketSync {
   }
 
   /// Returns whether sync is currently paused
-  bool get isPaused => _runGuarded(() => !_connectivityManager.isConnected || _isPaused);
+  bool get isPaused =>
+      _runGuarded(() => !_connectivityManager.isConnected || _isPaused);
 
   /// Cleans up resources
   Future<void> dispose() async {
