@@ -13,7 +13,7 @@
 
 PocketSync is a powerful Flutter package that enables seamless data synchronization across devices without managing backend infrastructure. It works with SQLite databases and handles all the complexities of data synchronization for you.
 
-> **Note:** PocketSync is currently in Early Alpha. The API may undergo changes as we refine the service.
+> **Note:** PocketSync is currently in alpha. The system is under active development and should not be considered reliable for production use. Features and APIs may change without notice.
 
 ## Features
 

@@ -12,14 +12,8 @@ import { PhWarning } from '@phosphor-icons/vue'
                 <h3 class="text-sm font-medium text-yellow-800">We are currently in alpha</h3>
                 <div class="mt-2 text-sm text-yellow-700">
                     <p>
-                        PocketSync is currently in alpha stage. During this phase:
+                        PocketSync is currently in alpha. The system is under active development and should not be considered reliable for production use. Features and APIs may change without notice.
                     </p>
-                    <ul class="mt-2 list-disc space-y-1 pl-5">
-                        <li>You may encounter bugs or unexpected behavior</li>
-                        <li>Data loss is possible</li>
-                        <li>Features and APIs may change without notice</li>
-                        <li>We recommend regular backups of critical data</li>
-                    </ul>
                 </div>
             </div>
         </div>

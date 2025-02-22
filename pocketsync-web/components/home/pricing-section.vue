@@ -3,7 +3,7 @@
         <div class="mx-auto max-w-7xl px-6 lg:px-8">
             <!-- Promotional Banner -->
             <div class="mb-12 rounded-lg bg-primary-50 p-4 text-center">
-                <p class="text-lg font-semibold text-primary-600">🎉 Free for everyone during beta! Get early access to all features.</p>
+                <p class="text-lg font-semibold text-primary-600">🎉 Free for everyone until stable! Get early access to all features.</p>
             </div>
 
             <div class="mx-auto max-w-2xl text-center">
