@@ -1,3 +1,7 @@
+## 0.0.10
+- Fix: Better handling of schema lifecycle (hence better support for integration in existing apps)
+- Some api cleanup
+
 ## 0.0.9
 - Fix: error when opening an existing database with missing tables missing`ps_global_id` column
 - Fix device state initialization
