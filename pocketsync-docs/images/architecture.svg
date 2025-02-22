@@ -1,0 +1,66 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <rect width="100%" height="100%" fill="white"/>
+ <defs>
+  <marker orient="auto" refY="3.5" refX="9" markerHeight="7" markerWidth="10" id="arrowhead">
+   <polygon id="svg_1" fill="#666" points="0 0, 10 3.5, 0 7"/>
+  </marker>
+ </defs>
+ <!-- Device 1 (Origin) -->
+ <!-- Server -->
+ <!-- Device 2 -->
+ <!-- Flow Arrows -->
+ <!-- Device 1 to Server -->
+ <!-- Server to Device 2 -->
+ <!-- Legend -->
+ <g>
+  <title>Layer 1</title>
+  <g id="svg_2">
+   <rect id="svg_3" stroke-width="2" stroke="#666" fill="#f0f0f0" rx="10" height="200" width="200" y="52" x="33"/>
+   <text id="svg_4" font-weight="bold" font-size="14" font-family="Arial" text-anchor="middle" y="82" x="133">Device 1 (Origin)</text>
+   <!-- Local Components -->
+   <rect id="svg_5" stroke="#2e7d32" fill="#a5d6a7" rx="5" height="30" width="160" y="102" x="53"/>
+   <text id="svg_6" font-size="12" font-family="Arial" text-anchor="middle" y="122" x="133">PocketSyncDatabase</text>
+   <rect id="svg_7" stroke="#1976d2" fill="#90caf9" rx="5" height="30" width="160" y="142" x="53"/>
+   <text id="svg_8" font-size="12" font-family="Arial" text-anchor="middle" y="162" x="133">ChangesProcessor</text>
+   <rect id="svg_9" stroke="#f57c00" fill="#ffcc80" rx="5" height="30" width="160" y="182" x="53"/>
+   <text id="svg_10" font-size="12" font-family="Arial" text-anchor="middle" y="202" x="133">SyncTaskQueue</text>
+  </g>
+  <g id="svg_11">
+   <rect id="svg_12" stroke-width="2" stroke="#666" fill="#e3f2fd" rx="10" height="250" width="200" y="100" x="300"/>
+   <text id="svg_13" font-weight="bold" font-size="14" font-family="Arial" text-anchor="middle" y="130" x="400">PocketSync Server</text>
+   <!-- Server Components -->
+   <rect id="svg_14" stroke="#0288d1" fill="#81d4fa" rx="5" height="30" width="160" y="150" x="320"/>
+   <text id="svg_15" font-size="12" font-family="Arial" text-anchor="middle" y="170" x="400">Change Receiver</text>
+   <rect id="svg_16" stroke="#512da8" fill="#b39ddb" rx="5" height="30" width="160" y="190" x="320"/>
+   <text id="svg_17" font-size="12" font-family="Arial" text-anchor="middle" y="210" x="400">Conflict Resolution</text>
+   <rect id="svg_18" stroke="#303f9f" fill="#9fa8da" rx="5" height="30" width="160" y="230" x="320"/>
+   <text id="svg_19" font-size="12" font-family="Arial" text-anchor="middle" y="250" x="400">Change Broadcaster</text>
+   <rect id="svg_20" stroke="#c62828" fill="#ef9a9a" rx="5" height="30" width="160" y="270" x="320"/>
+   <text id="svg_21" font-size="12" font-family="Arial" text-anchor="middle" y="290" x="400">WebSocket Manager</text>
+  </g>
+  <g id="svg_22">
+   <rect id="svg_23" stroke-width="2" stroke="#666" fill="#f0f0f0" rx="10" height="200" width="200" y="58" x="583"/>
+   <text id="svg_24" font-weight="bold" font-size="14" font-family="Arial" text-anchor="middle" y="88" x="683">Device 2</text>
+   <!-- Local Components -->
+   <rect id="svg_25" stroke="#2e7d32" fill="#a5d6a7" rx="5" height="30" width="160" y="108" x="603"/>
+   <text id="svg_26" font-size="12" font-family="Arial" text-anchor="middle" y="128" x="683">PocketSyncDatabase</text>
+   <rect id="svg_27" stroke="#1976d2" fill="#90caf9" rx="5" height="30" width="160" y="148" x="603"/>
+   <text id="svg_28" font-size="12" font-family="Arial" text-anchor="middle" y="168" x="683">ChangesProcessor</text>
+   <rect id="svg_29" stroke="#f57c00" fill="#ffcc80" rx="5" height="30" width="160" y="188" x="603"/>
+   <text id="svg_30" font-size="12" font-family="Arial" text-anchor="middle" y="208" x="683">SyncTaskQueue</text>
+  </g>
+  <path id="svg_31" fill="none" marker-end="url(#arrowhead)" stroke-width="2" stroke="#666" d="m233,150l66,0"/>
+  <text id="svg_32" font-size="10" font-family="Arial" y="139" x="249">Changes</text>
+  <path id="svg_33" fill="none" marker-end="url(#arrowhead)" stroke-width="2" stroke="#666" d="m498,150l86,0"/>
+  <text id="svg_34" font-size="10" font-family="Arial" y="140" x="525">Updates</text>
+  <g id="svg_35">
+   <text id="svg_36" font-weight="bold" font-size="14" font-family="Arial" y="400" x="50">Flow Description:</text>
+   <text id="svg_37" font-size="12" font-family="Arial" y="430" x="50">1. Local changes captured by PocketSyncDatabase</text>
+   <text id="svg_38" font-size="12" font-family="Arial" y="450" x="50">2. ChangesProcessor prepares data for sync</text>
+   <text id="svg_39" font-size="12" font-family="Arial" y="470" x="50">3. SyncTaskQueue manages sync operations</text>
+   <text id="svg_40" font-size="12" font-family="Arial" y="490" x="50">4. Server processes and resolves conflicts</text>
+   <text id="svg_41" font-size="12" font-family="Arial" y="510" x="50">5. Changes broadcast to connected devices</text>
+   <text id="svg_42" font-size="12" font-family="Arial" y="530" x="50">6. Receiving devices process and apply updates</text>
+  </g>
+ </g>
+</svg>

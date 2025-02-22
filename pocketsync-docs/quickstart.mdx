@@ -1,11 +1,17 @@
 ---
-title: 'Quickstart'
-description: 'Get started with PocketSync in your application'
+title: Quickstart
+description: "Get started with PocketSync in your Flutter application"
 ---
 
 ## Installation
 
-Get started with PocketSync by installing the required packages:
+### Requirements
+
+- A PocketSync account (sign up at [pocketsync.dev](https://pocketsync.dev))
+
+### Add Dependency
+
+Add PocketSync to your `pubspec.yaml` file:
 
 ```yaml
 dependencies:
@@ -18,18 +24,13 @@ Or install via command line:
 flutter pub add pocketsync_flutter
 ```
 
-## Basic Setup
+### Basic Setup
 
-### Initialize PocketSync
-
-1. Create an account at [pocketsync.dev](https://pocketsync.dev)
-2. Create a new project in the PocketSync console
-3. Initialize PocketSync in your app:
+1. Create a project in the PocketSync console
+2. Initialize PocketSync in your app:
 
 ```dart
 import 'package:pocketsync_flutter/pocketsync_flutter.dart';
-import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -55,62 +56,59 @@ void main() async {
 }
 ```
 
-### Configure Database
+## Configuration
 
-PocketSync uses SQLite for local storage. When designing your database schema, it's crucial to use UUIDs (or similar globally unique identifiers) instead of auto-incrementing integer IDs for your primary keys:
+### Database Schema
+
+When designing your database schema, follow these best practices:
 
 ```dart
 // In your database initialization
-final databaseOptions = DatabaseOptions(
-  version: 1,
-  onCreate: (db, version) async {
-    await db.execute('''
-      CREATE TABLE todos (
-        id TEXT PRIMARY KEY NOT NULL,  // UUID as primary key
-        title TEXT NOT NULL,
-        is_completed INTEGER NOT NULL DEFAULT 0,
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL
-      )
-    ''');
-  },
-);
+await db.execute('''
+  CREATE TABLE todos (
+    id TEXT PRIMARY KEY NOT NULL, // Use UUID instead of auto-increment
+    title TEXT NOT NULL,
+    is_completed INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )
+''');
 ```
 
-## Basic Usage
+Key points:
+- Use UUIDs for primary keys
+- Include timestamp fields for sync optimization
+- Use appropriate data types for each column
 
-### Working with Data
-
-PocketSyncDatabase is a wrapper around the `sqflite` package, providing additional features for syncing data across devices:
+### Basic Operations
 
 ```dart
-import 'package:uuid/uuid.dart';
-
+// Get database instance
 final db = PocketSync.instance.database;
 
-// Create
+// Insert data
 await db.insert('todos', {
-  'id': const Uuid().v4(),  // Generate a unique UUID
+  'id': const Uuid().v4(),
   'title': 'Buy groceries',
   'is_completed': 0,
   'created_at': DateTime.now().millisecondsSinceEpoch,
   'updated_at': DateTime.now().millisecondsSinceEpoch,
 });
 
-// Read
+// Query data
 final todos = await db.query('todos',
   where: 'is_completed = ?',
   whereArgs: [0],
 );
 
-// Update
+// Update data
 await db.update('todos',
   {'is_completed': 1},
   where: 'id = ?',
   whereArgs: ['todo-123'],
 );
 
-// Delete
+// Delete data
 await db.delete('todos',
   where: 'id = ?',
   whereArgs: ['todo-123'],
@@ -119,7 +117,7 @@ await db.delete('todos',
 
 ### Watch for Changes
 
-Monitor database changes in real-time with the watch API:
+PocketSync provides a powerful watch API to monitor database changes:
 
 ```dart
 // Watch all todos
@@ -140,52 +138,7 @@ StreamBuilder<List<Map<String, dynamic>>>(
 );
 ```
 
-### Sync Management
-
-Control the synchronization process:
-
-```dart
-// Start sync
-await PocketSync.instance.start();
-
-// Pause sync
-await PocketSync.instance.pause();
-
-// Clean up resources
-await PocketSync.instance.dispose();
-```
-
-## Error Handling
-
-```dart
-try {
-  // Your sync operations
-} on NetworkError catch (e) {
-  print('Network error: ${e.message}');
-} on DatabaseError catch (e) {
-  print('Database error: ${e.message}');
-} on ConflictError catch (e) {
-  print('Conflict error: ${e.message}');
-} on SyncError catch (e) {
-  print('General sync error: ${e.message}');
-}
-```
-
 ## Next Steps
 
-<CardGroup cols={2}>
-  <Card
-    title="API Reference"
-    icon="code"
-    href="/api-reference/introduction"
-  >
-    Explore the complete API documentation
-  </Card>
-  <Card
-    title="Advanced Features"
-    icon="wand-magic-sparkles"
-    href="/advanced-features"
-  >
-    Learn about conflict resolution and advanced sync options
-  </Card>
-</CardGroup>
+- Learn about [Core concepts](/core-concepts/offline-first)
+- Understand [Conflict resolution](/core-concepts/conflict-resolution)

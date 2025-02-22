@@ -1,0 +1,181 @@
+---
+title: "Conflict Resolution"
+description: "Understanding how PocketSync handles data conflicts and maintains consistency"
+---
+
+## Understanding Conflicts
+
+In a distributed system like PocketSync, conflicts can occur when multiple devices modify the same data while offline. PocketSync implements a robust conflict resolution system to maintain data consistency across all devices.
+
+## Default Strategy: Last Write Wins
+
+By default, PocketSync uses a "Last Write Wins" (LWW) strategy for conflict resolution:
+
+1. **Timestamp-Based resolution**
+   - Each change is timestamped when created
+   - When conflicts occur, the most recent change prevails
+   - Ensures consistent conflict resolution across devices
+
+2. **Version tracking**
+   - Each record maintains a version number
+   - Versions increment with each modification
+   - Helps in detecting concurrent modifications
+
+## Custom conflict resolution
+
+### Configuration
+
+When initializing PocketSync, you can configure the conflict resolution strategy:
+
+```dart
+// Initialize with custom conflict resolution
+final options = PocketSyncOptions(
+  projectId: projectId,
+  authToken: authToken,
+  serverUrl: serverUrl,
+  conflictResolver: ConflictResolver(
+    strategy: ConflictResolutionStrategy.custom,
+    customResolver: (tableName, localRow, remoteRow) {
+      // Your custom resolution logic here
+      return remoteRow;
+    },
+  ),
+);
+
+// Available strategies:
+// - ConflictResolutionStrategy.ignore (default)
+// - ConflictResolutionStrategy.serverWins
+// - ConflictResolutionStrategy.clientWins
+// - ConflictResolutionStrategy.custom
+```
+
+### Implementing Custom Resolution
+
+```dart
+class CustomConflictResolver extends ConflictResolver {
+  @override
+  Future<Map<String, dynamic>> resolveConflict(
+    String tableName,
+    Map<String, dynamic> localData,
+    Map<String, dynamic> remoteData,
+  ) async {
+    if (tableName == 'todos') {
+      // Custom resolution logic for todos
+      return {
+        ...remoteData,
+        'title': '${localData['title']} (merged)',
+        'updated_at': DateTime.now().millisecondsSinceEpoch,
+      };
+    }
+    return remoteData; // Default to LWW for other tables
+  }
+}
+```
+
+
+
+### Resolution strategies
+
+1. **Field-Level Merging**
+   ```dart
+   // Merge specific fields from both versions
+   return {
+     ...remoteData,
+     'description': '${localData['description']}\n${remoteData['description']}',
+   };
+   ```
+
+2. **Business logic based**
+   ```dart
+   // Apply business rules for resolution
+   return {
+     ...remoteData,
+     'quantity': max(localData['quantity'], remoteData['quantity']),
+   };
+   ```
+
+3. **User interaction**
+   ```dart
+   // Prompt user for resolution
+   final userChoice = await showConflictDialog(
+     localData: localData,
+     remoteData: remoteData,
+   );
+   return userChoice == 'local' ? localData : remoteData;
+   ```
+
+## Conflict prevention
+
+### Best practices
+
+1. **Data structure design**
+   ```dart
+   // Use composite keys to prevent conflicts
+   await db.execute('''
+     CREATE TABLE shared_notes (
+       id TEXT,
+       user_id TEXT,
+       content TEXT,
+       updated_at INTEGER,
+       PRIMARY KEY (id, user_id)
+     )
+   ''');
+   ```
+
+2. **Optimistic locking**
+   ```dart
+   // Check version before update
+   final result = await db.update(
+     'items',
+     newData,
+     where: 'id = ? AND version = ?',
+     whereArgs: [itemId, currentVersion],
+   );
+   if (result == 0) {
+     // Handle concurrent modification
+   }
+   ```
+
+3. **Atomic operations**
+   ```dart
+   // Use transactions for related changes
+   await db.transaction((txn) async {
+     await txn.update('orders', {'status': 'completed'});
+     await txn.insert('order_history', {'event': 'completed'});
+   });
+   ```
+## Edge cases
+
+1. **Cascading updates**
+   - Related records are updated together
+   - Maintains referential integrity
+   - Preserves data consistency
+
+2. **Concurrent modifications**
+   - Data edited by multiple devices
+   - Version tracking prevents data loss
+   - Clear resolution hierarchy
+
+3. **Network partitions**
+   - Temporary network splits
+   - Eventual consistency
+   - Robust conflict handling
+
+## Best practices summary
+
+1. **Design for conflicts**
+   - Plan data structure carefully
+   - Use appropriate primary keys
+   - Consider concurrent access patterns
+
+2. **Implement proper handling**
+   - Choose appropriate resolution strategies
+   - Test conflict scenarios thoroughly
+   - Monitor conflict resolution
+
+3. **User experience**
+   - Provide clear feedback
+   - Offer resolution options when appropriate
+   - Maintain data integrity
+
+By following these guidelines and implementing appropriate conflict resolution strategies, you can ensure your application handles data conflicts gracefully while maintaining a consistent user experience.

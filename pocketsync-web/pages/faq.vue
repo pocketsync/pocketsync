@@ -28,9 +28,7 @@
                 <div class="space-y-6">
                     <div>
                         <h3 class="text-lg font-medium text-gray-900">Which platforms does PocketSync support?</h3>
-                        <p class="mt-2 text-gray-600">PocketSync supports all major platforms including iOS, Android,
-                            and web applications. Our SDKs are available for multiple programming languages and
-                            frameworks.</p>
+                        <p class="mt-2 text-gray-600">PocketSync only supports Flutter (Android & IOS) at the moment.</p>
                     </div>
                     <div>
                         <h3 class="text-lg font-medium text-gray-900">How does PocketSync handle data conflicts?</h3>

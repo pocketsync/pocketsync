@@ -28,7 +28,7 @@ graph TD
 
 ## Component Responsibilities
 
-### Core Components
+### Core components
 
 #### PocketSync
 - Central orchestrator of the sync engine

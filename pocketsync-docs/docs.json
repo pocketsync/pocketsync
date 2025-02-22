@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "PocketSync Documentation",
+  "name": "PocketSync",
   "colors": {
     "primary": "#0066FF",
     "light": "#3385FF",
@@ -9,20 +9,33 @@
   },
   "favicon": "/favicon.svg",
   "navigation": {
+    "global": {
+      "anchors": [
+        {
+          "anchor": "Flutter SDK",
+          "href": "https://pub.dev/packages/pocketsync_flutter",
+          "icon": "code"
+        },
+        {
+          "anchor": "Web console",
+          "href": "https://pocketsync.dev",
+          "icon": "globe"
+        }
+      ]
+    },  
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
             "group": "Get Started",
             "pages": [
               "introduction",
-              "quickstart",
-              "development"
+              "quickstart"
             ]
           },
           {
-            "group": "Core Concepts",
+            "group": "Core concepts",
             "pages": [
               "core-concepts/offline-first",
               "core-concepts/sync-engine",
@@ -30,25 +43,11 @@
             ]
           },
           {
-            "group": "Advanced Features",
+            "group": "Architecture",
             "pages": [
-              "advanced-features/custom-sync-strategies",
-              "advanced-features/data-encryption",
-              "advanced-features/batch-operations"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "API Reference",
-        "groups": [
-          {
-            "group": "API Documentation",
-            "pages": [
-              "api-reference/introduction",
-              "api-reference/authentication",
-              "api-reference/database-operations",
-              "api-reference/sync-management"
+              "architecture/overview",
+              "architecture/architecture",
+              "architecture/server-data-cleanup"
             ]
           }
         ]
