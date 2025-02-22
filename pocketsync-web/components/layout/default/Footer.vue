@@ -5,7 +5,7 @@
                 <div>
                     <h3 class="text-sm font-semibold text-gray-400 tracking-wider uppercase">Product</h3>
                     <div class="mt-4 space-y-4">
-                        <NuxtLink to="/docs" class="text-base text-gray-500 hover:text-gray-900 block">Documentation
+                        <NuxtLink to="https://docs.pocketsync.dev" class="text-base text-gray-500 hover:text-gray-900 block">Documentation
                         </NuxtLink>
                         <NuxtLink to="/pricing" class="text-base text-gray-500 hover:text-gray-900 block">Pricing
                         </NuxtLink>

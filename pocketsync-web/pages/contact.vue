@@ -10,7 +10,7 @@
                 <div class="space-y-4">
                     <div>
                         <h3 class="text-lg font-medium text-gray-900">Support</h3>
-                        <p class="mt-2 text-gray-600">For technical support, please visit our <NuxtLink to="/docs"
+                        <p class="mt-2 text-gray-600">For technical support, please visit our <NuxtLink to="https://docs.pocktsync.dev"
                                 class="text-blue-600 hover:text-blue-800">documentation</NuxtLink> or email us at
                             support@pocketsync.dev</p>
                     </div>

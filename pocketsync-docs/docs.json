@@ -1,0 +1,58 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "PocketSync Documentation",
+  "colors": {
+    "primary": "#0066FF",
+    "light": "#3385FF",
+    "dark": "#004DC2"
+  },
+  "favicon": "/favicon.svg",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "development"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "core-concepts/offline-first",
+              "core-concepts/sync-engine",
+              "core-concepts/conflict-resolution"
+            ]
+          },
+          {
+            "group": "Advanced Features",
+            "pages": [
+              "advanced-features/custom-sync-strategies",
+              "advanced-features/data-encryption",
+              "advanced-features/batch-operations"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "API Documentation",
+            "pages": [
+              "api-reference/introduction",
+              "api-reference/authentication",
+              "api-reference/database-operations",
+              "api-reference/sync-management"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -115,7 +115,7 @@ await PocketSync.instance.start();
                                             <li>Monitor sync activity in real-time</li>
                                         </ul>
                                         <div class="mt-4">
-                                            <NuxtLink to="/docs"
+                                            <NuxtLink to="https://docs.pocketsync.dev"
                                                 class="text-sm font-medium text-primary-600 hover:text-primary-500">
                                                 View Documentation →
                                             </NuxtLink>

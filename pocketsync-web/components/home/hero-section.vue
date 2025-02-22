@@ -20,7 +20,7 @@
                         class="rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-primary-600 shadow-sm hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
                         Get started
                     </NuxtLink>
-                    <NuxtLink to="/docs" class="text-sm font-semibold leading-6 text-white">
+                    <NuxtLink to="https://docs.pocketsync.dev" class="text-sm font-semibold leading-6 text-white">
                         Documentation
                         <span aria-hidden="true">→</span>
                     </NuxtLink>
