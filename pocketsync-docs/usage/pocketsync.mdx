@@ -1,0 +1,177 @@
+---
+title: "PocketSync"
+description: "Main orchestrator for sync operations"
+---
+
+# PocketSync
+
+PocketSync is the main orchestrator of all synchronization operations. It exposes a singleton object `PocketSync.instance` that manages initialization, user authentication, and sync control.
+
+## Overview
+
+PocketSync follows a simple lifecycle:
+1. Initialize the sync engine
+2. Authenticate users
+3. Control sync operations (start/pause)
+4. Clean up resources when done
+
+## Initialization
+
+Before using PocketSync, you need to initialize it with your project configuration:
+
+```dart
+await PocketSync.instance.initialize(
+  dbPath: path,
+  options: PocketSyncOptions(
+    projectId: 'your-project-id',
+    authToken: 'your-auth-token',
+    serverUrl: 'https://api.pocketsync.dev',
+  ),
+  databaseOptions: DatabaseOptions(
+    onCreate: (db, version) async {
+      // Define your database schema
+      await db.execute(
+        'CREATE TABLE IF NOT EXISTS your_table(...)',
+      );
+    },
+  ),
+);
+```
+
+### Parameters
+
+- `dbPath`: Path to your SQLite database file
+- `options`: PocketSync configuration options
+  - `projectId`: Your project ID from the PocketSync console
+  - `authToken`: Your project's authentication token
+  - `serverUrl`: PocketSync server URL (defaults to https://api.pocketsync.dev)
+  - `conflictResolver`: Custom conflict resolution strategy (defaults to applying remote changes)
+  - `silent`: Whether to suppress console logs (defaults to true in release mode, false in debug mode)
+- `databaseOptions`: SQLite database configuration
+  - `onCreate`: Required callback to create your database schema
+  - `version`: Database schema version number (defaults to 1)
+  - `onConfigure`: Optional callback for database configuration before creation/opening
+  - `onUpgrade`: Optional callback for handling database schema upgrades
+  - `onDowngrade`: Optional callback for handling database schema downgrades
+  - `onOpen`: Optional callback triggered after database is opened
+
+## User authentication
+
+After initialization, you need to set a user ID to identify the current device's owner:
+
+```dart
+await PocketSync.instance.setUserId(userId: 'user-123');
+```
+
+This step is crucial for:
+- Identifying which user's data to sync
+- Managing access control
+- Tracking changes per user
+
+## Controlling sync operations
+
+### Starting sync
+
+To begin synchronizing data:
+
+```dart
+await PocketSync.instance.start();
+```
+
+This will:
+- Connect to the PocketSync server
+- Upload local changes
+- Download remote changes
+- Keep data in sync across devices
+
+### Pausing sync
+
+To temporarily pause synchronization:
+
+```dart
+PocketSync.instance.pause();
+```
+
+This is useful when you want to:
+- Conserve battery/network usage
+- Perform large batch operations
+- Prevent immediate sync during sensitive operations
+
+## Resource cleanup
+
+When you're done with PocketSync (e.g., user logs out), properly dispose of resources:
+
+```dart
+await PocketSync.instance.dispose();
+```
+
+This will:
+- Stop all sync operations
+- Close database connections
+- Clean up memory resources
+- Disconnect from the server
+
+## Best practices
+
+1. **Initialize early**: Call `initialize()` as early as possible in your app's lifecycle, typically in `main()`
+
+2. **Handle errors**: Wrap PocketSync operations in try-catch blocks:
+```dart
+try {
+  await PocketSync.instance.initialize(...);
+  await PocketSync.instance.setUserId(userId: 'user-123');
+  await PocketSync.instance.start();
+} catch (e) {
+  print('PocketSync error: $e');
+}
+```
+
+3. **Cleanup resources**: Always call `dispose()` when cleaning up your app or logging out users
+
+4. **User Management**: Update the user ID whenever the authenticated user changes
+
+## Example implementation
+
+Here's a complete example showing proper PocketSync usage:
+
+```dart
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  final dbPath = join(await getDatabasesPath(), 'my_app.db');
+  
+  try {
+    // Initialize PocketSync
+    await PocketSync.instance.initialize(
+      dbPath: dbPath,
+      options: PocketSyncOptions(
+        projectId: 'your-project-id',
+        authToken: 'your-auth-token',
+        serverUrl: 'https://api.pocketsync.dev',
+      ),
+      databaseOptions: DatabaseOptions(
+        onCreate: (db, version) async {
+          await db.execute(
+            'CREATE TABLE items(id INTEGER PRIMARY KEY, name TEXT)',
+          );
+        },
+      ),
+    );
+
+    // Set user ID
+    await PocketSync.instance.setUserId(userId: 'user-123');
+    
+    // Start syncing
+    await PocketSync.instance.start();
+    
+    runApp(MyApp());
+  } catch (e) {
+    print('Failed to initialize PocketSync: $e');
+  }
+}
+
+// In your app's cleanup/logout logic:
+void cleanup() async {
+  await PocketSync.instance.dispose();
+}
+```

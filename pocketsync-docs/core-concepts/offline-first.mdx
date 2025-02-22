@@ -3,7 +3,7 @@ title: "Offline-first"
 description: "Understanding PocketSync's offline-first architecture and capabilities"
 ---
 
-## What is Offline-First?
+## What is Offline-first?
 
 Offline-first is an architectural approach that prioritizes a seamless user experience regardless of network connectivity. PocketSync implements this pattern by allowing your application to work fully offline while automatically managing data synchronization when connectivity is restored.
 
@@ -44,14 +44,12 @@ Offline-first is an architectural approach that prioritizes a seamless user expe
 
 1. **Data structure**
    ```dart
-   // Include necessary fields for offline handling
    await db.execute('''
      CREATE TABLE items (
        id TEXT PRIMARY KEY,
        content TEXT,
        created_at INTEGER,
        updated_at INTEGER,
-       is_synced INTEGER DEFAULT 0
      )
    ''');
    ```
@@ -86,7 +84,6 @@ Offline-first is an architectural approach that prioritizes a seamless user expe
              itemCount: snapshot.data?.length ?? 0,
              itemBuilder: (context, index) => ItemWidget(
                item: snapshot.data![index],
-               isSynced: snapshot.data![index]['is_synced'] == 1,
              ),
            ),
          ],

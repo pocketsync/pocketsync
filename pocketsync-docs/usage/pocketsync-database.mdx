@@ -1,0 +1,138 @@
+---
+title: "PocketSyncDatabase"
+description: "Understanding PocketSyncDatabase and its role in data synchronization"
+---
+
+## Overview
+
+PocketSyncDatabase is a core component of PocketSync that manages local SQLite database operations while enabling seamless data synchronization. It wraps the `sqflite` package, providing all of its functionality while adding powerful synchronization capabilities.
+
+## Key features
+
+### 1. Automatic change tracking
+
+PocketSyncDatabase automatically monitors and tracks all database changes:
+- Inserts, updates, and deletions are automatically captured
+- Changes are logged with appropriate metadata
+- No manual tracking or change logging required
+
+### 2. Full SQLite compatibility
+
+As a wrapper around `sqflite`, PocketSyncDatabase supports all standard SQLite operations:
+- Raw SQL queries
+- Prepared statements
+- Transactions
+- Batch operations
+
+## Usage
+
+### Initialize
+
+PocketSyncDatabase is automatically initialized when PocketSync.instance.initialize is called.
+You can get the instance using:
+```dart
+final database = PocketSync.instance.database;
+```
+
+### Basic operations
+
+```dart
+// Insert data
+await db.insert('users', {
+  'id': 'user1',
+  'name': 'John Doe',
+  'email': 'john@example.com',
+});
+
+// Query data
+final users = await db.query('users');
+
+// Update data
+await db.update('users',
+  {'name': 'John Smith'},
+  where: 'id = ?',
+  whereArgs: ['user1'],
+);
+
+// Delete data
+await db.delete('users',
+  where: 'id = ?',
+  whereArgs: ['user1'],
+);
+```
+
+### Transactions
+
+PocketSyncDatabase supports transactions for atomic operations:
+
+```dart
+await db.transaction((txn) async {
+  await txn.insert('users', {
+    'id': 'user1',
+    'name': 'John Doe',
+  });
+  
+  await txn.insert('profiles', {
+    'user_id': 'user1',
+    'avatar': 'default.png',
+  });
+});
+```
+
+### Batch operations
+
+For multiple operations, use batch processing:
+
+```dart
+final batch = db.batch();
+
+batch.insert('users', {
+  'id': 'user1',
+  'name': 'John Doe',
+});
+
+batch.insert('users', {
+  'id': 'user2',
+  'name': 'Jane Doe',
+});
+
+await batch.commit();
+```
+
+## Why should you use PocketSyncDatabase ?
+
+### 1. Automatic sync integration
+
+PocketSyncDatabase automatically handles:
+- Change tracking
+- Version management
+- Conflict detection
+- Data synchronization
+
+### 2. Familiar API
+
+- Uses the same API as `sqflite`
+- No learning curve for existing SQLite developers
+- Seamless integration with existing code
+
+### 3. Zero configuration
+
+- Change tracking works out of the box
+- No manual sync code required
+- Automatic conflict resolution
+
+## Best practices
+
+1. **Always use PocketSyncDatabase**
+   - Don't bypass PocketSyncDatabase by using raw SQLite
+   - All changes must go through PocketSyncDatabase to be tracked
+
+2. **Use transactions**
+   - Group related operations in transactions
+   - Ensures data consistency
+   - All changes in a transaction sync together
+
+3. **Batch operations**
+   - Use batch operations for multiple changes
+   - More efficient than individual operations
+   - Changes are tracked as a single unit
