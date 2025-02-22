@@ -1,3 +1,7 @@
+## 0.0.11
+- Fix: Weird behaviour when using pocketsync on a project already using sqflite
+- Fix: Changes insertion was causing an issue for some scenarios
+
 ## 0.0.10
 - Fix: Better handling of schema lifecycle (hence better support for integration in existing apps)
 - Some api cleanup

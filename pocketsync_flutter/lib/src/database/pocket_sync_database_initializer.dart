@@ -114,7 +114,7 @@ class PocketSyncDatabaseInitializer {
           table_name, record_rowid, operation, timestamp, data, version
         ) VALUES (
           '$tableName',
-          NEW.ps_global_id,
+          COALESCE(NEW.ps_global_id, (SELECT ps_global_id FROM $tableName WHERE rowid = NEW.rowid)),
           'UPDATE',
           (strftime('%s', 'now') * 1000),
           json_object(
@@ -146,7 +146,7 @@ class PocketSyncDatabaseInitializer {
           table_name, record_rowid, operation, timestamp, data, version
         ) VALUES (
           '$tableName',
-          (SELECT ps_global_id FROM $tableName WHERE rowid = NEW.rowid),
+          COALESCE(NEW.ps_global_id, (SELECT ps_global_id FROM $tableName WHERE rowid = NEW.rowid)),
           'INSERT',
           (strftime('%s', 'now') * 1000),
           json_object(
@@ -177,7 +177,7 @@ class PocketSyncDatabaseInitializer {
           table_name, record_rowid, operation, timestamp, data, version
         ) VALUES (
           '$tableName',
-          OLD.ps_global_id,
+          COALESCE(OLD.ps_global_id, hex(randomblob(16))),
           'DELETE',
           (strftime('%s', 'now') * 1000),
           json_object(
