@@ -57,6 +57,7 @@
 import {
     PhBook,
     PhHouse,
+    PhNotebook,
 } from '@phosphor-icons/vue'
 import { useUtils } from '~/composables/useUtils'
 
@@ -78,5 +79,6 @@ function isActive(href: string): boolean {
 const navigation = [
     { name: 'Dashboard', href: '/console', icon: PhHouse },
     { name: 'Projects', href: '/console/projects', icon: PhBook },
+    { name: 'Documentation', href: 'https://docs.pocketsync.dev', icon: PhNotebook },
 ]
 </script>
