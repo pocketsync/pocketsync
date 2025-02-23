@@ -1,3 +1,6 @@
+## 0.0.12
+- Fix: Resource cleanup (especially for hot reload/restart scenarios)  
+
 ## 0.0.11
 - Fix: Weird behaviour when using pocketsync on a project already using sqflite
 - Fix: Changes insertion was causing an issue for some scenarios

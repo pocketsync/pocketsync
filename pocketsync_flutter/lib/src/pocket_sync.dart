@@ -138,9 +138,11 @@ class PocketSync {
   Future<void> start() async {
     await _runGuarded(() async {
       if (_userId == null) throw StateError('User ID not set');
+      
+      await _cleanupResources();
+      
       _isPaused = false;
 
-      // Set up real-time change notification
       _dbChangeManager.addGlobalListener(_syncChanges);
 
       // Initialize connectivity monitoring
@@ -148,6 +150,16 @@ class PocketSync {
       _networkService.reconnect();
       await _sync();
     });
+  }
+
+  /// Cleans up existing resources without full disposal
+  Future<void> _cleanupResources() async {
+    _networkService.disconnect();
+    _dbChangeManager.removeGlobalListener(_syncChanges);
+    _connectivityManager.stopMonitoring();
+    
+    _isSyncing = false;
+    _isPaused = true;
   }
 
   final _syncLock = Lock();
