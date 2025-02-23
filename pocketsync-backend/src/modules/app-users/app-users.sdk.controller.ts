@@ -12,7 +12,7 @@ export class AppUsersSdkController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new app user', operationId: 'createAppUser' })
-  @ApiResponse({ status: 201, description: 'Project created successfully', type: AppUserResponseDto })
+  @ApiResponse({ status: 201, description: 'App user created successfully', type: AppUserResponseDto })
   create(@Body() createAppUserDto: CreateAppUserDto) {
     return this.appUsersService.createFromSdk(createAppUserDto);
   }
