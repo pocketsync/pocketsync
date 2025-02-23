@@ -1,6 +1,6 @@
 import { IsObject, IsArray, IsString, ValidateNested, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ApiProperty, ApiPropertyOptions } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 
 class RowChange {
     @ApiProperty({
@@ -45,21 +45,6 @@ class TableRows {
 }
 
 class TableChanges {
-    @ApiProperty({
-        description: 'Map of table names to their respective row changes',
-        type: 'object',
-        additionalProperties: { type: 'object', $ref: '#/components/schemas/TableRows' },
-        example: {
-            users: {
-                rows: [{
-                    primaryKey: 'user_123',
-                    version: 1,
-                    timestamp: 1645564800000,
-                    data: { name: 'John Doe', email: 'john@example.com' }
-                }]
-            }
-        }
-    })
     [key: string]: TableRows;
 }
 
