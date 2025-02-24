@@ -1,5 +1,5 @@
 <template>
-    <div class="py-24 sm:py-32">
+    <div class="py-12 sm:py-12">
         <div class="mx-auto max-w-7xl px-6 lg:px-8">
             <div class="mx-auto max-w-2xl lg:text-center">
                 <h2 class="text-base font-semibold leading-7 text-primary-600">Powerful Features</h2>
@@ -11,12 +11,23 @@
                     <div class="flex flex-col">
                         <dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-gray-900">
                             <svg class="h-5 w-5 flex-none text-primary-600" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd" />
+                                <path d="M5.25 3C4.007 3 3 4.007 3 5.25v9.5C3 15.993 4.007 17 5.25 17h9.5c1.243 0 2.25-1.007 2.25-2.25v-9.5C17 4.007 15.993 3 14.75 3h-9.5zM5 8.5h10M8.5 5v10" />
                             </svg>
-                            Secure Sync
+                            Backendless
                         </dt>
                         <dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-600">
-                            <p class="flex-auto">End-to-end encryption and secure data transmission ensure your data stays protected during synchronization.</p>
+                            <p class="flex-auto">No need to manage your own backend infrastructure, focus on building great features.</p>
+                        </dd>
+                    </div>
+                    <div class="flex flex-col">
+                        <dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-gray-900">
+                            <svg class="h-5 w-5 flex-none text-primary-600" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                            </svg>
+                            Offline-first
+                        </dt>
+                        <dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-600">
+                            <p class="flex-auto">Work offline with automatic background sync when connected to ensure data consistency.</p>
                         </dd>
                     </div>
                     <div class="flex flex-col">
@@ -24,10 +35,10 @@
                             <svg class="h-5 w-5 flex-none text-primary-600" viewBox="0 0 20 20" fill="currentColor">
                                 <path d="M15.98 1.804a1 1 0 00-1.96 0l-.24 1.192a1 1 0 01-.784.785l-1.192.238a1 1 0 000 1.962l1.192.238a1 1 0 01.785.785l.238 1.192a1 1 0 001.962 0l.238-1.192a1 1 0 01.785-.785l1.192-.238a1 1 0 000-1.962l-1.192-.238a1 1 0 01-.785-.785l-.238-1.192zM6.949 5.684a1 1 0 00-1.898 0l-.683 2.051a1 1 0 01-.633.633l-2.051.683a1 1 0 000 1.898l2.051.684a1 1 0 01.633.632l.683 2.051a1 1 0 001.898 0l.683-2.051a1 1 0 01.633-.633l2.051-.683a1 1 0 000-1.898l-2.051-.683a1 1 0 01-.633-.633L6.95 5.684z" />
                             </svg>
-                            Conflict Resolution
+                            Lightweight
                         </dt>
                         <dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-600">
-                            <p class="flex-auto">Automatic conflict detection and resolution keeps your data consistent across all devices.</p>
+                            <p class="flex-auto">Simple integration for non-intensive sync needs, making it perfect for most applications.</p>
                         </dd>
                     </div>
                     <div class="flex flex-col">

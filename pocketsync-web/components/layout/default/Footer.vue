@@ -1,13 +1,13 @@
 <template>
     <footer class="bg-white border-t border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 w-full">
                 <div>
                     <h3 class="text-sm font-semibold text-gray-400 tracking-wider uppercase">Product</h3>
                     <div class="mt-4 space-y-4">
-                        <NuxtLink to="https://docs.pocketsync.dev" class="text-base text-gray-500 hover:text-gray-900 block">Documentation
-                        </NuxtLink>
-                        <NuxtLink to="/pricing" class="text-base text-gray-500 hover:text-gray-900 block">Pricing
+                        <NuxtLink to="https://docs.pocketsync.dev"
+                            class="text-base text-gray-500 hover:text-gray-900 block">Documentation
                         </NuxtLink>
                     </div>
                 </div>

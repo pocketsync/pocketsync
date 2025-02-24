@@ -2,7 +2,7 @@
     <div class="relative bg-white py-24 sm:py-32">
         <div class="mx-auto max-w-7xl px-6 lg:px-8">
             <div class="mx-auto max-w-2xl lg:text-center">
-                <h2 class="text-base font-semibold leading-7 text-primary-600">Local-First Development</h2>
+                <h2 class="text-base font-semibold leading-7 text-primary-600">Local-first development</h2>
                 <p class="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Build apps that work anywhere</p>
                 <p class="mt-6 text-lg leading-8 text-gray-600">Local-first software prioritizes the local device while seamlessly syncing with the cloud, ensuring your apps work flawlessly both online and offline.</p>
             </div>

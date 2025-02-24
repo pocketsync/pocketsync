@@ -8,6 +8,19 @@
     "dark": "#004DC2"
   },
   "favicon": "/favicon.svg",
+  "logo": {
+    "light": "/logo_light.svg",
+    "dark": "/logo_dark.svg"
+  },
+  "description": "PocketSync is a Flutter SDK and web console for building offline-first applications without the hassle of building a custom backend.",
+  "navbar": {
+    "links": [
+      {
+        "href": "https://pocketsync.dev/auth/login",
+        "label": "Go to console"
+      }
+    ]
+  },
   "navigation": {
     "global": {
       "anchors": [
@@ -22,7 +35,7 @@
           "icon": "globe"
         }
       ]
-    },  
+    },
     "tabs": [
       {
         "tab": "Documentation",
