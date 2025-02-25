@@ -1,7 +1,0 @@
-{
-  "dependencies": {
-    "@nuxtjs/robots": "^5.2.4",
-    "@nuxtjs/sitemap": "^7.2.6",
-    "@openpanel/web": "^1.0.1"
-  }
-}
