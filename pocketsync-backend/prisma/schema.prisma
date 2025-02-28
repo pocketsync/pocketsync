@@ -35,7 +35,7 @@ model AppUser {
 }
 
 model Device {
-  deviceId       String      @id @map("device_id") @db.VarChar(255)
+  deviceId       String      @map("device_id") @db.VarChar(255)
   userIdentifier String      @map("user_identifier") @db.VarChar(255)
   lastSeenAt     DateTime?   @map("last_seen_at") @db.Timestamp()
   createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamp()
@@ -43,6 +43,7 @@ model Device {
   appUser        AppUser     @relation(fields: [userIdentifier], references: [userIdentifier])
   changeLogs     ChangeLog[]
 
+  @@id([deviceId, userIdentifier])
   @@map("devices")
 }
 
@@ -56,7 +57,7 @@ model ChangeLog {
   projectId      String    @map("project_id") @db.Uuid
   deletedAt      DateTime? @map("deleted_at") @db.Timestamp()
   appUser        AppUser   @relation(fields: [userIdentifier], references: [userIdentifier])
-  device         Device    @relation(fields: [deviceId], references: [deviceId])
+  device         Device    @relation(fields: [deviceId, userIdentifier], references: [deviceId, userIdentifier])
   project        Project   @relation(fields: [projectId], references: [id])
 
   @@map("change_logs")

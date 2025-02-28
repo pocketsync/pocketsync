@@ -85,7 +85,12 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
         }
 
         await this.prisma.device.update({
-            where: { deviceId },
+            where: {
+                deviceId_userIdentifier: {
+                    deviceId,
+                    userIdentifier: deviceId
+                }
+            },
             data: { lastSeenAt: new Date() }
         });
 

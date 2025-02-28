@@ -11,10 +11,11 @@ export class DevicesService {
     private appUsersService: AppUsersService,
   ) { }
 
-  async findByDeviceId(deviceId: string): Promise<Device | null> {
+  async findByDeviceId(deviceId: string, userIdentifier?: string): Promise<Device | null> {
     return this.prisma.device.findFirst({
       where: { 
         deviceId,
+        ...(userIdentifier && { userIdentifier }),
         deletedAt: null
       },
       include: {
@@ -33,6 +34,7 @@ export class DevicesService {
     const existingDevice = await this.prisma.device.findFirst({
       where: {
         deviceId: data.deviceId,
+        userIdentifier: data.userIdentifier,
         deletedAt: null
       }
     });
@@ -91,8 +93,11 @@ export class DevicesService {
   }
 
   async findOne(userId: string, deviceId: string) {
-    const device = await this.prisma.device.findUnique({
-      where: { deviceId },
+    const device = await this.prisma.device.findFirst({
+      where: { 
+        deviceId,
+        deletedAt: null
+      },
       include: {
         appUser: {
           include: {
@@ -116,10 +121,15 @@ export class DevicesService {
   }
 
   async remove(userId: string, deviceId: string) {
-    await this.findOne(userId, deviceId);
+    const device = await this.findOne(userId, deviceId);
 
     return this.prisma.device.update({
-      where: { deviceId },
+      where: { 
+        deviceId_userIdentifier: {
+          deviceId,
+          userIdentifier: device.userIdentifier
+        }
+      },
       data: { deletedAt: new Date() },
     });
   }
@@ -140,7 +150,7 @@ export class DevicesService {
   }
 
   async getOrCreateDeviceFromId(deviceId: string, userId: string, projectId: string) {
-    let device = await this.findByDeviceId(deviceId);
+    let device = await this.findByDeviceId(deviceId, userId);
     if (!device) {
       device = await this.createFromSdk({
         deviceId: deviceId,
