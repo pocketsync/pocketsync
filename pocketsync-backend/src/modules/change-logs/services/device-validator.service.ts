@@ -17,31 +17,36 @@ export class DeviceValidatorService {
     ) { }
 
     async validateDevice(userIdentifier: string, deviceId: string, projectId?: string): Promise<void> {
-        const cacheKey = `device:${userIdentifier}:${deviceId}`;
-        const cachedDevice = await this.cacheManager.get(cacheKey);
-
-        if (cachedDevice) {
-            await this.updateLastSeen(userIdentifier, deviceId);
-            return;
-        }
-
         const startTime = Date.now();
+        const cacheKey = `device:${userIdentifier}:${deviceId}`;
 
         try {
-            // First try to find the device
+            // Check cache first
+            const cachedValidation = await this.cacheManager.get(cacheKey);
+            if (cachedValidation) {
+                this.logger.debug(`Using cached validation for device ${deviceId}`);
+                return;
+            }
+
+            // Attempt to find or create the device
+            if (projectId) {
+                const device = await this.devicesService.getOrCreateDeviceFromId(deviceId, userIdentifier, projectId);
+                if (device) {
+                    await this.cacheManager.set(cacheKey, true, this.CACHE_TTL);
+                    this.logger.debug(`Device ${deviceId} validated and cached for user ${userIdentifier}`);
+                    return;
+                }
+            }
+
+            // If no projectId provided or device creation failed, check if device exists
             const device = await this.prisma.device.findFirst({
                 where: { deviceId, userIdentifier, deletedAt: null },
                 select: { userIdentifier: true },
             });
 
             if (!device) {
-                if (projectId) {
-                    this.logger.log(`Device ${deviceId} not found for user ${userIdentifier}, creating it...`);
-                    await this.devicesService.getOrCreateDeviceFromId(deviceId, userIdentifier, projectId);
-                } else {
-                    this.logger.error(`Device validation failed: Device ${deviceId} not found for user ${userIdentifier}`);
-                    throw new DeviceNotFoundException(deviceId, userIdentifier);
-                }
+                this.logger.error(`Device validation failed: Device ${deviceId} not found for user ${userIdentifier}`);
+                throw new DeviceNotFoundException(deviceId, userIdentifier);
             }
 
             await this.cacheManager.set(cacheKey, true, this.CACHE_TTL);
@@ -51,13 +56,6 @@ export class DeviceValidatorService {
             const duration = Date.now() - startTime;
             this.recordMetrics(duration);
         }
-    }
-
-    private async updateLastSeen(userIdentifier: string, deviceId: string): Promise<void> {
-        await this.prisma.device.update({
-            where: { userIdentifier, deviceId },
-            data: { lastSeenAt: new Date() },
-        });
     }
 
     private recordMetrics(duration: number): void {
