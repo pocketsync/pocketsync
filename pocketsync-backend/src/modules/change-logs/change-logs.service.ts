@@ -37,7 +37,7 @@ export class ChangeLogsService {
         return cachedResult;
       }
 
-      await this.deviceValidator.validateDevice(userIdentifier, deviceId);
+      await this.deviceValidator.validateDevice(userIdentifier, deviceId, projectId);
       
       const batches = this.batchProcessor.splitIntoBatches(changeSets);
       const processedLogs: ChangeLog[] = [];
