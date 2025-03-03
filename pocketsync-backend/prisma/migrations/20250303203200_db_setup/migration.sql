@@ -28,7 +28,7 @@ CREATE TABLE "devices" (
     "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "deleted_at" TIMESTAMP,
 
-    CONSTRAINT "devices_pkey" PRIMARY KEY ("device_id")
+    CONSTRAINT "devices_pkey" PRIMARY KEY ("device_id","user_identifier")
 );
 
 -- CreateTable
@@ -39,15 +39,50 @@ CREATE TABLE "change_logs" (
     "change_set" JSONB NOT NULL,
     "received_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "processed_at" TIMESTAMP,
+    "project_id" UUID NOT NULL,
     "deleted_at" TIMESTAMP,
 
     CONSTRAINT "change_logs_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
+CREATE TABLE "notification_settings" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "user_id" UUID NOT NULL,
+    "marketing_enabled" BOOLEAN NOT NULL DEFAULT true,
+    "email_enabled" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "notification_settings_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "password_reset_tokens" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "token" VARCHAR(255) NOT NULL,
+    "user_id" UUID NOT NULL,
+    "expires_at" TIMESTAMP NOT NULL,
+    "used" BOOLEAN NOT NULL DEFAULT false,
+
+    CONSTRAINT "password_reset_tokens_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "email_verification_tokens" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "token" VARCHAR(255) NOT NULL,
+    "user_id" UUID NOT NULL,
+    "expires_at" TIMESTAMP NOT NULL,
+    "used" BOOLEAN NOT NULL DEFAULT false,
+
+    CONSTRAINT "email_verification_tokens_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "users" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "email" VARCHAR(255),
+    "email" VARCHAR(255) NOT NULL,
     "password_hash" VARCHAR(255),
     "first_name" VARCHAR(255),
     "last_name" VARCHAR(255),
@@ -114,6 +149,15 @@ CREATE TABLE "auth_tokens" (
 );
 
 -- CreateIndex
+CREATE UNIQUE INDEX "notification_settings_user_id_key" ON "notification_settings"("user_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "password_reset_tokens_token_key" ON "password_reset_tokens"("token");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "email_verification_tokens_token_key" ON "email_verification_tokens"("token");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
@@ -124,9 +168,6 @@ CREATE UNIQUE INDEX "user_social_connections_provider_id_provider_user_id_key" O
 
 -- CreateIndex
 CREATE UNIQUE INDEX "refresh_tokens_token_key" ON "refresh_tokens"("token");
-
--- CreateIndex
-CREATE UNIQUE INDEX "auth_tokens_name_key" ON "auth_tokens"("name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "auth_tokens_token_key" ON "auth_tokens"("token");
@@ -144,7 +185,19 @@ ALTER TABLE "devices" ADD CONSTRAINT "devices_user_identifier_fkey" FOREIGN KEY 
 ALTER TABLE "change_logs" ADD CONSTRAINT "change_logs_user_identifier_fkey" FOREIGN KEY ("user_identifier") REFERENCES "app_users"("user_identifier") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "change_logs" ADD CONSTRAINT "change_logs_device_id_fkey" FOREIGN KEY ("device_id") REFERENCES "devices"("device_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "change_logs" ADD CONSTRAINT "change_logs_device_id_user_identifier_fkey" FOREIGN KEY ("device_id", "user_identifier") REFERENCES "devices"("device_id", "user_identifier") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "change_logs" ADD CONSTRAINT "change_logs_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "projects"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "notification_settings" ADD CONSTRAINT "notification_settings_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "password_reset_tokens" ADD CONSTRAINT "password_reset_tokens_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "email_verification_tokens" ADD CONSTRAINT "email_verification_tokens_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "user_social_connections" ADD CONSTRAINT "user_social_connections_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
