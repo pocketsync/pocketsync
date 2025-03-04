@@ -9,15 +9,9 @@
                 <h2 class="text-xl font-semibold text-gray-900 mb-4">Reach Us</h2>
                 <div class="space-y-4">
                     <div>
-                        <h3 class="text-lg font-medium text-gray-900">Support</h3>
-                        <p class="mt-2 text-gray-600">For technical support, please visit our <NuxtLink to="https://docs.pocktsync.dev"
-                                class="text-blue-600 hover:text-blue-800">documentation</NuxtLink> or email us at
-                            support@pocketsync.dev</p>
-                    </div>
-                    <div>
-                        <h3 class="text-lg font-medium text-gray-900">Business Inquiries</h3>
+                        <h3 class="text-lg font-medium text-gray-900">Business inquiries or support</h3>
                         <p class="mt-2 text-gray-600">For business and partnership inquiries, please email us at
-                            business@pocketsync.dev</p>
+                            hello@pocketsync.dev</p>
                     </div>
                     <div>
                         <h3 class="text-lg font-medium text-gray-900">Office Hours</h3>
@@ -30,18 +24,6 @@
 </template>
 
 <script setup>
-const form = ref({
-    name: '',
-    email: '',
-    subject: '',
-    message: ''
-})
-
-const handleSubmit = () => {
-    // TODO: Implement form submission logic
-    console.log('Form submitted:', form.value)
-}
-
 definePageMeta({
     layout: 'default'
 })

@@ -54,7 +54,7 @@
 
             <section>
                 <h2>Contact Us</h2>
-                <p>If you have any questions about this Privacy Policy, please contact us at privacy@pocketsync.dev</p>
+                <p>If you have any questions about this Privacy Policy, please contact us at hello@pocketsync.dev</p>
             </section>
         </div>
     </div>
