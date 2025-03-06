@@ -55,7 +55,7 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
         await this.devicesService.getOrCreateDeviceFromId(device_id, user_id, project_id);
 
         this.connectedDevices.set(device_id, client.id);
-        this.logger.log(`Device ${device_id} connected to project ${project_id}`);
+        this.logger.log(`Device ${device_id} connected to project ${project_id}, last synced at ${last_synced_at}`);
 
         // Convert milliseconds timestamp to Date object
         const lastSyncedDate = last_synced_at ? new Date(parseInt(last_synced_at)) : null;
@@ -84,11 +84,20 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
             return;
         }
 
+        const device = await this.prisma.device.findFirst({
+            where: { deviceId, deletedAt: null }
+        });
+
+        if (!device) {
+            this.logger.warn(`Device ${deviceId} not found in database`);
+            return;
+        }
+
         await this.prisma.device.update({
             where: {
                 deviceId_userIdentifier: {
                     deviceId,
-                    userIdentifier: deviceId
+                    userIdentifier: device.userIdentifier
                 }
             },
             data: { lastSeenAt: new Date() }
@@ -107,12 +116,14 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
         const changes = await this.prisma.changeLog.findMany({
             where: {
                 userIdentifier: device.userIdentifier,
-                OR: [
-                    // Get changes processed after last sync
-                    { processedAt: lastSyncedAt ? { gte: lastSyncedAt } : undefined },
-                    // Get updates to existing records
-                    { receivedAt: lastSyncedAt ? { gte: lastSyncedAt } : undefined }
-                ],
+                ...(lastSyncedAt ? {
+                    OR: [
+                        // Get changes processed after last sync
+                        { processedAt: { gte: lastSyncedAt } },
+                        // Get updates to existing records
+                        { receivedAt: { gte: lastSyncedAt } }
+                    ],
+                } : {}), // For new devices (null lastSyncedAt), get all changes
                 deviceId: { not: device.deviceId },
             },
             orderBy: [

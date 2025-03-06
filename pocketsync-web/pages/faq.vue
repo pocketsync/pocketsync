@@ -27,14 +27,19 @@
                 <h2 class="text-xl font-semibold text-gray-900 mb-4">Use Cases</h2>
                 <div class="space-y-6">
                     <div>
-                        <h3 class="text-lg font-medium text-gray-900">What types of applications work best with PocketSync?</h3>
-                        <p class="mt-2 text-gray-600">PocketSync is ideal for local applications that don't require a backend server, such as:
-                            <ul class="list-disc pl-5 mt-2 space-y-1">
-                                <li>Note-taking applications</li>
-                                <li>Personal trackers (habits, goals, tasks)</li>
-                                <li>Any app where data depends solely on the user</li>
-                            </ul>
-                            These types of applications, where data synchronization is primarily user-centric and doesn't depend on backend services, benefit the most from PocketSync's offline-first capabilities.</p>
+                        <h3 class="text-lg font-medium text-gray-900">What types of applications work best with
+                            PocketSync?</h3>
+                        <p class="mt-2 text-gray-600">PocketSync is ideal for local applications that don't require a
+                            backend server, such as:</p>
+                        <ul class="list-disc pl-5 mt-2 space-y-1">
+                            <li>Note-taking applications</li>
+                            <li>Personal trackers (habits, goals, tasks)</li>
+                            <li>Any app where data depends solely on the user</li>
+                        </ul>
+                        <p class="mt-2 text-gray-600"> These types of applications, where data synchronization is
+                            primarily user-centric and doesn't
+                            depend on backend services, benefit the most from PocketSync's offline-first capabilities.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -44,7 +49,8 @@
                 <div class="space-y-6">
                     <div>
                         <h3 class="text-lg font-medium text-gray-900">Which platforms does PocketSync support?</h3>
-                        <p class="mt-2 text-gray-600">PocketSync only supports Flutter (Android & IOS) at the moment.</p>
+                        <p class="mt-2 text-gray-600">PocketSync only supports Flutter (Android & IOS) at the moment.
+                        </p>
                     </div>
                     <div>
                         <h3 class="text-lg font-medium text-gray-900">How does PocketSync handle data conflicts?</h3>
