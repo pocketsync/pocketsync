@@ -2,7 +2,7 @@
     <div class="relative isolate overflow-hidden bg-gradient-to-b from-primary-600 to-primary-900">
         <div class="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80">
             <div
-                class="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-primary-500 to-primary-200 opacity-30 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]">
+                class="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-primary-500 to-primary-200 opacity-30 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem] animate-pulse">
             </div>
         </div>
 
@@ -17,12 +17,12 @@
                 </p>
                 <div class="mt-10 flex items-center gap-x-6">
                     <NuxtLink to="/auth/register"
-                        class="rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-primary-600 shadow-sm hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+                        class="rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-primary-600 shadow-sm hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-all duration-300 hover:scale-105">
                         Get started
                     </NuxtLink>
-                    <NuxtLink to="https://docs.pocketsync.dev" class="text-sm font-semibold leading-6 text-white">
+                    <NuxtLink to="https://docs.pocketsync.dev" class="text-sm font-semibold leading-6 text-white group transition-all duration-300">
                         Documentation
-                        <span aria-hidden="true">→</span>
+                        <span aria-hidden="true" class="inline-block transition-transform duration-300 group-hover:translate-x-1">→</span>
                     </NuxtLink>
                 </div>
             </div>
@@ -30,7 +30,7 @@
             <div
                 class="mx-auto mt-16 flex max-w-2xl sm:mt-24 lg:ml-10 lg:mt-0 lg:mr-0 lg:max-w-none lg:flex-none xl:ml-32">
                 <div class="max-w-3xl flex-none sm:max-w-5xl lg:max-w-none">
-                    <div class="rounded-xl bg-white/5 p-2 ring-1 ring-inset ring-white/10">
+                    <div class="rounded-xl bg-white/5 p-2 ring-1 ring-inset ring-white/10 shadow-xl transition-all duration-300 hover:shadow-2xl hover:bg-white/10">
                         <div class="rounded-md bg-gray-900 p-4">
                             <pre class="text-sm leading-6 text-gray-300"><code>// Initialize PocketSync
 await PocketSync.instance.initialize(
@@ -64,7 +64,7 @@ await PocketSync.instance.start();
         <div
             class="absolute inset-x-0 top-[calc(100%-13rem)] -z-10 transform-gpu overflow-hidden blur-3xl sm:top-[calc(100%-30rem)]">
             <div
-                class="relative left-[calc(50%+3rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 bg-gradient-to-tr from-primary-500 to-primary-200 opacity-30 sm:left-[calc(50%+36rem)] sm:w-[72.1875rem]">
+                class="relative left-[calc(50%+3rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 bg-gradient-to-tr from-primary-500 to-primary-200 opacity-30 sm:left-[calc(50%+36rem)] sm:w-[72.1875rem] animate-pulse">
             </div>
         </div>
     </div>
