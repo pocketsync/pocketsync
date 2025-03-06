@@ -41,7 +41,7 @@
                                 <div class="mt-4">
                                     <div class="relative">
                                         <pre class="language-yaml rounded-lg bg-gray-800 p-4"><code class="text-sm text-white">dependencies:
-  pocketsync_flutter: ^1.0.0</code></pre>
+  pocketsync_flutter: ^0.1.0</code></pre>
                                         <button @click="copyCode('flutter')"
                                             class="absolute right-2 top-2 rounded-md bg-white/10 p-2 text-white hover:bg-white/20">
                                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -109,13 +109,15 @@ await PocketSync.instance.start();
                                             Now that you've set up PocketSync, you can:
                                         </p>
                                         <ul class="list-disc pl-5 text-sm text-gray-500">
-                                            <li>Configure your sync settings in the project dashboard</li>
-                                            <li>Set up your data models and sync rules</li>
-                                            <li>Test the sync functionality in development mode</li>
-                                            <li>Monitor sync activity in real-time</li>
+                                            <li>Start using SQLite operations in your Flutter app - all changes will be
+                                                automatically tracked</li>
+                                            <li>Test offline data persistence and automatic sync when back online</li>
+                                            <li>Monitor sync status and conflicts in the project dashboard</li>
+                                            <li>Implement custom conflict resolution strategies if needed</li>
                                         </ul>
                                         <div class="mt-4">
-                                            <NuxtLink to="https://docs.pocketsync.dev"
+                                            <NuxtLink to="https://docs.pocketsync.dev" target="_blank"
+                                                rel="noopener noreferrer"
                                                 class="text-sm font-medium text-primary-600 hover:text-primary-500">
                                                 View Documentation →
                                             </NuxtLink>
@@ -148,7 +150,7 @@ const createProject = () => {
     router.push('/console/projects?action=create')
 }
 
-const copyCode = (section) => {
+const copyCode = (section: any) => {
     const codeElements = {
         'flutter': 'dependencies:\n  pocketsync_flutter: ^1.0.0',
         'flutter-init': 'final pocketSync = await PocketSync.instance.initialize(\n  options: PocketSyncOptions(\n    serverUrl: \'https://api.pocketsync.dev\',\n    projectId: \'your-project-id\',\n    authToken: \'your-auth-token\',\n  ),\n);\n\n// Regular SQLite operations are automatically tracked\nawait database.insert(\'users\', {\n  \'name\': \'John Doe\',\n  \'email\': \'john@example.com\'\n});\n\n// Changes are automatically synchronized when online\n// No additional code needed for sync'
