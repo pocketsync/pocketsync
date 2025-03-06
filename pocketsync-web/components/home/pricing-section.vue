@@ -40,7 +40,7 @@
                         Custom integrations
                     </li>
                 </ul>
-                <NuxtLink to="/auth/register" class="mt-8 block rounded-md bg-primary-600 px-3.5 py-2 text-center text-sm font-semibold leading-6 text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 transition-all duration-300 hover:scale-105">
+                <NuxtLink to="/auth/register" class="mt-8 block rounded-md bg-primary-600/90 backdrop-blur-sm px-3.5 py-2.5 text-center text-sm font-medium leading-6 text-white shadow-sm hover:bg-primary-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary-500/20 border border-primary-500/10">
                     Get started for free
                 </NuxtLink>
                 <p class="mt-4 text-sm text-gray-500">No credit card required</p>
