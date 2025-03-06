@@ -8,7 +8,7 @@
                         class="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">PocketSync</span>
                 </div>
                 <nav class="mt-6 flex-1 space-y-1.5 px-3">
-                    <NuxtLink v-for="item in navigation" :key="item.name" :to="item.href" :class="[
+                    <NuxtLink v-for="item in navigation" :key="item.name" :to="item.href" :target="item.href.startsWith('http') ? '_blank' : undefined" :rel="item.href.startsWith('http') ? 'noopener noreferrer' : undefined" :class="[
                         isActive(item.href)
                             ? 'bg-primary-50/80 text-primary-600 shadow-sm ring-1 ring-primary-100'
                             : 'text-gray-600 hover:bg-gray-50/80 hover:text-gray-900',

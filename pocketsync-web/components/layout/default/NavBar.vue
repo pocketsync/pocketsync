@@ -14,14 +14,14 @@
                             active-class="border-b-2 border-primary-500">
                             Home
                         </NuxtLink>
-                        
+
                         <NuxtLink to="/about"
                             class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900"
                             active-class="border-b-2 border-primary-500">
                             About
                         </NuxtLink>
-                        
-                        <NuxtLink to="https://docs.pocketsync.dev"
+
+                        <NuxtLink to="https://docs.pocketsync.dev" target="_blank" rel="noopener"
                             class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900"
                             active-class="border-b-2 border-primary-500">
                             <span>Documentation</span>

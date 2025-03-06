@@ -6,6 +6,7 @@
                     <h3 class="text-sm font-bold text-gray-900 tracking-wider uppercase mb-6">Product</h3>
                     <div class="space-y-4">
                         <NuxtLink to="https://docs.pocketsync.dev"
+                            target="_blank" rel="noopener noreferrer"
                             class="text-base text-gray-600 hover:text-primary-600 transition-colors duration-200 block">Documentation
                         </NuxtLink>
                     </div>
