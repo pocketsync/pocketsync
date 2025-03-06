@@ -5,8 +5,9 @@ import { ChangeStatsService } from './change-stats.service';
 @Injectable()
 export class ChangeMergerService {
   private readonly logger = new Logger(ChangeMergerService.name);
-  private readonly processedChanges = new Set<string>();
+  private readonly processedChanges = new Map<string, number>();
   private readonly PROCESSED_CHANGES_CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hour
+  private readonly PROCESSED_CHANGES_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
   constructor(
     private readonly changeStats: ChangeStatsService
@@ -41,13 +42,14 @@ export class ChangeMergerService {
       }
 
       const changeSetHash = this.computeChangeSetHash(changeSet);
+      const now = Date.now();
       if (this.processedChanges.has(changeSetHash)) {
         this.logger.debug(`Skipping already processed change set: ${changeSetHash}`);
         continue;
       }
 
       await this.processChangeSetOperations(changeSet, recordOperations);
-      this.processedChanges.add(changeSetHash);
+      this.processedChanges.set(changeSetHash, now);
     }
 
     // Second pass: determine final state and organize changes
@@ -154,12 +156,12 @@ export class ChangeMergerService {
     if (lastOperation === 'delete') {
       // If this is the only operation, it's a straightforward delete
       if (operations.length === 1) return 'delete';
-      
+
       // If the record was inserted in this changeset and later deleted,
       // we can skip broadcasting this change entirely since the net effect
       // is as if the record never existed
       if (operations.includes('insert')) return null;
-      
+
       // For records that existed before this changeset and were deleted,
       // we need to broadcast the deletion
       return 'delete';
@@ -183,15 +185,48 @@ export class ChangeMergerService {
   }
 
   private computeChangeSetHash(changeSet: ChangeSetDto): string {
+    // Extract only essential properties for hash calculation
+    const essentialData = {
+      timestamp: changeSet.timestamp,
+      version: changeSet.version,
+      tables: this.extractTableKeys(changeSet)
+    };
+
     return require('crypto')
       .createHash('sha256')
-      .update(JSON.stringify(changeSet))
+      .update(JSON.stringify(essentialData))
       .digest('hex');
   }
 
+  private extractTableKeys(changeSet: ChangeSetDto): Record<string, string[]> {
+    const result: Record<string, string[]> = {};
+
+    for (const operation of ['insertions', 'updates', 'deletions'] as const) {
+      for (const [tableName, tableChanges] of Object.entries(changeSet[operation])) {
+        if (!result[tableName]) {
+          result[tableName] = [];
+        }
+
+        for (const row of tableChanges.rows) {
+          result[tableName].push(`${row.primaryKey}:${row.version}:${operation}`);
+        }
+      }
+    }
+
+    return result;
+  }
+
   private cleanupProcessedChanges(): void {
-    const before = this.processedChanges.size;
-    this.processedChanges.clear();
-    this.logger.debug(`Cleaned up processed changes cache (removed ${before} entries)`);
+    const now = Date.now();
+    const expiredCount = Array.from(this.processedChanges.entries())
+      .filter(([_, timestamp]) => now - timestamp > this.PROCESSED_CHANGES_TTL)
+      .map(([key, _]) => {
+        this.processedChanges.delete(key);
+        return key;
+      }).length;
+
+    if (expiredCount > 0) {
+      this.logger.debug(`Cleaned up processed changes cache (removed ${expiredCount} expired entries, remaining: ${this.processedChanges.size})`);
+    }
   }
 }
