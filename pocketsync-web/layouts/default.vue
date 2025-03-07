@@ -5,20 +5,20 @@ import NavBar from '~/components/layout/default/NavBar.vue';
 const route = useRoute();
 
 useHead({
-  title: 'PocketSync - Effortless local-First Sync Solution',
+  title: 'PocketSync - Effortless local-first sync engine',
   meta: [
     { name: 'description', content: 'PocketSync is a powerful local-first synchronization solution that helps you keep your data in sync across all your devices while maintaining privacy and security.' },
     { name: 'keywords', content: 'local-first, sync, synchronization, offline-first, data sync, privacy' },
 
     // Open Graph
     { property: 'og:type', content: 'website' },
-    { property: 'og:title', content: 'PocketSync - Effortless local-First Sync Solution' },
+    { property: 'og:title', content: 'PocketSync - Effortless local-first sync engine' },
     { property: 'og:description', content: 'PocketSync is a powerful local-first synchronization solution that helps you keep your data in sync across all your devices while maintaining privacy and security.' },
     { property: 'og:site_name', content: 'PocketSync' },
 
     // Twitter Card
     { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: 'PocketSync - Effortless local-First Sync Solution' },
+    { name: 'twitter:title', content: 'PocketSync - Effortless local-first sync engine' },
     { name: 'twitter:description', content: 'PocketSync is a powerful local-first synchronization solution that helps you keep your data in sync across all your devices while maintaining privacy and security.' },
   ],
   link: [
