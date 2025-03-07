@@ -12,6 +12,8 @@ import { BatchProcessorService } from './services/batch-processor.service';
 import { ChangeMergerService } from './services/change-merger.service';
 import { DeviceValidatorService } from './services/device-validator.service';
 import { ChangeStatsService } from './services/change-stats.service';
+import { MetadataSanitizerService } from './services/metadata-sanitizer.service';
+import { ChangeFilterService } from './services/change-filter.service';
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { ChangeStatsService } from './services/change-stats.service';
     ChangeMergerService,
     DeviceValidatorService,
     ChangeStatsService,
+    MetadataSanitizerService,
+    ChangeFilterService,
   ],
 })
 export class ChangeLogsModule { }

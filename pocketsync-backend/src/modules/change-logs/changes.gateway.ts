@@ -6,6 +6,8 @@ import { ChangeLog } from '@prisma/client';
 import { AppUsersService } from '../app-users/app-users.service';
 import { DevicesService } from '../devices/devices.service';
 import { SocketAuthGuard } from '../../common/guards/socket-auth.guard';
+import { MetadataSanitizerService } from './services/metadata-sanitizer.service';
+import { ChangeFilterService } from './services/change-filter.service';
 
 @Injectable()
 @WebSocketGateway({
@@ -27,6 +29,8 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
         private prisma: PrismaService,
         private readonly devicesService: DevicesService,
         private readonly appUsersService: AppUsersService,
+        private readonly metadataSanitizer: MetadataSanitizerService,
+        private readonly changeFilter: ChangeFilterService,
     ) { }
 
     async handleConnection(client: any) {
@@ -93,6 +97,7 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
             return;
         }
 
+        const now = new Date();
         await this.prisma.device.update({
             where: {
                 deviceId_userIdentifier: {
@@ -100,9 +105,11 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
                     userIdentifier: device.userIdentifier
                 }
             },
-            data: { lastSeenAt: new Date() }
+            data: { 
+                lastSeenAt: now,
+            }
         });
-
+        
         this.logger.log(`Device ${deviceId} acknowledged ${payload.changeIds.length} changes`);
     }
 
@@ -113,6 +120,7 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
 
         if (!device) return;
 
+        // First, get all changes
         const changes = await this.prisma.changeLog.findMany({
             where: {
                 userIdentifier: device.userIdentifier,
@@ -132,30 +140,42 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
             ],
         });
 
-        if (changes.length > 0) {
+        // For new or reinstalled devices, filter out records that were deleted
+        let filteredChanges = changes;
+
+        // If this is a new or reinstalled device (no sync history), filter out deleted records
+        if (!lastSyncedAt && changes.length > 0) {
+            this.logger.log(`New or reinstalled device detected. Filtering out deleted records...`);
+            filteredChanges = this.changeFilter.filterDeletedRecords(changes);
+        }
+
+        if (filteredChanges && filteredChanges.length > 0) {
             const socketId = this.connectedDevices.get(deviceId);
             if (socketId) {
                 // Split changes into batches
-                for (let i = 0; i < changes.length; i += this.BATCH_SIZE) {
-                    const batch = changes.slice(i, i + this.BATCH_SIZE);
+                for (let i = 0; i < filteredChanges.length; i += this.BATCH_SIZE) {
+                    const batch = filteredChanges.slice(i, i + this.BATCH_SIZE);
+
+                    // Ensure metadata is only at row level, never in row.data
+                    const sanitizedBatch = batch.map(change => this.metadataSanitizer.ensureMetadataAtRowLevel(change));
 
                     // Send batch and wait for acknowledgment or delay
                     this.server.to(socketId).emit('changes', {
-                        changes: batch,
+                        changes: sanitizedBatch,
                         requiresAck: true,
                         batchInfo: {
                             current: Math.floor(i / this.BATCH_SIZE) + 1,
-                            total: Math.ceil(changes.length / this.BATCH_SIZE)
+                            total: Math.ceil(filteredChanges.length / this.BATCH_SIZE)
                         }
                     });
 
                     // Add delay between batches
-                    if (i + this.BATCH_SIZE < changes.length) {
+                    if (i + this.BATCH_SIZE < filteredChanges.length) {
                         await new Promise(resolve => setTimeout(resolve, this.BATCH_DELAY));
                     }
                 }
 
-                this.logger.log(`Sent ${changes.length} changes in ${Math.ceil(changes.length / this.BATCH_SIZE)} batches to device ${deviceId}`);
+                this.logger.log(`Sent ${filteredChanges.length} changes in ${Math.ceil(filteredChanges.length / this.BATCH_SIZE)} batches to device ${deviceId}`);
             }
         }
     }
@@ -170,8 +190,11 @@ export class ChangesGateway implements OnGatewayConnection, OnGatewayDisconnect 
         this.logger.log(`Notifying ${connectedDeviceIds.length} devices of new change`);
 
         for (const [_, socketId] of connectedDeviceIds) {
+            // Ensure metadata is only at row level, never in row.data
+            const sanitizedChangeLog = this.metadataSanitizer.ensureMetadataAtRowLevel(changeLog);
+
             this.server.to(socketId).emit('changes', {
-                changes: [changeLog],
+                changes: [sanitizedChangeLog],
                 requiresAck: true
             });
         }
