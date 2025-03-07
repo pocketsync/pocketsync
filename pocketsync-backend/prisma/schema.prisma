@@ -38,6 +38,7 @@ model Device {
   deviceId       String      @map("device_id") @db.VarChar(255)
   userIdentifier String      @map("user_identifier") @db.VarChar(255)
   lastSeenAt     DateTime?   @map("last_seen_at") @db.Timestamp()
+  lastChangeAt   DateTime?   @map("last_change_at") @db.Timestamp()
   createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamp()
   deletedAt      DateTime?   @map("deleted_at") @db.Timestamp()
   appUser        AppUser     @relation(fields: [userIdentifier], references: [userIdentifier])
