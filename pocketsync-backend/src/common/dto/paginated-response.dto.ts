@@ -1,5 +1,4 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsInt, IsBoolean, ValidateNested } from 'class-validator';
 import { applyDecorators } from '@nestjs/common';
 import { ApiOkResponse, getSchemaPath } from '@nestjs/swagger';
 

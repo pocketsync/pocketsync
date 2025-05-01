@@ -6,10 +6,9 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { oauthConfig } from './config/oauth.config';
 import { AuthModule } from './modules/auth/auth.module';
 import { ProjectsModule } from './modules/projects/projects.module';
-import { AppUsersModule } from './modules/app-users/app-users.module';
-import { DevicesModule } from './modules/devices/devices.module';
-import { ChangeLogsModule } from './modules/change-logs/change-logs.module';
 import { EmailModule } from './modules/email/email.module';
+import { SyncModule } from './modules/sync/sync.module';
+import { PrismaModule } from './modules/prisma/prisma.module';
 
 @Module({
   imports: [
@@ -38,10 +37,9 @@ import { EmailModule } from './modules/email/email.module';
     }),
     AuthModule,
     ProjectsModule,
-    AppUsersModule,
-    DevicesModule,
-    ChangeLogsModule,
     EmailModule,
+    PrismaModule,
+    SyncModule,
   ],
   providers: [
     {

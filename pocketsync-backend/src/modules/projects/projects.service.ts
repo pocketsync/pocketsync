@@ -15,7 +15,7 @@ export class ProjectsService {
   ) { }
 
   private generateToken(): string {
-    return `ds_${Buffer.from(uuidv4().replace(/-/g, '')).toString('base64').replace(/[+/]/g, '').slice(0, 60)}`;
+    return `ps_${Buffer.from(uuidv4().replace(/-/g, '')).toString('base64').replace(/[+/]/g, '').slice(0, 60)}`;
   }
 
   async create(userId: string, createProjectDto: CreateProjectDto) {
