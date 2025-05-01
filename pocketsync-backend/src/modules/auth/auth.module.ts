@@ -7,7 +7,6 @@ import { GoogleStrategy } from './strategies/google.strategy';
 import { GithubStrategy } from './strategies/github.strategy';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { PrismaModule } from '../prisma/prisma.module';
 import { UserMapper } from './mappers/user.mapper';
 import { NotificationSettingsController } from './controllers/notification-settings.controller';
 import { NotificationSettingsService } from './services/notification-settings.service';
@@ -17,7 +16,6 @@ import { EmailTemplateService } from '../email/email-template.service';
 @Module({
   imports: [
     PassportModule,
-    PrismaModule,
     JwtModule.registerAsync({
       useFactory: (configService: ConfigService) => ({
         secret: configService.get('oauth.jwt.secret'),

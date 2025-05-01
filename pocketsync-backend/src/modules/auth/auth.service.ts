@@ -140,7 +140,6 @@ export class AuthService {
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = uuidv4();
 
-    // Store refresh token in database
     await this.prisma.refreshToken.create({
       data: {
         userId,

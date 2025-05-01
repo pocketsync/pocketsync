@@ -14,64 +14,68 @@ model Project {
   updatedAt         DateTime            @default(now()) @map("updated_at") @db.Timestamp()
   deletedAt         DateTime?           @map("deleted_at") @db.Timestamp()
   appUsers          AppUser[]
-  user              User               @relation(fields: [userId], references: [id])
-  userId            String             @map("user_id") @db.Uuid
+  user              User                @relation(fields: [userId], references: [id])
+  userId            String              @map("user_id") @db.Uuid
   projectAuthTokens ProjectAuthTokens[]
-  changeLogs        ChangeLog[]
 
   @@map("projects")
 }
 
 model AppUser {
-  userIdentifier String      @id @map("user_identifier") @db.VarChar(255)
-  projectId      String      @map("project_id") @db.Uuid
-  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamp()
-  deletedAt      DateTime?   @map("deleted_at") @db.Timestamp()
-  project        Project     @relation(fields: [projectId], references: [id])
+  userIdentifier String       @id @map("user_identifier") @db.VarChar(255)
+  projectId      String       @map("project_id") @db.Uuid
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamp()
+  deletedAt      DateTime?    @map("deleted_at") @db.Timestamp()
+  project        Project      @relation(fields: [projectId], references: [id])
+  syncChanges    SyncChange[]
   devices        Device[]
-  changeLogs     ChangeLog[]
 
   @@map("app_users")
 }
 
 model Device {
-  deviceId       String      @map("device_id") @db.VarChar(255)
-  userIdentifier String      @map("user_identifier") @db.VarChar(255)
-  lastSeenAt     DateTime?   @map("last_seen_at") @db.Timestamp()
-  lastChangeAt   DateTime?   @map("last_change_at") @db.Timestamp()
-  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamp()
-  deletedAt      DateTime?   @map("deleted_at") @db.Timestamp()
-  appUser        AppUser     @relation(fields: [userIdentifier], references: [userIdentifier])
-  changeLogs     ChangeLog[]
+  deviceId       String       @map("device_id") @db.VarChar(255)
+  userIdentifier String       @map("user_identifier") @db.VarChar(255)
+  lastSeenAt     DateTime?    @map("last_seen_at") @db.Timestamp()
+  lastChangeAt   DateTime?    @map("last_change_at") @db.Timestamp()
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamp()
+  deletedAt      DateTime?    @map("deleted_at") @db.Timestamp()
+  appUser        AppUser      @relation(fields: [userIdentifier], references: [userIdentifier])
+  syncChanges    SyncChange[]
 
   @@id([deviceId, userIdentifier])
   @@map("devices")
 }
 
-model ChangeLog {
-  id             Int       @id @default(autoincrement())
-  userIdentifier String    @map("user_identifier") @db.VarChar(255)
-  deviceId       String    @map("device_id") @db.VarChar(255)
-  changeSet      Json      @map("change_set") @db.JsonB
-  receivedAt     DateTime  @default(now()) @map("received_at") @db.Timestamp()
-  processedAt    DateTime? @map("processed_at") @db.Timestamp()
-  projectId      String    @map("project_id") @db.Uuid
-  deletedAt      DateTime? @map("deleted_at") @db.Timestamp()
-  appUser        AppUser   @relation(fields: [userIdentifier], references: [userIdentifier])
-  device         Device    @relation(fields: [deviceId, userIdentifier], references: [deviceId, userIdentifier])
-  project        Project   @relation(fields: [projectId], references: [id])
+enum ChangeType {
+  CREATE
+  UPDATE
+  DELETE
+}
 
-  @@map("change_logs")
+model SyncChange {
+  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  onDeviceId String     @map("on_device_id") @db.VarChar(255)
+  userId     String     @map("user_id") @db.Uuid
+  deviceId   String     @map("device_id") @db.VarChar(255)
+  changeType ChangeType @map("change_type")
+  changeData Json       @map("change_data") @db.JsonB
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamp()
+  deletedAt  DateTime?  @map("deleted_at") @db.Timestamp()
+  device     Device     @relation(fields: [deviceId, userId], references: [deviceId, userIdentifier])
+  appUser    AppUser    @relation(fields: [onDeviceId], references: [userIdentifier])
+
+  @@map("sync_changes")
 }
 
 model NotificationSettings {
-  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId            String   @unique @map("user_id") @db.Uuid
-  marketingEnabled  Boolean  @default(true) @map("marketing_enabled")
-  emailEnabled      Boolean  @default(true) @map("email_enabled")
-  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamp()
-  updatedAt         DateTime @default(now()) @map("updated_at") @db.Timestamp()
-  user              User     @relation(fields: [userId], references: [id])
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String   @unique @map("user_id") @db.Uuid
+  marketingEnabled Boolean  @default(true) @map("marketing_enabled")
+  emailEnabled     Boolean  @default(true) @map("email_enabled")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt        DateTime @default(now()) @map("updated_at") @db.Timestamp()
+  user             User     @relation(fields: [userId], references: [id])
 
   @@map("notification_settings")
 }
@@ -99,22 +103,22 @@ model EmailVerificationToken {
 }
 
 model User {
-  id                  String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email               String                @unique @db.VarChar(255)
-  passwordHash        String?                @map("password_hash") @db.VarChar(255)
-  firstName           String?                @map("first_name") @db.VarChar(255)
-  lastName            String?                @map("last_name") @db.VarChar(255)
-  avatarUrl           String?                @map("avatar_url") @db.Text
-  isEmailVerified     Boolean                @default(false) @map("is_email_verified")
-  createdAt           DateTime               @default(now()) @map("created_at") @db.Timestamp()
-  updatedAt           DateTime               @default(now()) @map("updated_at") @db.Timestamp()
-  projects            Project[]
-  socialConnections   UserSocialConnection[]
-  refreshTokens       RefreshToken[]
-  projectAuthTokens   ProjectAuthTokens[]
+  id                   String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                String                   @unique @db.VarChar(255)
+  passwordHash         String?                  @map("password_hash") @db.VarChar(255)
+  firstName            String?                  @map("first_name") @db.VarChar(255)
+  lastName             String?                  @map("last_name") @db.VarChar(255)
+  avatarUrl            String?                  @map("avatar_url") @db.Text
+  isEmailVerified      Boolean                  @default(false) @map("is_email_verified")
+  createdAt            DateTime                 @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt            DateTime                 @default(now()) @map("updated_at") @db.Timestamp()
+  projects             Project[]
+  socialConnections    UserSocialConnection[]
+  refreshTokens        RefreshToken[]
+  projectAuthTokens    ProjectAuthTokens[]
   notificationSettings NotificationSettings?
-  passwordResetTokens PasswordResetToken[]
-  emailVerifications  EmailVerificationToken[]
+  passwordResetTokens  PasswordResetToken[]
+  emailVerifications   EmailVerificationToken[]
 
   @@map("users")
 }
