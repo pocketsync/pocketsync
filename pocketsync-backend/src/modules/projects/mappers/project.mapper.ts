@@ -1,4 +1,4 @@
-import { AppUser, Device, DeviceChanges, Project, ProjectAuthTokens } from '@prisma/client';
+import { AppUser, Device, DeviceChange, Project, ProjectAuthTokens } from '@prisma/client';
 import { ProjectResponseDto } from '../dto/responses/project.response.dto';
 import { AuthTokensMapper } from './auth-tokens.mapper';
 import { PaginatedResponse } from 'src/common/dto/paginated-response.dto';
@@ -12,7 +12,7 @@ export class ProjectMapper {
     toResponse(project: Project & { 
         appUsers?: (AppUser & { _count?: { devices: number }, devices?: Device[] })[], 
         _count?: { appUsers: number }, 
-        deviceChanges?: DeviceChanges[] 
+        deviceChanges?: DeviceChange[] 
     }, authTokens: ProjectAuthTokens[]): ProjectResponseDto {
         const deviceCount = project.appUsers?.reduce((sum, user) => sum + (user._count?.devices || 0), 0) || 0;
         const activeUsersTodayCount = project.appUsers?.filter(user => user.devices && user.devices.length > 0).length || 0;
@@ -45,7 +45,7 @@ export class ProjectMapper {
     mapToPaginatedResponse(data: (Project & { 
         _count?: { appUsers: number }, 
         appUsers?: (AppUser & { _count?: { devices: number }, devices?: Device[] })[], 
-        deviceChanges?: DeviceChanges[] 
+        deviceChanges?: DeviceChange[] 
     })[], total: number, page: number, limit: number): PaginatedResponse<ProjectResponseDto> {
         return {
             data: data.map((project) => {

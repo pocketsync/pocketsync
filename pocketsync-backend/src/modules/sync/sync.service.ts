@@ -7,6 +7,7 @@ import { ChangeOptimizerService } from './services/change-optimizer.service';
 import { SyncGateway } from './sync.gateway';
 import { SyncNotificationDto } from './dto/sync-notification.dto';
 import { ChangeResponseDto } from './dto/change-response.dto';
+import { DeviceChange } from '@prisma/client';
 
 @Injectable()
 export class SyncService {
@@ -33,10 +34,11 @@ export class SyncService {
 
         const now = Date.now();
         const createdChanges = await Promise.all(changeBatch.changes.map(async (change) => {
-            return this.prisma.deviceChanges.create({
+            return this.prisma.deviceChange.create({
                 data: {
                     projectId: appUser.projectId,
                     deviceId: device.deviceId,
+                    changeId: change.change_id,
                     userIdentifier: appUser.userIdentifier,
                     changeType: this.mapChangeType(change.operation),
                     tableName: change.table_name,
@@ -83,7 +85,7 @@ export class SyncService {
         }
 
         const sinceDate = new Date(since || 0);
-        const changes = await this.prisma.deviceChanges.findMany({
+        const changes = await this.prisma.deviceChange.findMany({
             where: {
                 projectId: appUser.projectId,
                 deviceId: { not: device.deviceId },
@@ -116,7 +118,7 @@ export class SyncService {
             return;
         }
         const sinceDate = new Date(since || 0);
-        const missedChanges = await this.prisma.deviceChanges.count({
+        const missedChanges = await this.prisma.deviceChange.count({
             where: {
                 projectId: appUser.projectId,
                 userIdentifier: userId,
@@ -186,7 +188,7 @@ export class SyncService {
         }
     }
 
-    private mapToSyncChange(dbChange: any): SyncChange {
+    private mapToSyncChange(dbChange: DeviceChange): SyncChange {
         let operation: ChangeType;
         switch (dbChange.changeType) {
             case 'CREATE':
@@ -203,18 +205,17 @@ export class SyncService {
         }
 
         return {
-            id: dbChange.id,
+            change_id: dbChange.changeId,
             table_name: dbChange.tableName,
             record_id: dbChange.recordId,
             operation: operation,
             data: new Map(
-                Object.entries(dbChange.data).map(([key, value]) => {
+                Object.entries(dbChange.data as any).map(([key, value]) => {
                     return [key as ChangeDataKey, value];
                 })
             ),
             timestamp: dbChange.clientTimestamp.getTime(),
-            version: dbChange.clientVersion,
-            synced: true
+            version: dbChange.clientVersion
         };
     }
 }

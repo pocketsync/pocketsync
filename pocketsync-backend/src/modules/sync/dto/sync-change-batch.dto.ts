@@ -1,6 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { Type } from "class-transformer";
-import { IsArray, IsBoolean, IsNotEmpty, IsNumber, IsString, ValidateNested } from "class-validator";
+import { IsNotEmpty, IsNumber } from "class-validator";
 
 export enum ChangeType {
     INSERT = 'insert',
@@ -12,10 +11,11 @@ export enum ChangeDataKey {
     OLD = 'old',
     NEW = 'new'
 }
+
 export class SyncChange {
     /// The ID of the change
     @ApiProperty()
-    id: number;
+    change_id: string;
 
     /// The table that was changed
     @ApiProperty()
@@ -37,10 +37,11 @@ export class SyncChange {
     /// For updates, this contains both 'old' and 'new' data.
     /// For deletes, this contains only 'old' data.
     @ApiProperty({
-        type: Map,
-        required: true
+        required: true,
+        description: 'Change data containing old/new values',
+        example: { [ChangeDataKey.OLD]: { field: 'oldValue' }, [ChangeDataKey.NEW]: { field: 'newValue' } }
     })
-    data: Map<ChangeDataKey, any>;
+    data: { [key: string]: any };
 
     /// Timestamp when the change occurred (milliseconds since epoch)
     @ApiProperty({
@@ -55,10 +56,6 @@ export class SyncChange {
         required: true
     })
     version: number;
-
-    /// Whether the change has been synced to the server
-    @ApiProperty()
-    synced: boolean;
 }
 
 export class SyncChangeBatchDto {
