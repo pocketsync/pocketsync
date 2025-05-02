@@ -17,7 +17,7 @@ model Project {
   user              User                @relation(fields: [userId], references: [id])
   userId            String              @map("user_id") @db.Uuid
   projectAuthTokens ProjectAuthTokens[]
-  deviceChanges     DeviceChanges[]
+  deviceChanges     DeviceChange[]
 
   @@map("projects")
 }
@@ -28,7 +28,7 @@ model AppUser {
   createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamp()
   deletedAt      DateTime?       @map("deleted_at") @db.Timestamp()
   project        Project         @relation(fields: [projectId], references: [id])
-  deviceChanges  DeviceChanges[]
+  deviceChanges  DeviceChange[]
   devices        Device[]
 
   @@map("app_users")
@@ -42,7 +42,7 @@ model Device {
   createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamp()
   deletedAt      DateTime?       @map("deleted_at") @db.Timestamp()
   appUser        AppUser         @relation(fields: [userIdentifier], references: [userIdentifier])
-  deviceChanges  DeviceChanges[]
+  deviceChanges  DeviceChange[]
 
   @@id([deviceId, userIdentifier])
   @@map("devices")
@@ -54,8 +54,9 @@ enum ChangeType {
   DELETE
 }
 
-model DeviceChanges {
+model DeviceChange {
   id              String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  changeId        String     @map("change_id") @db.VarChar(255)
   projectId       String     @map("project_id") @db.Uuid
   userIdentifier  String     @map("user_identifier") @db.VarChar(255)
   deviceId        String     @map("device_id") @db.VarChar(255)
