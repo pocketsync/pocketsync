@@ -15,37 +15,31 @@
 
 // May contain unused imports in some cases
 // @ts-ignore
-import type { AppUserResponseDto } from './app-user-response-dto';
+import type { SyncChange } from './sync-change';
 
 /**
  * 
  * @export
- * @interface AppUserResponseList
+ * @interface SyncChangeBatchDto
  */
-export interface AppUserResponseList {
+export interface SyncChangeBatchDto {
+    /**
+     * 
+     * @type {Array<SyncChange>}
+     * @memberof SyncChangeBatchDto
+     */
+    'changes': Array<SyncChange>;
     /**
      * 
      * @type {number}
-     * @memberof AppUserResponseList
+     * @memberof SyncChangeBatchDto
      */
-    'total'?: number;
+    'batch_timestamp': number;
     /**
      * 
      * @type {number}
-     * @memberof AppUserResponseList
+     * @memberof SyncChangeBatchDto
      */
-    'currentPage'?: number;
-    /**
-     * 
-     * @type {number}
-     * @memberof AppUserResponseList
-     */
-    'totalPages'?: number;
-    /**
-     * 
-     * @type {Array<AppUserResponseDto>}
-     * @memberof AppUserResponseList
-     */
-    'data'?: Array<AppUserResponseDto>;
+    'change_count': number;
 }
 

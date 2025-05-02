@@ -10,7 +10,7 @@ CLIENT_DIR="$(dirname "$0")/../pocketsync-web/api-client"
 
 # Function to check if backend is running
 check_backend() {
-    curl -s http://localhost:3000/api-json > /dev/null
+    curl -s http://localhost:3000/api-docs-json > /dev/null
     return $?
 }
 
@@ -51,7 +51,7 @@ fi
 
 # Generate Web Console Client
 echo "Generating Web Console API Client..."
-openapi-generator-cli generate -g typescript-axios -c "$CONFIG_FILE" -i "http://localhost:3000/api-json" -o "$CLIENT_DIR"
+openapi-generator-cli generate -g typescript-axios -c "$CONFIG_FILE" -i "http://localhost:3000/api-docs-json" -o "$CLIENT_DIR"
 
 # Shutdown backend if we started it
 if [ "$BACKEND_STARTED" = true ]; then

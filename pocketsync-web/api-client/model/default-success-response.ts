@@ -17,20 +17,20 @@
 /**
  * 
  * @export
- * @interface CreateAppUserDto
+ * @interface DefaultSuccessResponse
  */
-export interface CreateAppUserDto {
+export interface DefaultSuccessResponse {
     /**
-     * The unique identifier for the user
-     * @type {string}
-     * @memberof CreateAppUserDto
+     * 
+     * @type {boolean}
+     * @memberof DefaultSuccessResponse
      */
-    'userIdentifier': string;
+    'success': boolean;
     /**
-     * The UUID of the project
+     * 
      * @type {string}
-     * @memberof CreateAppUserDto
+     * @memberof DefaultSuccessResponse
      */
-    'projectId': string;
+    'message': string;
 }
 
