@@ -1,15 +1,21 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger, Inject, forwardRef } from '@nestjs/common';
 import { SyncChangeBatchDto, SyncChange, ChangeType, ChangeDataKey } from './dto/sync-change-batch.dto';
 import { AppUser } from 'src/common/entities/app-user.entity';
 import { Device } from 'src/common/entities/device.entity';
 import { PrismaService } from '../../modules/prisma/prisma.service';
 import { ChangeOptimizerService } from './services/change-optimizer.service';
+import { SyncGateway } from './sync.gateway';
+import { SyncNotificationDto } from './dto/sync-notification.dto';
 
 @Injectable()
 export class SyncService {
+    private readonly logger = new Logger(SyncService.name);
+
     constructor(
         private prisma: PrismaService,
-        private changeOptimizer: ChangeOptimizerService
+        private changeOptimizer: ChangeOptimizerService,
+        @Inject(forwardRef(() => SyncGateway))
+        private syncGateway: SyncGateway
     ) { }
 
     /**
@@ -52,6 +58,9 @@ export class SyncService {
                 lastChangeAt: new Date(now)
             }
         });
+
+        // Notify other devices about the new changes
+        this.notifyOtherDevices(appUser.userIdentifier, device.deviceId, createdChanges.length);
 
         return {
             success: true,
@@ -109,6 +118,32 @@ export class SyncService {
     /**
      * Map a database device change record to the client-side DTO format
      */
+    /**
+     * Notify other devices about new changes
+     * @param userIdentifier The user identifier
+     * @param sourceDeviceId The device ID that uploaded the changes (to exclude from notifications)
+     * @param changeCount The number of changes uploaded
+     */
+    private notifyOtherDevices(userIdentifier: string, sourceDeviceId: string, changeCount: number): void {
+        try {
+            this.logger.log(`Notifying devices for user ${userIdentifier} about ${changeCount} new changes`);
+
+            // Prepare notification payload
+            const notification = {
+                type: 'new_changes',
+                sourceDeviceId,
+                changeCount,
+                timestamp: Date.now()
+            } as SyncNotificationDto;
+
+            // Send notification to all other devices of this user
+            this.syncGateway.notifyChanges(userIdentifier, notification);
+        } catch (error) {
+            // Log the error but don't fail the request
+            this.logger.error(`Failed to notify devices: ${error.message}`, error.stack);
+        }
+    }
+
     private mapToSyncChange(dbChange: any): SyncChange {
         let operation: ChangeType;
         switch (dbChange.changeType) {
