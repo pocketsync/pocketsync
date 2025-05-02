@@ -34,6 +34,22 @@ export class SyncService {
 
         const now = Date.now();
         const createdChanges = await Promise.all(changeBatch.changes.map(async (change) => {
+            // Validate that data is not empty
+            if (!change.data || (typeof change.data === 'object' && Object.keys(change.data).length === 0)) {
+                this.logger.warn(`Received change with empty data: ${JSON.stringify(change)}`);
+            }
+            
+            // Ensure data is properly formatted
+            let processedData: Record<string, any>;
+            if (change.data instanceof Map) {
+                processedData = Object.fromEntries(change.data);
+            } else if (typeof change.data === 'object') {
+                processedData = change.data;
+            } else {
+                this.logger.warn(`Invalid data format for change: ${JSON.stringify(change)}`);
+                processedData = {};
+            }
+            
             return this.prisma.deviceChange.create({
                 data: {
                     projectId: appUser.projectId,
@@ -43,9 +59,7 @@ export class SyncService {
                     changeType: this.mapChangeType(change.operation),
                     tableName: change.table_name,
                     recordId: change.record_id,
-                    data: change.data instanceof Map
-                        ? Object.fromEntries(change.data)
-                        : change.data,
+                    data: processedData,
                     clientTimestamp: new Date(change.timestamp),
                     clientVersion: change.version,
                     createdAt: new Date(now)
@@ -118,7 +132,7 @@ export class SyncService {
             return;
         }
         const sinceDate = new Date(since || 0);
-        const missedChanges = await this.prisma.deviceChange.count({
+        const missedChanges = await this.prisma.deviceChange.findMany({
             where: {
                 projectId: appUser.projectId,
                 userIdentifier: userId,
@@ -128,15 +142,10 @@ export class SyncService {
             }
         });
 
-        if (missedChanges > 0) {
-            this.logger.log(`Device ${deviceId} has ${missedChanges} missed changes since ${sinceDate.toISOString()}`);
+        if (missedChanges.length > 0) {
+            this.logger.log(`Device ${deviceId} has ${missedChanges.length} missed changes since ${sinceDate.toISOString()}`);
             // Notify the device about missed changes
-            this.syncGateway.notifyChanges(userId, {
-                type: 'missed_changes',
-                sourceDeviceId: 'server',
-                changeCount: missedChanges,
-                timestamp: Date.now()
-            });
+            this.syncGateway.notifyMissedChanges(userId, deviceId, missedChanges);
         } else {
             this.logger.log(`Device ${deviceId} has no missed changes since ${sinceDate.toISOString()}`);
         }
@@ -204,16 +213,18 @@ export class SyncService {
                 operation = ChangeType.UPDATE;
         }
 
+        // Ensure data is properly handled
+        const data = dbChange.data as Record<string, any>;
+        if (!data || typeof data !== 'object') {
+            this.logger.warn(`Invalid data format for change ${dbChange.id}: ${JSON.stringify(data)}`);
+        }
+
         return {
             change_id: dbChange.changeId,
             table_name: dbChange.tableName,
             record_id: dbChange.recordId,
             operation: operation,
-            data: new Map(
-                Object.entries(dbChange.data as any).map(([key, value]) => {
-                    return [key as ChangeDataKey, value];
-                })
-            ),
+            data: data || {}, // Ensure we always have an object, even if empty
             timestamp: dbChange.clientTimestamp.getTime(),
             version: dbChange.clientVersion
         };

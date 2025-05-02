@@ -4,7 +4,7 @@ import { Server, Socket } from 'socket.io';
 import { SyncService } from './sync.service';
 import { SocketAuthGuard } from '../../common/guards/socket-auth.guard';
 import { SyncNotificationDto } from './dto/sync-notification.dto';
-import { PrismaService } from '../../modules/prisma/prisma.service';
+import { DeviceChange } from '@prisma/client';
 
 @WebSocketGateway({
     cors: {
@@ -76,6 +76,7 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.join(`user-${payload.userId}`);
         this.logger.log(`Client ${client.id} subscribed to updates for user ${payload.userId} with device ${payload.deviceId}`);
 
+        // This should be an acknoledgement of the subscription
         this.syncService.verifyMissedChanges(payload.userId, payload.deviceId, payload.since);
 
         return { success: true };
@@ -99,15 +100,16 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
         try {
             // Get all socket IDs in the user's room
             const roomName = `user-${userId}`;
-            const roomSockets = this.server.in(roomName).fetchSockets();
+            const roomSockets = await this.server.in(roomName).fetchSockets();
 
-            if (!roomSockets || (await roomSockets).length === 0) {
+            if (!roomSockets || roomSockets.length === 0) {
                 this.logger.debug(`No connected clients for user ${userId}`);
                 return;
             }
 
             // Send to all clients in the room except the source device
-            for (const socket of await roomSockets) {
+            let notifiedCount = 0;
+            for (const socket of roomSockets) {
                 const clientInfo = this.clientDeviceMap.get(socket.id);
 
                 // Skip if this client is from the source device
@@ -118,10 +120,48 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
                 // Send the notification to this client
                 socket.emit('sync-changes', payload);
-                this.logger.debug(`Sent notification to socket ${socket.id}`);
+                this.logger.debug(`Sent notification to socket ${socket.id} (device: ${clientInfo?.deviceId || 'unknown'})`);
+                notifiedCount++;
+            }
+
+            if (notifiedCount === 0) {
+                this.logger.debug(`No other devices connected for user ${userId}`);
+            } else {
+                this.logger.debug(`Notified ${notifiedCount} sockets for user ${userId}`);
             }
         } catch (error) {
             this.logger.error(`Error notifying devices for user ${userId}: ${error.message}`);
+        }
+    }
+
+    async notifyMissedChanges(userId: string, deviceId: string, changes: DeviceChange[]) {
+        this.logger.debug(`Preparing to notify device ${deviceId} about ${changes.length} missed changes`);
+
+        // 1. We want to send notifications only to the socket with deviceId
+        const roomName = `user-${userId}`;
+        const roomSockets = await this.server.in(roomName).fetchSockets();
+        for (const socket of roomSockets) {
+            const clientInfo = this.clientDeviceMap.get(socket.id);
+            if (clientInfo && clientInfo.deviceId === deviceId) {
+                socket.emit('sync-changes', {
+                    type: 'missed_changes',
+                    sourceDeviceId: deviceId,
+                    changeCount: changes.length,
+                    timestamp: Date.now()
+                } as SyncNotificationDto);
+            }
+        }
+    }
+
+    /**
+     * Map database change type to client-side operation type
+     */
+    private mapChangeTypeToOperation(changeType: string): string {
+        switch (changeType) {
+            case 'CREATE': return 'insert';
+            case 'UPDATE': return 'update';
+            case 'DELETE': return 'delete';
+            default: return 'update';
         }
     }
 }

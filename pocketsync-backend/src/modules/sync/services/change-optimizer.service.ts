@@ -101,18 +101,29 @@ export class ChangeOptimizerService {
       return lastChange;
     }
 
+    // Helper functions to work with data regardless of whether it's a Map or an object
+    const hasData = (change: SyncChange, key: ChangeDataKey): boolean => {
+      if (!change.data) return false;
+      if (change.data instanceof Map) return change.data.has(key);
+      return change.data[key] !== undefined;
+    };
+
+    const getData = (change: SyncChange, key: ChangeDataKey): any => {
+      if (!change.data) return undefined;
+      if (change.data instanceof Map) return change.data.get(key);
+      return change.data[key];
+    };
+
     // For INSERT followed by UPDATEs, we can combine them into a single INSERT
     if (firstOp === ChangeType.INSERT) {
       // Start with a copy of the first change
       const optimizedChange = { ...firstChange };
 
       // Update with the latest data from the last change
-      if (lastChange.data.has(ChangeDataKey.NEW)) {
-        // Create a new Map with only the 'new' data
-        const newData = new Map<ChangeDataKey, any>();
-        newData.set(ChangeDataKey.NEW, lastChange.data.get(ChangeDataKey.NEW));
-
-        optimizedChange.data = newData;
+      if (hasData(lastChange, ChangeDataKey.NEW)) {
+        optimizedChange.data = {
+          [ChangeDataKey.NEW]: getData(lastChange, ChangeDataKey.NEW)
+        };
         optimizedChange.version = lastChange.version;
         optimizedChange.timestamp = lastChange.timestamp;
       }
@@ -125,19 +136,23 @@ export class ChangeOptimizerService {
       // Start with a copy of the first change
       const optimizedChange = { ...firstChange };
 
-      // Create a new Map that combines the 'old' data from the first change
+      // Create a new object that combines the 'old' data from the first change
       // and the 'new' data from the last change
-      const newData = new Map<ChangeDataKey, any>();
+      const newData: { [key: string]: any } = {};
 
-      if (firstChange.data.has(ChangeDataKey.OLD)) {
-        newData.set(ChangeDataKey.OLD, firstChange.data.get(ChangeDataKey.OLD));
+      if (hasData(firstChange, ChangeDataKey.OLD)) {
+        newData[ChangeDataKey.OLD] = getData(firstChange, ChangeDataKey.OLD);
       }
 
-      if (lastChange.data.has(ChangeDataKey.NEW)) {
-        newData.set(ChangeDataKey.NEW, lastChange.data.get(ChangeDataKey.NEW));
+      if (hasData(lastChange, ChangeDataKey.NEW)) {
+        newData[ChangeDataKey.NEW] = getData(lastChange, ChangeDataKey.NEW);
       }
 
-      optimizedChange.data = newData;
+      // Only set data if we have actual data
+      if (Object.keys(newData).length > 0) {
+        optimizedChange.data = newData;
+      }
+      
       optimizedChange.version = lastChange.version;
       optimizedChange.timestamp = lastChange.timestamp;
 
