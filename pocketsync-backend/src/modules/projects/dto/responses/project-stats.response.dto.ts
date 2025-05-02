@@ -30,11 +30,11 @@ export class ProjectStatsResponseDto {
   onlineDevices: number;
 
   @ApiProperty({
-    description: 'Total number of change logs in the project',
+    description: 'Total number of changes in the project',
     example: 10000,
     default: 0
   })
-  totalChangeLogs: number;
+  totalChanges: number;
 
   @ApiProperty({
     description: 'Number of unprocessed changes pending synchronization',

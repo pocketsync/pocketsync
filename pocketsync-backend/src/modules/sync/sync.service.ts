@@ -6,6 +6,7 @@ import { PrismaService } from '../../modules/prisma/prisma.service';
 import { ChangeOptimizerService } from './services/change-optimizer.service';
 import { SyncGateway } from './sync.gateway';
 import { SyncNotificationDto } from './dto/sync-notification.dto';
+import { ChangeResponseDto } from './dto/change-response.dto';
 
 @Injectable()
 export class SyncService {
@@ -34,12 +35,15 @@ export class SyncService {
         const createdChanges = await Promise.all(changeBatch.changes.map(async (change) => {
             return this.prisma.deviceChanges.create({
                 data: {
+                    projectId: appUser.projectId,
                     deviceId: device.deviceId,
                     userIdentifier: appUser.userIdentifier,
                     changeType: this.mapChangeType(change.operation),
-                    tableName: change.tableName,
-                    recordId: change.recordId,
-                    data: Object.fromEntries(change.data),
+                    tableName: change.table_name,
+                    recordId: change.record_id,
+                    data: change.data instanceof Map 
+                      ? Object.fromEntries(change.data)
+                      : change.data,
                     clientTimestamp: new Date(change.timestamp),
                     clientVersion: change.version,
                     createdAt: new Date(now)
@@ -74,13 +78,14 @@ export class SyncService {
      * Applies optimization to reduce the number of changes sent
      */
     async downloadChanges(appUser: AppUser, device: Device, since: number) {
-        if (!since || isNaN(since)) {
+        if (isNaN(since)) {
             throw new BadRequestException('Invalid since parameter');
         }
-        const sinceDate = new Date(since);
+
+        const sinceDate = new Date(since || 0);
         const changes = await this.prisma.deviceChanges.findMany({
             where: {
-                userIdentifier: appUser.userIdentifier,
+                projectId: appUser.projectId,
                 deviceId: { not: device.deviceId },
                 createdAt: { gt: sinceDate },
                 deletedAt: null
@@ -89,6 +94,7 @@ export class SyncService {
                 createdAt: 'asc'
             }
         });
+
         const syncChanges = changes.map(change => this.mapToSyncChange(change));
         const optimizedChanges = this.changeOptimizer.optimizeChanges(syncChanges);
 
@@ -96,7 +102,7 @@ export class SyncService {
             changes: optimizedChanges,
             timestamp: Date.now(),
             count: optimizedChanges.length
-        };
+        } as ChangeResponseDto;
     }
 
     /**
@@ -162,8 +168,8 @@ export class SyncService {
 
         return {
             id: dbChange.id,
-            tableName: dbChange.tableName,
-            recordId: dbChange.recordId,
+            table_name: dbChange.tableName,
+            record_id: dbChange.recordId,
             operation: operation,
             data: new Map(
                 Object.entries(dbChange.data).map(([key, value]) => {

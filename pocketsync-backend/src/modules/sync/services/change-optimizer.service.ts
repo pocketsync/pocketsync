@@ -24,11 +24,11 @@ export class ChangeOptimizerService {
     // Sort changes by recordId, tableName, and timestamp to group related operations
     const sortedChanges = [...changes].sort((a, b) => {
       // First sort by recordId
-      const recordCompare = a.recordId.localeCompare(b.recordId);
+      const recordCompare = a.record_id.localeCompare(b.record_id);
       if (recordCompare !== 0) return recordCompare;
 
       // Then by tableName
-      const tableCompare = a.tableName.localeCompare(b.tableName);
+      const tableCompare = a.table_name.localeCompare(b.table_name);
       if (tableCompare !== 0) return tableCompare;
 
       // Finally by timestamp
@@ -39,7 +39,7 @@ export class ChangeOptimizerService {
     const changesByRecord: Record<string, SyncChange[]> = {};
 
     for (const change of sortedChanges) {
-      const key = `${change.tableName}:${change.recordId}`;
+      const key = `${change.table_name}:${change.record_id}`;
       if (!changesByRecord[key]) {
         changesByRecord[key] = [];
       }

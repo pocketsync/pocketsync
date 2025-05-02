@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsArray, IsNumber, IsString, Min, ValidateNested } from "class-validator";
+import { IsArray, IsBoolean, IsNotEmpty, IsNumber, IsString, ValidateNested } from "class-validator";
 
 export enum ChangeType {
     INSERT = 'insert',
@@ -15,24 +15,20 @@ export enum ChangeDataKey {
 export class SyncChange {
     /// The ID of the change
     @ApiProperty()
-    @IsNumber()
     id: number;
 
     /// The table that was changed
     @ApiProperty()
-    @IsString()
-    tableName: string;
+    table_name: string;
 
     /// The global ID of the record that was changed
     @ApiProperty()
-    @IsString()
-    recordId: string;
+    record_id: string;
 
     /// The type of operation (insert, update, delete)
     @ApiProperty({
         enum: ChangeType
     })
-    @IsString()
     operation: ChangeType;
 
     /// The data associated with the change
@@ -51,7 +47,6 @@ export class SyncChange {
         type: 'number',
         required: true
     })
-    @IsNumber()
     timestamp: number;
 
     /// Version number for the change
@@ -59,7 +54,6 @@ export class SyncChange {
         type: 'number',
         required: true
     })
-    @IsNumber()
     version: number;
 
     /// Whether the change has been synced to the server
@@ -74,9 +68,12 @@ export class SyncChangeBatchDto {
         isArray: true,
         required: true
     })
-    @Type(() => SyncChange)
-    @ValidateNested({ each: true })
-    @IsArray()
+    @ApiProperty({
+        type: () => SyncChange,
+        isArray: true,
+        required: true
+    })
+    @IsNotEmpty()
     changes: SyncChange[];
 
     /// The timestamp of the batch
@@ -87,16 +84,5 @@ export class SyncChangeBatchDto {
     /// The number of changes in the batch
     @ApiProperty()
     @IsNumber()
-    @Min(1)
     change_count: number;
-
-    /// The user ID of the device
-    @ApiProperty()
-    @IsString()
-    userId: string;
-
-    /// The device ID of the device
-    @ApiProperty()
-    @IsString()
-    deviceId: string;
 }
