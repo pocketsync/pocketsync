@@ -45,11 +45,11 @@ export interface ProjectStatsResponseDto {
      */
     'onlineDevices': number;
     /**
-     * Total number of change logs in the project
+     * Total number of changes in the project
      * @type {number}
      * @memberof ProjectStatsResponseDto
      */
-    'totalChangeLogs': number;
+    'totalChanges': number;
     /**
      * Number of unprocessed changes pending synchronization
      * @type {number}
