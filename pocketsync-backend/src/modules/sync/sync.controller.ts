@@ -5,6 +5,8 @@ import { ApiHeader, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { DefaultSuccessResponse } from 'src/common/dto/default-success.response';
 import { SdkAuthGuard } from 'src/common/guards/sdk-auth.guard';
 import { UseGuards } from '@nestjs/common';
+import { IUserDevice, UserDevice } from './decorators/user-device.decorator';
+
 
 @ApiHeader({
   name: 'Authorization',
@@ -28,8 +30,8 @@ export class SyncController {
     description: 'Changes uploaded successfully',
     type: DefaultSuccessResponse
   })
-  uploadChanges(@Body() changes: SyncChangeBatchDto) {
-    return this.syncService.uploadChanges(changes);
+  uploadChanges(@UserDevice() userDevice: IUserDevice, @Body() changes: SyncChangeBatchDto) {
+    return this.syncService.uploadChanges(userDevice.appUser, userDevice.device, changes);
   }
 
   @Get('/download')
@@ -39,7 +41,7 @@ export class SyncController {
     description: 'Changes downloaded successfully',
     type: [SyncChange]
   })
-  downloadChanges(@Query('since') since: number) {
-    return this.syncService.downloadChanges(since);
+  downloadChanges(@UserDevice() userDevice: IUserDevice, @Query('since') since: number) {
+    return this.syncService.downloadChanges(userDevice.appUser, userDevice.device, since);
   }
 }
