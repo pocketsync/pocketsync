@@ -41,9 +41,9 @@ export class SyncService {
                     changeType: this.mapChangeType(change.operation),
                     tableName: change.table_name,
                     recordId: change.record_id,
-                    data: change.data instanceof Map 
-                      ? Object.fromEntries(change.data)
-                      : change.data,
+                    data: change.data instanceof Map
+                        ? Object.fromEntries(change.data)
+                        : change.data,
                     clientTimestamp: new Date(change.timestamp),
                     clientVersion: change.version,
                     createdAt: new Date(now)
@@ -103,6 +103,42 @@ export class SyncService {
             timestamp: Date.now(),
             count: optimizedChanges.length
         } as ChangeResponseDto;
+    }
+
+    async verifyMissedChanges(userId: string, deviceId: string, since: number) {
+        const appUser = await this.prisma.appUser.findUnique({
+            where: {
+                userIdentifier: userId
+            }
+        });
+        if (!appUser) {
+            this.logger.warn(`User ${userId} not found`);
+            return;
+        }
+        const sinceDate = new Date(since || 0);
+        const missedChanges = await this.prisma.deviceChanges.count({
+            where: {
+                projectId: appUser.projectId,
+                userIdentifier: userId,
+                deviceId: { not: deviceId },
+                createdAt: { gt: sinceDate },
+                deletedAt: null
+            }
+        });
+
+        if (missedChanges > 0) {
+            this.logger.log(`Device ${deviceId} has ${missedChanges} missed changes since ${sinceDate.toISOString()}`);
+            // Notify the device about missed changes
+            this.syncGateway.notifyChanges(userId, {
+                type: 'missed_changes',
+                sourceDeviceId: 'server',
+                changeCount: missedChanges,
+                timestamp: Date.now()
+            });
+        } else {
+            this.logger.log(`Device ${deviceId} has no missed changes since ${sinceDate.toISOString()}`);
+        }
+
     }
 
     /**

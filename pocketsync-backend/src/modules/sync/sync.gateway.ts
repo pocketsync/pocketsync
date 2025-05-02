@@ -4,6 +4,7 @@ import { Server, Socket } from 'socket.io';
 import { SyncService } from './sync.service';
 import { SocketAuthGuard } from '../../common/guards/socket-auth.guard';
 import { SyncNotificationDto } from './dto/sync-notification.dto';
+import { PrismaService } from '../../modules/prisma/prisma.service';
 
 @WebSocketGateway({
     cors: {
@@ -23,7 +24,7 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     constructor(
         @Inject(forwardRef(() => SyncService))
-        private readonly syncService: SyncService
+        private readonly syncService: SyncService,
     ) { }
 
     async handleConnection(client: Socket) {
@@ -50,8 +51,6 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
 
         this.logger.log(`Client connected: ${client.id}`);
-
-        // Verify changes are available and send a notification to the client
     }
 
     async handleDisconnect(client: Socket) {
@@ -61,7 +60,7 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     @SubscribeMessage('subscribe')
-    handleSubscribe(client: Socket, payload: { userId: string, deviceId: string }) {
+    handleSubscribe(client: Socket, payload: { userId: string, deviceId: string, since: number }) {
         if (!payload.userId || !payload.deviceId) {
             this.logger.warn(`Client ${client.id} tried to subscribe without userId or deviceId`);
             return { success: false, error: 'userId and deviceId are required' };
@@ -76,6 +75,8 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
         // Join the user's room
         client.join(`user-${payload.userId}`);
         this.logger.log(`Client ${client.id} subscribed to updates for user ${payload.userId} with device ${payload.deviceId}`);
+
+        this.syncService.verifyMissedChanges(payload.userId, payload.deviceId, payload.since);
 
         return { success: true };
     }
