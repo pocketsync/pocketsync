@@ -14,7 +14,7 @@ import { SyncNotificationDto } from './dto/sync-notification.dto';
 @UseGuards(SocketAuthGuard)
 export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly logger = new Logger(SyncGateway.name);
-    
+
     // Map to store client-to-device mapping
     private clientDeviceMap = new Map<string, { userId: string, deviceId: string }>();
 
@@ -27,7 +27,31 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ) { }
 
     async handleConnection(client: Socket) {
+        // Verify connection has required authentication headers
+        const token = client.handshake.headers.authorization;
+        if (!token) {
+            this.logger.warn(`Client ${client.id} attempted connection without authorization header`);
+            client.disconnect();
+            return;
+        }
+
+        const projectId = client.handshake.headers['x-project-id'];
+        if (!projectId) {
+            this.logger.warn(`Client ${client.id} attempted connection without projectId`);
+            client.disconnect();
+            return;
+        }
+
+        // Check if client has device information
+        if (!client.handshake.headers['x-device-id'] || !client.handshake.headers['x-user-id']) {
+            this.logger.warn(`Client ${client.id} attempted connection without deviceId or userId`);
+            client.disconnect();
+            return;
+        }
+
         this.logger.log(`Client connected: ${client.id}`);
+
+        // Verify changes are available and send a notification to the client
     }
 
     async handleDisconnect(client: Socket) {
@@ -42,17 +66,17 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
             this.logger.warn(`Client ${client.id} tried to subscribe without userId or deviceId`);
             return { success: false, error: 'userId and deviceId are required' };
         }
-        
+
         // Store the client-to-device mapping
         this.clientDeviceMap.set(client.id, {
             userId: payload.userId,
             deviceId: payload.deviceId
         });
-        
+
         // Join the user's room
         client.join(`user-${payload.userId}`);
         this.logger.log(`Client ${client.id} subscribed to updates for user ${payload.userId} with device ${payload.deviceId}`);
-        
+
         return { success: true };
     }
 
@@ -61,37 +85,42 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
      * @param userId The user identifier
      * @param payload The notification payload with change information
      */
-    notifyChanges(userId: string, payload: SyncNotificationDto) {
+    async notifyChanges(userId: string, payload: SyncNotificationDto) {
         const sourceDeviceId = payload.sourceDeviceId;
-        
+
         if (!sourceDeviceId) {
             this.logger.warn(`Notification payload missing sourceDeviceId: ${JSON.stringify(payload)}`);
             return;
         }
-        
+
         this.logger.debug(`Preparing to send notification to user ${userId} devices (except ${sourceDeviceId})`);
-        
-        // Get all socket IDs in the user's room
-        const room = this.server.sockets.adapter.rooms.get(`user-${userId}`);
-        
-        if (!room) {
-            this.logger.debug(`No connected clients for user ${userId}`);
-            return;
-        }
-        
-        // Send the notification to each client in the room, except those with the source device ID
-        room.forEach(socketId => {
-            const clientInfo = this.clientDeviceMap.get(socketId);
-            
-            // Skip if this client is from the source device
-            if (clientInfo && clientInfo.deviceId === sourceDeviceId) {
-                this.logger.debug(`Skipping notification to source device ${sourceDeviceId} (socket: ${socketId})`);
+
+        try {
+            // Get all socket IDs in the user's room
+            const roomName = `user-${userId}`;
+            const roomSockets = this.server.in(roomName).fetchSockets();
+
+            if (!roomSockets || (await roomSockets).length === 0) {
+                this.logger.debug(`No connected clients for user ${userId}`);
                 return;
             }
-            
-            // Send the notification to this client
-            this.server.to(socketId).emit('changes', payload);
-            this.logger.debug(`Sent notification to socket ${socketId}`);
-        });
+
+            // Send to all clients in the room except the source device
+            for (const socket of await roomSockets) {
+                const clientInfo = this.clientDeviceMap.get(socket.id);
+
+                // Skip if this client is from the source device
+                if (clientInfo && clientInfo.deviceId === sourceDeviceId) {
+                    this.logger.debug(`Skipping notification to source device ${sourceDeviceId} (socket: ${socket.id})`);
+                    continue;
+                }
+
+                // Send the notification to this client
+                socket.emit('sync-changes', payload);
+                this.logger.debug(`Sent notification to socket ${socket.id}`);
+            }
+        } catch (error) {
+            this.logger.error(`Error notifying devices for user ${userId}: ${error.message}`);
+        }
     }
 }

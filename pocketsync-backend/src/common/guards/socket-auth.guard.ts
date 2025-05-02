@@ -30,7 +30,7 @@ export class SocketAuthGuard implements CanActivate {
         throw new WsException('No token provided');
       }
 
-      const projectId = client.handshake.query.project_id;
+      const projectId = client.handshake.headers['x-project-id'];
       if (!projectId) {
         this.logger.warn('WebSocket connection rejected: No project ID provided');
         throw new WsException('Project ID is required');

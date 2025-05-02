@@ -36,7 +36,7 @@ export class ProjectsService {
         }
       });
 
-      return this.projectMapper.toResponse(project, [defaultToken], 0);
+      return this.projectMapper.toResponse(project, [defaultToken]);
     });
 
     return response
@@ -52,8 +52,13 @@ export class ProjectsService {
           _count: {
             select: {
               appUsers: true,
-              changeLogs: true,
             },
+          },
+          deviceChanges: {
+            take: 100,
+            orderBy: {
+              createdAt: 'desc'
+            }
           },
           appUsers: {
             include: {
@@ -92,8 +97,13 @@ export class ProjectsService {
         _count: {
           select: {
             appUsers: true,
-            changeLogs: true,
           },
+        },
+        deviceChanges: {
+          take: 100,
+          orderBy: {
+            createdAt: 'desc'
+          }
         },
         appUsers: {
           include: {
@@ -110,10 +120,6 @@ export class ProjectsService {
           }
         }
       },
-    });
-
-    const pendingChangeLogs = await this.prisma.changeLog.count({
-      where: { projectId: id, processedAt: null },
     });
 
     if (!project) {
@@ -128,9 +134,7 @@ export class ProjectsService {
       where: { projectId: id },
     });
 
-    const userCount = project._count.appUsers;
-
-    return this.projectMapper.toResponse(project, authTokens, pendingChangeLogs);
+    return this.projectMapper.toResponse(project, authTokens);
   }
 
   async update(userId: string, id: string, updateProjectDto: UpdateProjectDto) {
@@ -143,8 +147,13 @@ export class ProjectsService {
         _count: {
           select: {
             appUsers: true,
-            changeLogs: true,
           },
+        },
+        deviceChanges: {
+          take: 100,
+          orderBy: {
+            createdAt: 'desc'
+          }
         },
         appUsers: {
           include: {
@@ -167,11 +176,7 @@ export class ProjectsService {
       where: { projectId: id },
     });
 
-    const pendingChangeLogs = await this.prisma.changeLog.count({
-      where: { projectId: id, processedAt: null },
-    });
-
-    return this.projectMapper.toResponse(updatedProject, authTokens, pendingChangeLogs);
+    return this.projectMapper.toResponse(updatedProject, authTokens);
   }
 
   async remove(userId: string, id: string) {
@@ -182,7 +187,7 @@ export class ProjectsService {
       data: { deletedAt: new Date() },
     });
 
-    return this.projectMapper.toResponse(updatedProject, [], 0);
+    return this.projectMapper.toResponse(updatedProject, []);
   }
 
   async createAuthToken(userId: string, projectId: string, data: CreateAuthTokenDto) {
