@@ -20,6 +20,7 @@ model Project {
   deviceChanges     DeviceChange[]
   syncLogs          SyncLog[]
   syncMetrics       SyncMetric[]
+  conflicts         Conflict[]
   debugSettings     DebugSettings?
 
   @@map("projects")
@@ -124,6 +125,34 @@ model SyncMetric {
   @@map("sync_metrics")
 }
 
+enum ConflictResolutionStrategy {
+  LAST_WRITE_WINS
+  CLIENT_WINS
+  SERVER_WINS
+  CUSTOM
+}
+
+model Conflict {
+  id                    String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  projectId             String                    @map("project_id") @db.Uuid
+  userIdentifier        String                    @map("user_identifier") @db.VarChar(255)
+  deviceId              String                    @map("device_id") @db.VarChar(255)
+  tableName             String                    @map("table_name") @db.VarChar(255)
+  recordId              String                    @map("record_id") @db.VarChar(255)
+  clientData            Json                      @map("client_data") @db.JsonB
+  serverData            Json                      @map("server_data") @db.JsonB
+  resolutionStrategy    ConflictResolutionStrategy
+  resolvedData          Json                      @map("resolved_data") @db.JsonB
+  detectedAt            DateTime                  @default(now()) @map("detected_at") @db.Timestamp()
+  resolvedAt            DateTime                  @default(now()) @map("resolved_at") @db.Timestamp()
+  syncSessionId         String?                   @map("sync_session_id") @db.Uuid
+  metadata              Json?                     @db.JsonB
+  project               Project                   @relation(fields: [projectId], references: [id])
+  syncSession           SyncSession?              @relation(fields: [syncSessionId], references: [id])
+
+  @@map("conflicts")
+}
+
 model SyncSession {
   id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   deviceId       String         @map("device_id") @db.VarChar(255)
@@ -136,6 +165,7 @@ model SyncSession {
   device         Device         @relation(fields: [deviceId, userIdentifier], references: [deviceId, userIdentifier])
   deviceChanges  DeviceChange[]
   logs           SyncLog[]
+  conflicts      Conflict[]
 
   @@map("sync_sessions")
 }
