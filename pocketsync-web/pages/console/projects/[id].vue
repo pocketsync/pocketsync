@@ -31,7 +31,7 @@
                 <!-- Tab Panels -->
                 <div class="mt-8">
                     <IntegrationTab v-if="currentTab === 'integration'" :project="project" :tokens="authTokens" />
-                    <UsersTab v-if="currentTab === 'users'" :users="users" :is-loading="isLoadingUsers" />
+                    <UsersTab v-if="currentTab === 'users'" :users="[]" :is-loading="false" />
                     <div v-if="currentTab === 'tokens'">
                         <AuthTokensTab :auth-tokens="authTokens" @create-token="showCreateTokenModal = true"
                             @token-revoked="handleTokenRevoked" />
@@ -59,7 +59,6 @@ import CreateTokenModal from '~/components/projects/create-token-modal.vue'
 import StatsGrid from '~/components/projects/stats-grid.vue'
 import TabsNavigation from '~/components/projects/tabs-navigation.vue'
 import ErrorAlert from '~/components/common/error-alert.vue'
-import { useAppUsers } from '~/composables/useAppUsers'
 import { useProjects } from '~/composables/useProjects'
 
 definePageMeta({
@@ -69,12 +68,10 @@ definePageMeta({
 const showCreateTokenModal = ref(false)
 const route = useRoute()
 const { fetchProjectById, currentProject, isLoading, error } = useProjects()
-const { users, isLoading: isLoadingUsers, error: usersError, fetchProjectUsers } = useAppUsers()
 
 onMounted(async () => {
     try {
         await fetchProjectById(route.params.id as string)
-        await fetchProjectUsers(route.params.id as string)
     } catch (err) {
     }
 })
@@ -89,7 +86,7 @@ const stats = computed(() => {
         activeUsersToday: 0,
         totalDevices: 0,
         onlineDevices: 0,
-        totalChangeLogs: 0,
+        totalChanges: 0,
         pendingChanges: 0,
     }
 })
@@ -98,7 +95,7 @@ const stats = computed(() => {
 const currentTab = ref('integration')
 const tabs = computed(() => [
     { name: 'Integration', value: 'integration' },
-    { name: 'Users', value: 'users', count: users.value?.length || 0 },
+    { name: 'Users', value: 'users' },
     { name: 'Auth Tokens', value: 'tokens', count: authTokens.value?.length || 0 },
     { name: 'Settings', value: 'settings' }
 ])
