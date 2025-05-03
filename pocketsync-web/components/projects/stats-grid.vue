@@ -20,7 +20,7 @@
 
         <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
             <dt class="truncate text-sm font-medium text-gray-500">Changes</dt>
-            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">{{ stats.totalChangeLogs || 0 }}</dd>
+            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">{{ stats.totalChanges || 0 }}</dd>
             <dd class="mt-2 flex items-center text-sm text-gray-600">
                 <PhArrowsClockwise class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-400" />
                 <span>{{ stats.pendingChanges || 0 }} pending sync</span>
@@ -38,7 +38,7 @@ const props = defineProps<{
         activeUsersToday: number
         totalDevices: number
         onlineDevices: number
-        totalChangeLogs: number
+        totalChanges: number
         pendingChanges: number,
     }
 }>()
