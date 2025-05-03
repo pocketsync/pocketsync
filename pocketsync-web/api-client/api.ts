@@ -15,7 +15,13 @@
 
 
 export * from './api/authentication-api';
+export * from './api/data-exports-api';
+export * from './api/debug-settings-api';
+export * from './api/devices-api';
 export * from './api/notification-settings-api';
 export * from './api/projects-api';
 export * from './api/sync-api';
+export * from './api/sync-logs-api';
+export * from './api/sync-metrics-api';
+export * from './api/sync-sessions-api';
 
