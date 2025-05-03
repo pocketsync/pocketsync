@@ -5,9 +5,14 @@ import { UserDeviceMiddleware } from './middlewares/user-device.middleware';
 import { PrismaModule } from '../prisma/prisma.module';
 import { ChangeOptimizerService } from './services/change-optimizer.service';
 import { SyncGateway } from './sync.gateway';
+import { SyncSessionsModule } from '../sync-sessions/sync-sessions.module';
+import { SyncLogsModule } from '../sync-logs/sync-logs.module';
+import { SyncMetricsModule } from '../sync-metrics/sync-metrics.module';
+import { DebugSettingsModule } from '../debug-settings/debug-settings.module';
+import { DevicesModule } from '../devices/devices.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, SyncSessionsModule, SyncLogsModule, SyncMetricsModule, DebugSettingsModule, DevicesModule],
   controllers: [SyncController],
   providers: [SyncService, ChangeOptimizerService, SyncGateway],
 })

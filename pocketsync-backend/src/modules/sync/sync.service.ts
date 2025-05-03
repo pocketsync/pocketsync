@@ -7,8 +7,13 @@ import { ChangeOptimizerService } from './services/change-optimizer.service';
 import { SyncGateway } from './sync.gateway';
 import { SyncNotificationDto } from './dto/sync-notification.dto';
 import { ChangeResponseDto } from './dto/change-response.dto';
-import { DeviceChange } from '@prisma/client';
-import { timestamp } from 'rxjs';
+import { DeviceChange, LogLevel, SyncStatus } from '@prisma/client';
+import { SyncSessionsService } from '../sync-sessions/sync-sessions.service';
+import { SyncLogsService } from '../sync-logs/sync-logs.service';
+import { SyncMetricsService } from '../sync-metrics/sync-metrics.service';
+import { DebugSettingsService } from '../debug-settings/debug-settings.service';
+import { DevicesService } from '../devices/devices.service';
+import { TrackedSyncMetric } from './dto/tracked-sync-metric.enum';
 
 @Injectable()
 export class SyncService {
@@ -18,7 +23,12 @@ export class SyncService {
         private prisma: PrismaService,
         private changeOptimizer: ChangeOptimizerService,
         @Inject(forwardRef(() => SyncGateway))
-        private syncGateway: SyncGateway
+        private syncGateway: SyncGateway,
+        private syncSessionsService: SyncSessionsService,
+        private syncLogsService: SyncLogsService,
+        private syncMetricsService: SyncMetricsService,
+        private debugSettingsService: DebugSettingsService,
+        private devicesService: DevicesService
     ) { }
 
     /**
@@ -26,20 +36,48 @@ export class SyncService {
      */
     async uploadChanges(appUser: AppUser, device: Device, changeBatch: SyncChangeBatchDto) {
         if (!changeBatch.changes || changeBatch.changes.length === 0) {
+            this.syncLogsService.createLog(
+                appUser.projectId,
+                'Upload changes failed: No changes provided',
+                LogLevel.ERROR,
+                { deviceId: device.deviceId },
+                appUser.userIdentifier,
+                device.deviceId
+            );
             throw new BadRequestException('No changes provided');
         }
 
         if (changeBatch.change_count !== changeBatch.changes.length) {
+            this.syncLogsService.createLog(
+                appUser.projectId,
+                'Upload changes failed: Change count mismatch',
+                LogLevel.ERROR,
+                { expected: changeBatch.change_count, actual: changeBatch.changes.length },
+                appUser.userIdentifier,
+                device.deviceId
+            );
             throw new BadRequestException('Change count does not match the number of changes');
         }
 
-        const syncSession = await this.prisma.syncSession.create({
-            data: {
-                deviceId: device.deviceId,
-                userIdentifier: appUser.userIdentifier,
-                status: 'IN_PROGRESS'
-            }
-        });
+        // Create a new sync session using the dedicated service
+        const syncSession = await this.syncSessionsService.createSession(
+            device.deviceId,
+            appUser.userIdentifier
+        );
+
+        // Update device last seen timestamp
+        await this.devicesService.updateLastSeen(device.deviceId, appUser.userIdentifier);
+
+        // Log the start of the sync session
+        await this.syncLogsService.createLog(
+            appUser.projectId,
+            'Sync session started',
+            LogLevel.INFO,
+            { changeCount: changeBatch.changes.length },
+            appUser.userIdentifier,
+            device.deviceId,
+            syncSession.id
+        );
 
         try {
             const now = Date.now();
@@ -79,29 +117,103 @@ export class SyncService {
                     });
                 }));
 
-                await tx.device.update({
-                    where: {
-                        deviceId_userIdentifier: {
-                            deviceId: device.deviceId,
-                            userIdentifier: appUser.userIdentifier
-                        }
-                    },
-                    data: {
-                        lastChangeAt: new Date(now)
-                    }
-                });
+                // We'll update the device after the transaction completes
 
-                await tx.syncSession.update({
-                    where: { id: syncSession.id },
-                    data: {
-                        status: 'SUCCESS'
-                    }
-                });
+                // We'll update the session after the transaction completes
 
                 return changes;
             });
 
-            // TODO: Save metrics
+            // Calculate sync duration in milliseconds
+            const syncDuration = Date.now() - now;
+
+            // Complete the sync session with success status
+            await this.syncSessionsService.completeSession(
+                syncSession.id,
+                'SUCCESS' as SyncStatus,
+                createdChanges.length
+            );
+
+            // Update device last change timestamp and sync status
+            await this.devicesService.updateSyncStatus(device.deviceId, appUser.userIdentifier, 'SUCCESS');
+
+            // Update device last change timestamp
+            await this.prisma.device.update({
+                where: {
+                    deviceId_userIdentifier: {
+                        deviceId: device.deviceId,
+                        userIdentifier: appUser.userIdentifier
+                    }
+                },
+                data: {
+                    lastChangeAt: new Date(now)
+                }
+            });
+
+            // Log the successful completion of the sync session
+            await this.syncLogsService.createLog(
+                appUser.projectId,
+                'Sync session completed successfully',
+                LogLevel.INFO,
+                { changeCount: createdChanges.length, duration: syncDuration },
+                appUser.userIdentifier,
+                device.deviceId,
+                syncSession.id
+            );
+
+            // Check if detailed logging is enabled
+            const detailedLoggingEnabled = await this.debugSettingsService.isDetailedLoggingEnabled(appUser.projectId);
+            if (detailedLoggingEnabled) {
+                // Add more detailed logs
+                await this.syncLogsService.createLog(
+                    appUser.projectId,
+                    'Sync session details',
+                    LogLevel.DEBUG,
+                    {
+                        changeCount: createdChanges.length,
+                        duration: syncDuration,
+                        changes: createdChanges.map(c => ({
+                            id: c.id,
+                            tableName: c.tableName,
+                            recordId: c.recordId,
+                            changeType: c.changeType
+                        }))
+                    },
+                    appUser.userIdentifier,
+                    device.deviceId,
+                    syncSession.id
+                );
+            }
+
+
+            // Record metrics
+            await this.syncMetricsService.recordMetric(
+                appUser.projectId,
+                TrackedSyncMetric.SYNC_DURATION,
+                syncDuration,
+                { changeCount: createdChanges.length, sessionId: syncSession.id },
+                appUser.userIdentifier,
+                device.deviceId
+            );
+
+            await this.syncMetricsService.recordMetric(
+                appUser.projectId,
+                TrackedSyncMetric.CHANGES_UPLOADED,
+                createdChanges.length,
+                { sessionId: syncSession.id },
+                appUser.userIdentifier,
+                device.deviceId
+            );
+
+            await this.syncMetricsService.recordMetric(
+                appUser.projectId,
+                TrackedSyncMetric.BATCH_SIZE_IN_BYTES,
+                changeBatch.changes.reduce((acc, change) => acc + JSON.stringify(change).length, 0),
+                { sessionId: syncSession.id },
+                appUser.userIdentifier,
+                device.deviceId
+            )
+
 
             // Notify other devices about the new changes
             this.notifyOtherDevices(appUser.userIdentifier, device.deviceId, createdChanges.length);
@@ -113,12 +225,26 @@ export class SyncService {
             };
 
         } catch (e) {
-            await this.prisma.syncSession.update({
-                where: { id: syncSession.id },
-                data: {
-                    status: 'FAILED'
-                }
-            })
+            // Complete the sync session with failure status
+            await this.syncSessionsService.completeSession(
+                syncSession.id,
+                'FAILED' as SyncStatus,
+                0
+            );
+
+            // Update device sync status to failed
+            await this.devicesService.updateSyncStatus(device.deviceId, appUser.userIdentifier, 'FAILED');
+
+            // Log the failure of the sync session
+            await this.syncLogsService.createLog(
+                appUser.projectId,
+                `Sync session failed: ${e.message}`,
+                LogLevel.ERROR,
+                { error: e.message, stack: e.stack },
+                appUser.userIdentifier,
+                device.deviceId,
+                syncSession.id
+            )
 
             return {
                 success: false,
@@ -133,7 +259,17 @@ export class SyncService {
      * Applies optimization to reduce the number of changes sent
      */
     async downloadChanges(appUser: AppUser, device: Device, since: number) {
+        // Update device last seen timestamp
+        await this.devicesService.updateLastSeen(device.deviceId, appUser.userIdentifier);
         if (isNaN(since)) {
+            await this.syncLogsService.createLog(
+                appUser.projectId,
+                'Download changes failed: Invalid since parameter',
+                LogLevel.ERROR,
+                { since },
+                appUser.userIdentifier,
+                device.deviceId
+            );
             throw new BadRequestException('Invalid since parameter');
         }
 
@@ -153,9 +289,89 @@ export class SyncService {
         const syncChanges = changes.map(change => this.mapToSyncChange(change));
         const optimizedChanges = this.changeOptimizer.optimizeChanges(syncChanges);
 
+        const timestamp = Date.now();
+        const downloadTime = timestamp - since;
+
+        // Log the download changes operation
+        await this.syncLogsService.createLog(
+            appUser.projectId,
+            'Changes downloaded successfully',
+            LogLevel.INFO,
+            {
+                changeCount: optimizedChanges.length,
+                since: new Date(since).toISOString(),
+                originalCount: changes.length,
+                downloadTime
+            },
+            appUser.userIdentifier,
+            device.deviceId
+        );
+
+        // Check if metrics collection is enabled
+        const metricsEnabled = await this.debugSettingsService.isMetricsCollectionEnabled(appUser.projectId);
+        if (metricsEnabled) {
+            // Record metrics
+            await this.syncMetricsService.recordMetric(
+                appUser.projectId,
+                'changes_downloaded',
+                optimizedChanges.length,
+                { originalCount: changes.length, since: new Date(since).toISOString() },
+                appUser.userIdentifier,
+                device.deviceId
+            );
+
+            await this.syncMetricsService.recordMetric(
+                appUser.projectId,
+                'download_time',
+                downloadTime,
+                { changeCount: optimizedChanges.length },
+                appUser.userIdentifier,
+                device.deviceId
+            );
+
+            // Calculate optimization efficiency
+            if (changes.length > 0) {
+                const optimizationEfficiency = (changes.length - optimizedChanges.length) / changes.length * 100;
+                await this.syncMetricsService.recordMetric(
+                    appUser.projectId,
+                    'optimization_efficiency',
+                    optimizationEfficiency,
+                    {
+                        originalCount: changes.length,
+                        optimizedCount: optimizedChanges.length
+                    },
+                    appUser.userIdentifier,
+                    device.deviceId
+                );
+            }
+        }
+
+        // Check if detailed logging is enabled
+        const detailedLoggingEnabled = await this.debugSettingsService.isDetailedLoggingEnabled(appUser.projectId);
+        if (detailedLoggingEnabled && optimizedChanges.length > 0) {
+            // Add more detailed logs
+            await this.syncLogsService.createLog(
+                appUser.projectId,
+                'Download changes details',
+                LogLevel.DEBUG,
+                {
+                    originalCount: changes.length,
+                    optimizedCount: optimizedChanges.length,
+                    changes: optimizedChanges.map(c => ({
+                        change_id: c.change_id,
+                        table_name: c.table_name,
+                        record_id: c.record_id,
+                        operation: c.operation
+                    }))
+                },
+                appUser.userIdentifier,
+                device.deviceId
+            );
+        }
+
         return {
             changes: optimizedChanges,
-            timestamp: Date.now(),
+            timestamp,
             count: optimizedChanges.length
         } as ChangeResponseDto;
     }
@@ -185,6 +401,19 @@ export class SyncService {
             this.logger.log(`Device ${deviceId} has ${missedChanges.length} missed changes since ${sinceDate.toISOString()}`);
             // Notify the device about missed changes
             this.syncGateway.notifyMissedChanges(userId, deviceId, missedChanges);
+
+            // Log the missed changes notification
+            await this.syncLogsService.createLog(
+                appUser.projectId,
+                `Device notified about ${missedChanges.length} missed changes`,
+                LogLevel.INFO,
+                {
+                    missedChangesCount: missedChanges.length,
+                    since: sinceDate.toISOString()
+                },
+                userId,
+                deviceId
+            );
         } else {
             this.logger.log(`Device ${deviceId} has no missed changes since ${sinceDate.toISOString()}`);
         }
@@ -216,9 +445,19 @@ export class SyncService {
      * @param sourceDeviceId The device ID that uploaded the changes (to exclude from notifications)
      * @param changeCount The number of changes uploaded
      */
-    private notifyOtherDevices(userIdentifier: string, sourceDeviceId: string, changeCount: number): void {
+    private async notifyOtherDevices(userIdentifier: string, sourceDeviceId: string, changeCount: number): Promise<void> {
         try {
             this.logger.log(`Notifying devices for user ${userIdentifier} about ${changeCount} new changes`);
+
+            // Get the app user to find the project ID
+            const appUser = await this.prisma.appUser.findUnique({
+                where: { userIdentifier }
+            });
+
+            if (!appUser) {
+                this.logger.warn(`User ${userIdentifier} not found for notification`);
+                return;
+            }
 
             // Prepare notification payload
             const notification = {
@@ -233,6 +472,31 @@ export class SyncService {
         } catch (error) {
             // Log the error but don't fail the request
             this.logger.error(`Failed to notify devices: ${error.message}`, error.stack);
+
+            // Try to log the error to the database
+            try {
+                const appUser = await this.prisma.appUser.findUnique({
+                    where: { userIdentifier }
+                });
+
+                if (appUser) {
+                    await this.syncLogsService.createLog(
+                        appUser.projectId,
+                        `Failed to notify devices: ${error.message}`,
+                        LogLevel.ERROR,
+                        {
+                            error: error.message,
+                            stack: error.stack,
+                            sourceDeviceId,
+                            changeCount
+                        },
+                        userIdentifier
+                    );
+                }
+            } catch (logError) {
+                // Just log to console if we can't log to the database
+                this.logger.error(`Failed to log notification error: ${logError.message}`);
+            }
         }
     }
 

@@ -67,8 +67,6 @@ export class ChangeOptimizerService {
       return changes;
     }
 
-    // Instead of iteratively applying rules, we'll optimize the entire sequence at once
-    // to match the client-side implementation
     const optimizedChange = this.optimizeChangesForRecord(changes);
 
     return optimizedChange ? [optimizedChange] : [];
@@ -76,7 +74,6 @@ export class ChangeOptimizerService {
 
   /**
    * Optimize a sequence of changes for a single record
-   * This implementation matches the client-side logic
    */
   private optimizeChangesForRecord(changes: SyncChange[]): SyncChange | null {
     // If there are no changes, return null
