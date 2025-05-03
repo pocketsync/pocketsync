@@ -9,6 +9,8 @@ import { ProjectsModule } from './modules/projects/projects.module';
 import { EmailModule } from './modules/email/email.module';
 import { SyncModule } from './modules/sync/sync.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
+import { DataExportsModule } from './modules/data-exports/data-exports.module';
+import { ConflictsModule } from './modules/conflicts/conflicts.module';
 
 @Module({
   imports: [
@@ -40,6 +42,8 @@ import { PrismaModule } from './modules/prisma/prisma.module';
     EmailModule,
     PrismaModule,
     SyncModule,
+    DataExportsModule,
+    ConflictsModule,
   ],
   providers: [
     {
