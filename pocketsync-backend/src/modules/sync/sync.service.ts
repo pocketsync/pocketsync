@@ -8,6 +8,7 @@ import { SyncGateway } from './sync.gateway';
 import { SyncNotificationDto } from './dto/sync-notification.dto';
 import { ChangeResponseDto } from './dto/change-response.dto';
 import { DeviceChange } from '@prisma/client';
+import { timestamp } from 'rxjs';
 
 @Injectable()
 export class SyncService {
@@ -32,61 +33,99 @@ export class SyncService {
             throw new BadRequestException('Change count does not match the number of changes');
         }
 
-        const now = Date.now();
-        const createdChanges = await Promise.all(changeBatch.changes.map(async (change) => {
-            // Validate that data is not empty
-            if (!change.data || (typeof change.data === 'object' && Object.keys(change.data).length === 0)) {
-                this.logger.warn(`Received change with empty data: ${JSON.stringify(change)}`);
-            }
-            
-            // Ensure data is properly formatted
-            let processedData: Record<string, any>;
-            if (change.data instanceof Map) {
-                processedData = Object.fromEntries(change.data);
-            } else if (typeof change.data === 'object') {
-                processedData = change.data;
-            } else {
-                this.logger.warn(`Invalid data format for change: ${JSON.stringify(change)}`);
-                processedData = {};
-            }
-            
-            return this.prisma.deviceChange.create({
-                data: {
-                    projectId: appUser.projectId,
-                    deviceId: device.deviceId,
-                    changeId: change.change_id,
-                    userIdentifier: appUser.userIdentifier,
-                    changeType: this.mapChangeType(change.operation),
-                    tableName: change.table_name,
-                    recordId: change.record_id,
-                    data: processedData,
-                    clientTimestamp: new Date(change.timestamp),
-                    clientVersion: change.version,
-                    createdAt: new Date(now)
-                }
-            });
-        }));
-
-        await this.prisma.device.update({
-            where: {
-                deviceId_userIdentifier: {
-                    deviceId: device.deviceId,
-                    userIdentifier: appUser.userIdentifier
-                }
-            },
+        const syncSession = await this.prisma.syncSession.create({
             data: {
-                lastChangeAt: new Date(now)
+                deviceId: device.deviceId,
+                userIdentifier: appUser.userIdentifier,
+                status: 'IN_PROGRESS'
             }
         });
 
-        // Notify other devices about the new changes
-        this.notifyOtherDevices(appUser.userIdentifier, device.deviceId, createdChanges.length);
+        try {
+            const now = Date.now();
+            // Execute all database operations in a transaction
+            const createdChanges = await this.prisma.$transaction(async (tx) => {
+                const changes = await Promise.all(changeBatch.changes.map(async (change) => {
+                    // Validate that data is not empty
+                    if (!change.data || (typeof change.data === 'object' && Object.keys(change.data).length === 0)) {
+                        this.logger.warn(`Received change with empty data: ${JSON.stringify(change)}`);
+                    }
 
-        return {
-            success: true,
-            timestamp: now,
-            processed: createdChanges.length
-        };
+                    // Ensure data is properly formatted
+                    let processedData: Record<string, any>;
+                    if (change.data instanceof Map) {
+                        processedData = Object.fromEntries(change.data);
+                    } else if (typeof change.data === 'object') {
+                        processedData = change.data;
+                    } else {
+                        this.logger.warn(`Invalid data format for change: ${JSON.stringify(change)}`);
+                        processedData = {};
+                    }
+
+                    return tx.deviceChange.create({
+                        data: {
+                            projectId: appUser.projectId,
+                            deviceId: device.deviceId,
+                            changeId: change.change_id,
+                            userIdentifier: appUser.userIdentifier,
+                            changeType: this.mapChangeType(change.operation),
+                            tableName: change.table_name,
+                            recordId: change.record_id,
+                            data: processedData,
+                            clientTimestamp: new Date(change.timestamp),
+                            clientVersion: change.version,
+                            createdAt: new Date(now)
+                        }
+                    });
+                }));
+
+                await tx.device.update({
+                    where: {
+                        deviceId_userIdentifier: {
+                            deviceId: device.deviceId,
+                            userIdentifier: appUser.userIdentifier
+                        }
+                    },
+                    data: {
+                        lastChangeAt: new Date(now)
+                    }
+                });
+
+                await tx.syncSession.update({
+                    where: { id: syncSession.id },
+                    data: {
+                        status: 'SUCCESS'
+                    }
+                });
+
+                return changes;
+            });
+
+            // TODO: Save metrics
+
+            // Notify other devices about the new changes
+            this.notifyOtherDevices(appUser.userIdentifier, device.deviceId, createdChanges.length);
+
+            return {
+                success: true,
+                timestamp: now,
+                processed: createdChanges.length
+            };
+
+        } catch (e) {
+            await this.prisma.syncSession.update({
+                where: { id: syncSession.id },
+                data: {
+                    status: 'FAILED'
+                }
+            })
+
+            return {
+                success: false,
+                timestamp: new Date(),
+                processed: 0
+            }
+        }
     }
 
     /**
