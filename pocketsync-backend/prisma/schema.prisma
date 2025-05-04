@@ -161,7 +161,7 @@ model SyncSession {
   endTime        DateTime?      @map("end_time") @db.Timestamp()
   status         SyncStatus     @default(IN_PROGRESS)
   changesCount   Int            @default(0) @map("changes_count")
-  syncDuration   Int?           @map("sync_duration") // Duration in milliseconds
+  syncDuration   Int?           @map("sync_duration")
   device         Device         @relation(fields: [deviceId, userIdentifier], references: [deviceId, userIdentifier])
   deviceChanges  DeviceChange[]
   logs           SyncLog[]
