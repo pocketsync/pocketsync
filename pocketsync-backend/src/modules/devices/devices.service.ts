@@ -7,7 +7,7 @@ import { SyncStatus } from '@prisma/client';
 export class DevicesService {
   private readonly logger = new Logger(DevicesService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   /**
    * Get a device by ID and user identifier
@@ -72,7 +72,7 @@ export class DevicesService {
   ): Promise<{ devices: DeviceDto[]; total: number }> {
     // First get all app users for this project
     const appUsers = await this.prisma.appUser.findMany({
-      where: { 
+      where: {
         projectId,
         ...!includeDeleted && { deletedAt: null }
       }
@@ -114,16 +114,23 @@ export class DevicesService {
     userIdentifier: string,
     deviceInfo: Record<string, any>
   ): Promise<DeviceDto> {
-    const device = await this.prisma.device.update({
+    const device = await this.prisma.device.upsert({
       where: {
         deviceId_userIdentifier: {
           deviceId,
           userIdentifier
         }
       },
-      data: {
+      update: {
         deviceInfo,
         lastSeenAt: new Date()
+      },
+      create: {
+        deviceId,
+        userIdentifier,
+        deviceInfo,
+        lastSeenAt: new Date(),
+        createdAt: new Date()
       }
     });
 
