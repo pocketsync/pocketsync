@@ -1,71 +1,70 @@
 <template>
-    <div class="py-6">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
-            <AlphaStageWarningCard class="mb-8" />
-            <h1 class="text-xl font-semibold text-gray-900">Getting Started with PocketSync</h1>
-        </div>
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
-            <div class="py-4">
-                <div class="prose max-w-none">
-                    <p class="text-md text-gray-500">
-                        Follow these steps to integrate PocketSync into your mobile application. PocketSync provides a
-                        simple
-                        yet powerful way to sync data between your app and your backend.
-                    </p>
+    <PageBreadcrumb pageTitle="Dashboard" />
 
-                    <!-- Project Setup Section -->
-                    <div class="mt-8">
-                        <h2 class="text-lg font-medium text-gray-900">1. Create a Project</h2>
-                        <div class="mt-4 rounded-lg bg-white shadow">
-                            <div class="p-6">
-                                <p class="text-sm text-gray-500">
-                                    First, create a new project to get your API keys and configure your sync settings.
-                                </p>
-                                <button @click="createProject"
-                                    class="mt-4 inline-flex items-center rounded-md flex flex-inline space-x-3 border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
-                                    <PhPlus :size="20" />
-                                    <span>Create new project</span>
+    <AlphaStageWarningCard class="mb-8" />
+    <h1 class="text-xl font-semibold text-gray-900 dark:text-white">Getting Started with PocketSync</h1>
+
+    <div class="py-4">
+        <div class="prose max-w-none">
+            <p class="text-md text-gray-500 dark:text-gray-400">
+                Follow these steps to integrate PocketSync into your mobile application. PocketSync provides a
+                simple
+                yet powerful way to sync data between your app and your backend.
+            </p>
+
+            <!-- Project Setup Section -->
+            <div class="mt-8">
+                <h2 class="text-lg font-medium text-gray-900 dark:text-white">1. Create a project</h2>
+                <div class="mt-4 rounded-lg bg-white dark:bg-gray-800 shadow">
+                    <div class="p-6">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            First, create a new project to get your API keys and configure your sync settings.
+                        </p>
+                        <button @click="createProject"
+                            class="mt-4 items-center rounded-md flex flex-inline space-x-3 border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                            <PhPlus :size="20" />
+                            <span>Create new project</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SDK Installation Section -->
+            <div class="mt-8">
+                <h2 class="text-lg font-medium text-gray-900 dark:text-white">2. Install the SDK</h2>
+
+                <!-- Flutter Installation -->
+                <div class="rounded-lg bg-white dark:bg-gray-800 shadow">
+                    <div class="p-6">
+                        <h3 class="text-sm font-medium text-gray-900 dark:text-white">Flutter Installation</h3>
+                        <div class="mt-4">
+                            <div class="relative">
+                                <pre class="language-yaml rounded-lg bg-gray-800 dark:bg-gray-700 p-4"><code class="text-sm text-white">dependencies:
+  pocketsync_flutter: ^0.1.0</code></pre>
+                                <button @click="copyCode('flutter')"
+                                    class="absolute right-2 top-2 rounded-md bg-white/10 p-2 text-white hover:bg-white/20">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <!-- SDK Installation Section -->
-                    <div class="mt-8">
-                        <h2 class="text-lg font-medium text-gray-900">2. Install the SDK</h2>
+            <!-- SDK Integration Section -->
+            <div class="mt-8">
+                <h2 class="text-lg font-medium text-gray-900 dark:text-white">3. Initialize the SDK</h2>
 
-                        <!-- Flutter Installation -->
-                        <div class="rounded-lg bg-white shadow">
-                            <div class="p-6">
-                                <h3 class="text-sm font-medium text-gray-900">Flutter Installation</h3>
-                                <div class="mt-4">
-                                    <div class="relative">
-                                        <pre class="language-yaml rounded-lg bg-gray-800 p-4"><code class="text-sm text-white">dependencies:
-  pocketsync_flutter: ^0.1.0</code></pre>
-                                        <button @click="copyCode('flutter')"
-                                            class="absolute right-2 top-2 rounded-md bg-white/10 p-2 text-white hover:bg-white/20">
-                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- SDK Integration Section -->
-                    <div class="mt-8">
-                        <h2 class="text-lg font-medium text-gray-900">3. Initialize the SDK</h2>
-
-                        <!-- Flutter Integration -->
-                        <div class="rounded-lg bg-white shadow">
-                            <div class="p-6">
-                                <h3 class="text-sm font-medium text-gray-900">Flutter Integration</h3>
-                                <div class="mt-4">
-                                    <div class="relative">
-                                        <pre class="language-dart rounded-lg bg-gray-800 p-4"><code class="text-sm text-white">final pocketSync = await PocketSync.initialize(
+                <!-- Flutter Integration -->
+                <div class="rounded-lg bg-white dark:bg-gray-800 shadow">
+                    <div class="p-6">
+                        <h3 class="text-sm font-medium text-gray-900 dark:text-white">Flutter Integration</h3>
+                        <div class="mt-4">
+                            <div class="relative">
+                                <pre class="language-dart rounded-lg bg-gray-800 dark:bg-gray-700 p-4"><code class="text-sm text-white">final pocketSync = await PocketSync.initialize(
   dbPath: path,
   options: PocketSyncOptions(
     projectId: 'your-project-id',
@@ -87,42 +86,39 @@ await PocketSync.instance.setUserId(userId: 'your-user-id');
 // Start syncing
 await PocketSync.instance.start();
 </code></pre>
-                                        <button @click="copyCode('flutter-init')"
-                                            class="absolute right-2 top-2 rounded-md bg-white/10 p-2 text-white hover:bg-white/20">
-                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </div>
+                                <button @click="copyCode('flutter-init')"
+                                    class="absolute right-2 top-2 rounded-md bg-white/10 p-2 text-white hover:bg-white/20">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                </button>
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                        <!-- Next Steps Section -->
-                        <div class="mt-8">
-                            <h2 class="text-lg font-medium text-gray-900">4. Next Steps</h2>
-                            <div class="mt-4 rounded-lg bg-white shadow">
-                                <div class="p-6">
-                                    <div class="space-y-4">
-                                        <p class="text-sm text-gray-500">
-                                            Now that you've set up PocketSync, you can:
-                                        </p>
-                                        <ul class="list-disc pl-5 text-sm text-gray-500">
-                                            <li>Start using SQLite operations in your Flutter app - all changes will be
-                                                automatically tracked</li>
-                                            <li>Test offline data persistence and automatic sync when back online</li>
-                                            <li>Monitor sync status and conflicts in the project dashboard</li>
-                                            <li>Implement custom conflict resolution strategies if needed</li>
-                                        </ul>
-                                        <div class="mt-4">
-                                            <NuxtLink to="https://docs.pocketsync.dev" target="_blank"
-                                                rel="noopener noreferrer"
-                                                class="text-sm font-medium text-primary-600 hover:text-primary-500">
-                                                View Documentation →
-                                            </NuxtLink>
-                                        </div>
-                                    </div>
+                <!-- Next Steps Section -->
+                <div class="mt-8">
+                    <h2 class="text-lg font-medium text-gray-900 dark:text-white">4. Next Steps</h2>
+                    <div class="mt-4 rounded-lg bg-white dark:bg-gray-800 shadow">
+                        <div class="p-6">
+                            <div class="space-y-4">
+                                <p class="text-sm text-gray-500 dark:text-gray-400">
+                                    Now that you've set up PocketSync, you can:
+                                </p>
+                                <ul class="list-disc pl-5 text-sm text-gray-500">
+                                    <li>Start using SQLite operations in your Flutter app - all changes will be
+                                        automatically tracked</li>
+                                    <li>Test offline data persistence and automatic sync when back online</li>
+                                    <li>Monitor sync status and conflicts in the project dashboard</li>
+                                    <li>Implement custom conflict resolution strategies if needed</li>
+                                </ul>
+                                <div class="mt-4">
+                                    <NuxtLink to="https://docs.pocketsync.dev" target="_blank" rel="noopener noreferrer"
+                                        class="text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-500">
+                                        View Documentation →
+                                    </NuxtLink>
                                 </div>
                             </div>
                         </div>
@@ -131,11 +127,13 @@ await PocketSync.instance.start();
             </div>
         </div>
     </div>
+
 </template>
 
 <script setup lang="ts">
 import { PhPlus } from '@phosphor-icons/vue'
 import AlphaStageWarningCard from '~/components/layout/dashboard/alpha-stage-warning-card.vue'
+import PageBreadcrumb from '~/components/common/page-breadcrumb.vue'
 
 definePageMeta({
     layout: 'dashboard'
