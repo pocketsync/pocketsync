@@ -49,7 +49,7 @@ export interface SyncMetricDto {
      * @type {string}
      * @memberof SyncMetricDto
      */
-    'metricType': string;
+    'metricType': SyncMetricDtoMetricTypeEnum;
     /**
      * Value of the metric
      * @type {number}
@@ -69,4 +69,16 @@ export interface SyncMetricDto {
      */
     'metadata'?: object;
 }
+
+export const SyncMetricDtoMetricTypeEnum = {
+    SyncDuration: 'sync_duration',
+    ChangesUploaded: 'changes_uploaded',
+    BatchSizeInBytes: 'batch_size_in_bytes',
+    OptimizationEfficiency: 'optimization_efficiency',
+    DownloadTime: 'download_time',
+    ChangesDownloaded: 'changes_downloaded'
+} as const;
+
+export type SyncMetricDtoMetricTypeEnum = typeof SyncMetricDtoMetricTypeEnum[keyof typeof SyncMetricDtoMetricTypeEnum];
+
 

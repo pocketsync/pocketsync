@@ -1,6 +1,8 @@
 export * from './auth-token-response-dto';
 export * from './authenticated-response-dto';
 export * from './change-password-dto';
+export * from './conflict-dto';
+export * from './conflict-response-dto';
 export * from './create-auth-token-dto';
 export * from './create-data-export-job-dto';
 export * from './create-project-dto';
@@ -19,6 +21,7 @@ export * from './project-stats-response-dto';
 export * from './refresh-token-dto';
 export * from './refresh-token-response-dto';
 export * from './register-dto';
+export * from './report-conflict-dto';
 export * from './request-password-reset-dto';
 export * from './reset-password-dto';
 export * from './sync-change';

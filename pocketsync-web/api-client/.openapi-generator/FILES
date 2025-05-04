@@ -3,6 +3,7 @@
 .openapi-generator-ignore
 api.ts
 api/authentication-api.ts
+api/conflicts-api.ts
 api/data-exports-api.ts
 api/debug-settings-api.ts
 api/devices-api.ts
@@ -19,6 +20,9 @@ docs/AuthTokenResponseDto.md
 docs/AuthenticatedResponseDto.md
 docs/AuthenticationApi.md
 docs/ChangePasswordDto.md
+docs/ConflictDto.md
+docs/ConflictResponseDto.md
+docs/ConflictsApi.md
 docs/CreateAuthTokenDto.md
 docs/CreateDataExportJobDto.md
 docs/CreateProjectDto.md
@@ -42,6 +46,7 @@ docs/ProjectsApi.md
 docs/RefreshTokenDto.md
 docs/RefreshTokenResponseDto.md
 docs/RegisterDto.md
+docs/ReportConflictDto.md
 docs/RequestPasswordResetDto.md
 docs/ResetPasswordDto.md
 docs/SyncApi.md
@@ -67,6 +72,8 @@ index.ts
 model/auth-token-response-dto.ts
 model/authenticated-response-dto.ts
 model/change-password-dto.ts
+model/conflict-dto.ts
+model/conflict-response-dto.ts
 model/create-auth-token-dto.ts
 model/create-data-export-job-dto.ts
 model/create-project-dto.ts
@@ -86,6 +93,7 @@ model/project-stats-response-dto.ts
 model/refresh-token-dto.ts
 model/refresh-token-response-dto.ts
 model/register-dto.ts
+model/report-conflict-dto.ts
 model/request-password-reset-dto.ts
 model/reset-password-dto.ts
 model/sync-change-batch-dto.ts
