@@ -1,12 +1,12 @@
 <template>
     <div v-if="show" class="fixed inset-0 z-50 overflow-y-auto">
-        <div class="fixed inset-0 bg-gray-500/60 transition-opacity"></div>
+        <div class="fixed inset-0 bg-gray-500/60 dark:bg-gray-900/60 transition-opacity"></div>
         <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
             <div
-                class="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+                class="relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
                 <div class="absolute right-0 top-0 pr-4 pt-4">
                     <button @click="close" type="button"
-                        class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 cursor-pointer">
+                        class="rounded-md bg-white dark:bg-gray-700 text-gray-400 dark:text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 cursor-pointer">
                         <span class="sr-only">Close</span>
                         <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -16,17 +16,17 @@
 
                 <div class="sm:flex sm:items-start">
                     <div class="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                        <h3 class="text-lg font-semibold leading-6 text-gray-900">User Devices</h3>
-                        <div class="mt-4 border-t border-gray-200 pt-4">
+                        <h3 class="text-lg font-semibold leading-6 text-gray-900 dark:text-gray-100">User Devices</h3>
+                        <div class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
                             <div v-if="user" class="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
                                 <div v-for="device in user.devices" :key="device.id"
-                                    class="flex items-start justify-between space-x-4 p-4 border border-gray-200 rounded-lg">
+                                    class="flex items-start justify-between space-x-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
                                     <div class="flex-1 min-w-0">
-                                        <p class="text-sm font-medium text-gray-900">{{ device.name || 'Unnamed Device'
+                                        <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ device.name || 'Unnamed Device'
                                             }}</p>
-                                        <p class="mt-1 text-sm text-gray-500">Last seen: {{
+                                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Last seen: {{
         formatDate(device.lastSeenAt) }}</p>
-                                        <p class="mt-1 text-sm text-gray-500">Device ID: {{ device.deviceId }}</p>
+                                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Device ID: {{ device.deviceId }}</p>
                                     </div>
                                     <div class="flex-shrink-0">
                                         <span

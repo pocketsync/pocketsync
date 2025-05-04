@@ -8,7 +8,7 @@
             <div v-if="isLoading" class="animate-pulse">
                 <div class="md:flex md:items-center md:justify-between">
                     <div class="min-w-0 flex-1">
-                        <div class="h-8 w-1/3 bg-gray-200 rounded"></div>
+                        <div class="h-8 w-1/3 bg-gray-200 dark:bg-gray-700 rounded"></div>
                     </div>
                 </div>
                 <StatsGrid :stats="stats" />
@@ -19,7 +19,7 @@
                 <div class="md:flex md:items-center md:justify-between">
                     <div class="min-w-0 flex-1">
                         <h2
-                            class="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
+                            class="text-2xl font-bold leading-7 text-gray-900 dark:text-gray-100 sm:truncate sm:text-3xl sm:tracking-tight">
                             {{ project.name }}</h2>
                     </div>
                 </div>

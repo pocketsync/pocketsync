@@ -32,10 +32,10 @@ const handleSettingsUpdate = async (field: string, value: boolean) => {
 </script>
 
 <template>
-  <div class="bg-white shadow-sm rounded-lg border border-gray-200">
+  <div class="bg-white dark:bg-gray-700 shadow-sm rounded-lg border border-gray-200 dark:border-gray-600">
     <div class="px-4 py-5 sm:p-6">
       <div class="flex items-center justify-between">
-        <h2 class="text-lg font-medium text-gray-900">Notification Settings</h2>
+        <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">Notification Settings</h2>
       </div>
 
       <ErrorAlert v-if="error" :error="error" title="Error loading notification settings" />
@@ -55,11 +55,11 @@ const handleSettingsUpdate = async (field: string, value: boolean) => {
           <!-- Marketing notifications -->
           <div class="flex items-center justify-between">
             <div>
-              <h3 class="text-sm font-medium text-gray-900">Marketing notifications</h3>
-              <p class="text-sm text-gray-500">Receive emails about new features, updates, and company news.</p>
+              <h3 class="text-sm font-medium text-gray-900 dark:text-gray-100">Marketing notifications</h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400">Receive emails about new features, updates, and company news.</p>
             </div>
             <button type="button"
-              :class="[settings.marketingEnabled ? 'bg-indigo-600' : 'bg-gray-200', 'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2']"
+              :class="[settings.marketingEnabled ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600', 'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2']"
               role="switch" :aria-checked="settings.marketingEnabled"
               @click="handleSettingsUpdate('marketingEnabled', !settings.marketingEnabled)">
               <span
@@ -87,11 +87,11 @@ const handleSettingsUpdate = async (field: string, value: boolean) => {
           <!-- Email notifications -->
           <div class="flex items-center justify-between">
             <div>
-              <h3 class="text-sm font-medium text-gray-900">Email notifications</h3>
-              <p class="text-sm text-gray-500">Receive email notifications about your account activity.</p>
+              <h3 class="text-sm font-medium text-gray-900 dark:text-gray-100">Email notifications</h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400">Receive email notifications about your account activity.</p>
             </div>
             <button type="button"
-              :class="[settings.emailEnabled ? 'bg-indigo-600' : 'bg-gray-200', 'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2']"
+              :class="[settings.emailEnabled ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-600', 'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2']"
               role="switch" :aria-checked="settings.emailEnabled"
               @click="handleSettingsUpdate('emailEnabled', !settings.emailEnabled)">
               <span
@@ -99,7 +99,7 @@ const handleSettingsUpdate = async (field: string, value: boolean) => {
                 <span
                   :class="[settings.emailEnabled ? 'opacity-0 duration-100 ease-out' : 'opacity-100 duration-200 ease-in', 'absolute inset-0 flex h-full w-full items-center justify-center transition-opacity']"
                   aria-hidden="true">
-                  <svg class="h-3 w-3 text-gray-400" fill="none" viewBox="0 0 12 12">
+                  <svg class="h-3 w-3 text-gray-400 dark:text-gray-600" fill="none" viewBox="0 0 12 12">
                     <path d="M4 8l2-2m0 0l2-2M6 6L4 4m2 2l2 2" stroke="currentColor" stroke-width="2"
                       stroke-linecap="round" stroke-linejoin="round" />
                   </svg>
@@ -107,7 +107,7 @@ const handleSettingsUpdate = async (field: string, value: boolean) => {
                 <span
                   :class="[settings.emailEnabled ? 'opacity-100 duration-200 ease-in' : 'opacity-0 duration-100 ease-out', 'absolute inset-0 flex h-full w-full items-center justify-center transition-opacity']"
                   aria-hidden="true">
-                  <svg class="h-3 w-3 text-indigo-600" fill="currentColor" viewBox="0 0 12 12">
+                  <svg class="h-3 w-3 text-indigo-600 dark:text-indigo-400" fill="currentColor" viewBox="0 0 12 12">
                     <path
                       d="M3.707 5.293a1 1 0 00-1.414 1.414l1.414-1.414zM5 8l-.707.707a1 1 0 001.414 0L5 8zm4.707-3.293a1 1 0 00-1.414-1.414l1.414 1.414zm-7.414 2l2 2 1.414-1.414-2-2-1.414 1.414zm3.414 2l4-4-1.414-1.414-4 4 1.414 1.414z" />
                   </svg>
