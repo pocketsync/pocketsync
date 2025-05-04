@@ -11,16 +11,16 @@ import * as os from 'os';
 // npm install json2csv exceljs jszip
 // For now, we'll use any type to avoid TypeScript errors
 const json2csv: any = { parse: (data: any) => JSON.stringify(data) };
-const ExcelJS: any = { 
-  Workbook: class { 
-    addWorksheet() { 
-      return { 
-        addRow() {} 
-      }; 
+const ExcelJS: any = {
+  Workbook: class {
+    addWorksheet() {
+      return {
+        addRow() { }
+      };
     }
     xlsx = {
-      writeFile() { 
-        return Promise.resolve(); 
+      writeFile() {
+        return Promise.resolve();
       }
     };
   }
@@ -53,7 +53,7 @@ export class DataExportsService {
     createDto: CreateDataExportJobDto
   ): Promise<DataExportJobDto> {
     this.logger.log(`Creating new data export job for project ${projectId}`);
-    
+
     const job = await this.prisma.dataExportJob.create({
       data: {
         projectId,
@@ -62,23 +62,8 @@ export class DataExportsService {
         filters: createDto.filters,
         formatType: createDto.formatType || DataExportFormat.JSON
       }
-    });
+    }); 
 
-    // Log the job creation
-    await this.syncLogsService.createLog(
-      projectId,
-      `Data export job created with ID ${job.id}`,
-      LogLevel.INFO,
-      {
-        jobId: job.id,
-        filters: createDto.filters,
-        formatType: job.formatType
-      },
-      undefined,
-      undefined
-    );
-
-    // Process the job asynchronously
     this.processExportJob(job.id).catch(error => {
       this.logger.error(`Error processing export job ${job.id}: ${error.message}`, error.stack);
     });
@@ -289,29 +274,29 @@ export class DataExportsService {
    */
   private async getDeviceChanges(projectId: string, filters: Record<string, any>): Promise<any[]> {
     const { userIdentifier, deviceId, startDate, endDate } = filters;
-    
+
     const where: any = { projectId };
-    
+
     if (userIdentifier) {
       where.userIdentifier = userIdentifier;
     }
-    
+
     if (deviceId) {
       where.deviceId = deviceId;
     }
-    
+
     if (startDate || endDate) {
       where.createdAt = {};
-      
+
       if (startDate) {
         where.createdAt.gte = new Date(startDate);
       }
-      
+
       if (endDate) {
         where.createdAt.lte = new Date(endDate);
       }
     }
-    
+
     return this.prisma.deviceChange.findMany({
       where,
       orderBy: {
@@ -325,33 +310,33 @@ export class DataExportsService {
    */
   private async getSyncLogs(projectId: string, filters: Record<string, any>): Promise<any[]> {
     const { userIdentifier, deviceId, startDate, endDate, level } = filters;
-    
+
     const where: any = { projectId };
-    
+
     if (userIdentifier) {
       where.userIdentifier = userIdentifier;
     }
-    
+
     if (deviceId) {
       where.deviceId = deviceId;
     }
-    
+
     if (level) {
       where.level = level;
     }
-    
+
     if (startDate || endDate) {
       where.timestamp = {};
-      
+
       if (startDate) {
         where.timestamp.gte = new Date(startDate);
       }
-      
+
       if (endDate) {
         where.timestamp.lte = new Date(endDate);
       }
     }
-    
+
     return this.prisma.syncLog.findMany({
       where,
       orderBy: {
@@ -365,33 +350,33 @@ export class DataExportsService {
    */
   private async getSyncMetrics(projectId: string, filters: Record<string, any>): Promise<any[]> {
     const { userIdentifier, deviceId, startDate, endDate, metricType } = filters;
-    
+
     const where: any = { projectId };
-    
+
     if (userIdentifier) {
       where.userIdentifier = userIdentifier;
     }
-    
+
     if (deviceId) {
       where.deviceId = deviceId;
     }
-    
+
     if (metricType) {
       where.metricType = metricType;
     }
-    
+
     if (startDate || endDate) {
       where.timestamp = {};
-      
+
       if (startDate) {
         where.timestamp.gte = new Date(startDate);
       }
-      
+
       if (endDate) {
         where.timestamp.lte = new Date(endDate);
       }
     }
-    
+
     return this.prisma.syncMetric.findMany({
       where,
       orderBy: {
@@ -405,10 +390,10 @@ export class DataExportsService {
    */
   private async getSyncSessions(projectId: string, filters: Record<string, any>): Promise<any[]> {
     const { userIdentifier, deviceId, startDate, endDate, status } = filters;
-    
+
     // First get all app users for this project if userIdentifier is not specified
     let userIdentifiers: string[] = [];
-    
+
     if (userIdentifier) {
       userIdentifiers = [userIdentifier];
     } else {
@@ -416,36 +401,36 @@ export class DataExportsService {
         where: { projectId },
         select: { userIdentifier: true }
       });
-      
+
       userIdentifiers = appUsers.map(user => user.userIdentifier);
     }
-    
+
     const where: any = {
       userIdentifier: {
         in: userIdentifiers
       }
     };
-    
+
     if (deviceId) {
       where.deviceId = deviceId;
     }
-    
+
     if (status) {
       where.status = status;
     }
-    
+
     if (startDate || endDate) {
       where.startTime = {};
-      
+
       if (startDate) {
         where.startTime.gte = new Date(startDate);
       }
-      
+
       if (endDate) {
         where.startTime.lte = new Date(endDate);
       }
     }
-    
+
     return this.prisma.syncSession.findMany({
       where,
       orderBy: {
@@ -459,41 +444,41 @@ export class DataExportsService {
    */
   private async getConflicts(projectId: string, filters: Record<string, any>): Promise<any[]> {
     const { userIdentifier, deviceId, startDate, endDate, tableName, recordId, resolutionStrategy } = filters;
-    
+
     const where: any = { projectId };
-    
+
     if (userIdentifier) {
       where.userIdentifier = userIdentifier;
     }
-    
+
     if (deviceId) {
       where.deviceId = deviceId;
     }
-    
+
     if (tableName) {
       where.tableName = tableName;
     }
-    
+
     if (recordId) {
       where.recordId = recordId;
     }
-    
+
     if (resolutionStrategy) {
       where.resolutionStrategy = resolutionStrategy;
     }
-    
+
     if (startDate || endDate) {
       where.detectedAt = {};
-      
+
       if (startDate) {
         where.detectedAt.gte = new Date(startDate);
       }
-      
+
       if (endDate) {
         where.detectedAt.lte = new Date(endDate);
       }
     }
-    
+
     return this.prisma.conflict.findMany({
       where,
       orderBy: {
@@ -513,17 +498,17 @@ export class DataExportsService {
     const filename = `export_${jobId}_${Date.now()}`;
     let filePath: string;
     let downloadUrl: string;
-    
+
     switch (formatType) {
       case DataExportFormat.JSON:
         filePath = path.join(this.exportsDir, `${filename}.json`);
         fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
         downloadUrl = `/api/data-exports/download/${jobId}`;
         break;
-        
+
       case DataExportFormat.CSV:
         filePath = path.join(this.exportsDir, `${filename}.csv`);
-        
+
         // If data is an array, convert directly to CSV
         if (Array.isArray(data)) {
           const csv = json2csv.parse(data);
@@ -534,38 +519,38 @@ export class DataExportsService {
           // This would require installing the jszip package
           // For now, we'll create a simple object to avoid TypeScript errors
           const zip = {
-            file: (name: string, content: string) => {},
+            file: (name: string, content: string) => { },
             generateAsync: () => Promise.resolve(Buffer.from(''))
           };
-          
+
           for (const [tableName, tableData] of Object.entries(data)) {
             if (Array.isArray(tableData) && tableData.length > 0) {
               const csv = json2csv.parse(tableData);
               zip.file(`${tableName}.csv`, csv);
             }
           }
-          
+
           const zipContent = await zip.generateAsync();
           fs.writeFileSync(zipFilePath, zipContent);
           filePath = zipFilePath;
         }
-        
+
         downloadUrl = `/api/data-exports/download/${jobId}`;
         break;
-        
+
       case DataExportFormat.EXCEL:
         filePath = path.join(this.exportsDir, `${filename}.xlsx`);
         const workbook = new ExcelJS.Workbook();
-        
+
         // If data is an array, add to a single worksheet
         if (Array.isArray(data)) {
           const worksheet = workbook.addWorksheet('Data');
-          
+
           // Add headers
           if (data.length > 0) {
             const headers = Object.keys(data[0]);
             worksheet.addRow(headers);
-            
+
             // Add data rows
             data.forEach(item => {
               worksheet.addRow(Object.values(item));
@@ -576,11 +561,11 @@ export class DataExportsService {
           for (const [tableName, tableData] of Object.entries(data)) {
             if (Array.isArray(tableData) && tableData.length > 0) {
               const worksheet = workbook.addWorksheet(tableName);
-              
+
               // Add headers
               const headers = Object.keys(tableData[0]);
               worksheet.addRow(headers);
-              
+
               // Add data rows
               tableData.forEach(item => {
                 worksheet.addRow(Object.values(item));
@@ -588,15 +573,15 @@ export class DataExportsService {
             }
           }
         }
-        
+
         await workbook.xlsx.writeFile(filePath);
         downloadUrl = `/api/data-exports/download/${jobId}`;
         break;
-        
+
       default:
         throw new Error(`Unsupported format type: ${formatType}`);
     }
-    
+
     return { filePath, downloadUrl };
   }
 

@@ -1,18 +1,19 @@
 import { Controller, Get, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
-import { ApiHeader, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { DevicesService } from './devices.service';
 import { DeviceDto } from './dto/device.dto';
 import { DeviceResponseDto } from './dto/responses/device-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SyncStatus } from '@prisma/client';
+import { SdkAuthGuard } from 'src/common/guards/sdk-auth.guard';
 
 @ApiTags('Devices')
 @Controller('devices')
-@UseGuards(JwtAuthGuard)
 export class DevicesController {
   constructor(private readonly devicesService: DevicesService) {}
 
   @Get('user/:userIdentifier')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get devices for a specific user' })
   @ApiParam({ name: 'userIdentifier', description: 'User identifier' })
   @ApiQuery({ name: 'includeDeleted', description: 'Include deleted devices', required: false, type: Boolean })
@@ -45,6 +46,7 @@ export class DevicesController {
   }
 
   @Get('project/:projectId')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get devices for a specific project' })
   @ApiParam({ name: 'projectId', description: 'Project ID' })
   @ApiQuery({ name: 'includeDeleted', description: 'Include deleted devices', required: false, type: Boolean })
@@ -77,6 +79,7 @@ export class DevicesController {
   }
 
   @Get(':deviceId/user/:userIdentifier')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get a device by ID and user identifier' })
   @ApiParam({ name: 'deviceId', description: 'Device ID' })
   @ApiParam({ name: 'userIdentifier', description: 'User identifier' })
@@ -103,6 +106,7 @@ export class DevicesController {
     type: DeviceDto
   })
   @ApiResponse({ status: 404, description: 'Device not found' })
+  @UseGuards(SdkAuthGuard)
   async updateDeviceInfo(
     @Param('deviceId') deviceId: string,
     @Param('userIdentifier') userIdentifier: string,
@@ -112,6 +116,7 @@ export class DevicesController {
   }
 
   @Put(':deviceId/user/:userIdentifier/status')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Update device sync status' })
   @ApiParam({ name: 'deviceId', description: 'Device ID' })
   @ApiParam({ name: 'userIdentifier', description: 'User identifier' })
@@ -130,6 +135,7 @@ export class DevicesController {
   }
 
   @Delete(':deviceId/user/:userIdentifier')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Delete a device (soft delete)' })
   @ApiParam({ name: 'deviceId', description: 'Device ID' })
   @ApiParam({ name: 'userIdentifier', description: 'User identifier' })
