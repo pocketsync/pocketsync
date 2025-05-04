@@ -4,4 +4,5 @@ export class ChangeResponseDto {
     changes: SyncChange[];
     timestamp: number;
     count: number;
+    sync_session_id: string;
 }
