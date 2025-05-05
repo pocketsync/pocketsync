@@ -51,10 +51,22 @@ export interface ProjectStatsResponseDto {
      */
     'totalChanges': number;
     /**
-     * Number of unprocessed changes pending synchronization
+     * Sync success rate
      * @type {number}
      * @memberof ProjectStatsResponseDto
      */
-    'pendingChanges': number;
+    'syncSuccessRate': number;
+    /**
+     * Sync failure rate
+     * @type {number}
+     * @memberof ProjectStatsResponseDto
+     */
+    'syncFailureRate': number;
+    /**
+     * Last sync time
+     * @type {string}
+     * @memberof ProjectStatsResponseDto
+     */
+    'lastSync': string | null;
 }
 

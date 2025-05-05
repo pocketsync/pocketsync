@@ -36,10 +36,27 @@ export class ProjectStatsResponseDto {
   })
   totalChanges: number;
 
+
   @ApiProperty({
-    description: 'Number of unprocessed changes pending synchronization',
-    example: 25,
+    description: 'Sync success rate',
+    example: 95,
     default: 0
   })
-  pendingChanges: number;
+  syncSuccessRate: number;
+
+  @ApiProperty({
+    description: 'Sync failure rate',
+    example: 5,
+    default: 0
+  })
+  syncFailureRate: number;
+
+  @ApiProperty({
+    description: 'Last sync time',
+    example: '2023-01-01T00:00:00.000Z',
+    default: null,
+    nullable: true,
+    type: Date,
+  })
+  lastSync: Date | null;
 }
