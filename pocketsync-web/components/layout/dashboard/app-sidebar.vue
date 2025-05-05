@@ -24,9 +24,13 @@
             </NuxtLink>
         </div>
         <div class="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
-            <NuxtLink to="/console" class="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200" :class="[!isExpanded && !isHovered ? 'lg:justify-center' : 'lg:justify-start']">
+            <NuxtLink to="/console"
+                class="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+                :class="[!isExpanded && !isHovered ? 'lg:justify-center' : 'lg:justify-start']">
                 <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+                    <path fill-rule="evenodd"
+                        d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z"
+                        clip-rule="evenodd" />
                 </svg>
                 <span v-if="isExpanded || isHovered || isMobileOpen" class="text-sm font-medium">Back to console</span>
             </NuxtLink>
@@ -126,13 +130,11 @@
 </template>
 
 <script setup lang="ts">
-import { BarChartIcon, ChevronDownIcon, DocsIcon, FolderIcon, HomeIcon, PieChartIcon, PlugInIcon, SupportIcon, TableIcon, HorizontalDots } from '~/components/icons';
+import { BarChartIcon, ChevronDownIcon, DocsIcon, HomeIcon, PieChartIcon, PlugInIcon, SupportIcon, TableIcon, HorizontalDots } from '~/components/icons';
 
 
 const route = useRoute()
-const { user, signOut } = useAuth()
 const { isExpanded, isMobileOpen, isHovered, openSubmenu } = useSidebar();
-const projectsStore = useProjectsStore();
 
 defineProps({
     isExpanded: {
@@ -150,10 +152,17 @@ defineProps({
 })
 
 function isActive(href: string): boolean {
+    // Special case for dashboard
     if (href === '/console') {
-        return route.path === href
+        return route.path === href || route.path.endsWith('/console/projects/')
     }
-    return route.path.startsWith(href)
+
+    // Handle external URLs
+    if (href.startsWith('http://') || href.startsWith('https://')) {
+        return false
+    }
+
+    return route.path.endsWith(href)
 }
 
 const toggleSubmenu = (groupIndex: number, itemIndex: number) => {
@@ -178,14 +187,14 @@ const isSubmenuOpen = (groupIndex: number, itemIndex: number) => {
     return (
         openSubmenu.value === key ||
         (isAnySubmenuRouteActive.value &&
-            menuGroups[groupIndex].items[itemIndex].subItems?.some((subItem) =>
+            menuGroups.value[groupIndex].items[itemIndex].subItems?.some((subItem) =>
                 isActive(subItem.path)
             ))
     );
 };
 
 const isAnySubmenuRouteActive = computed(() => {
-    return menuGroups.some((group) =>
+    return menuGroups.value.some((group) =>
         group.items.some(
             (item) =>
                 item.subItems && item.subItems.some((subItem) => isActive(subItem.path))
@@ -193,18 +202,18 @@ const isAnySubmenuRouteActive = computed(() => {
     );
 });
 
-const currentProject = computed(() => {
-    return projectsStore.currentProject;
+const projectId = computed(() => {
+    return (route.params.id as string) || 'default';
 });
 
-const menuGroups = [
+const menuGroups = computed(() => [
     {
         title: 'Core',
         items: [
             {
                 name: 'Dashboard',
                 icon: HomeIcon,
-                path: `/console/projects/${currentProject.value?.id}`,
+                path: `/console/projects/${projectId.value}`,
             },
         ],
     },
@@ -214,21 +223,21 @@ const menuGroups = [
             {
                 name: 'Sync Sessions',
                 icon: TableIcon,
-                path: `/console/projects/${currentProject.value?.id}/monitoring/sessions`,
+                path: `/console/projects/${projectId.value}/monitoring/sessions`,
             },
             {
                 name: 'System Logs',
                 icon: DocsIcon,
-                path: `/console/projects/${currentProject.value?.id}/logs`,
+                path: `/console/projects/${projectId.value}/logs`,
             },
             {
                 name: 'Analytics',
                 icon: BarChartIcon,
                 subItems: [
-                    { name: 'Performance', path: `/console/projects/${currentProject.value?.id}/analytics/performance` },
-                    { name: 'Usage Statistics', path: `/console/projects/${currentProject.value?.id}/analytics/usage` },
-                    { name: 'Trends', path: `/console/projects/${currentProject.value?.id}/analytics/trends` },
-                    { name: 'Metrics', path: `/console/projects/${currentProject.value?.id}/analytics/metrics` },
+                    { name: 'Performance', path: `/console/projects/${projectId.value}/analytics/performance` },
+                    { name: 'Usage Statistics', path: `/console/projects/${projectId.value}/analytics/usage` },
+                    { name: 'Trends', path: `/console/projects/${projectId.value}/analytics/trends` },
+                    { name: 'Metrics', path: `/console/projects/${projectId.value}/analytics/metrics` },
                 ],
             },
         ],
@@ -240,16 +249,16 @@ const menuGroups = [
                 name: 'Data Export',
                 icon: PlugInIcon,
                 subItems: [
-                    { name: 'Create New', path: `/console/projects/${currentProject.value?.id}/export/create` },
-                    { name: 'Export History', path: `/console/projects/${currentProject.value?.id}/export/history` },
+                    { name: 'Create New', path: `/console/projects/${projectId.value}/export/create` },
+                    { name: 'Export History', path: `/console/projects/${projectId.value}/export/history` },
                 ],
             },
             {
                 name: 'Reports',
                 icon: PieChartIcon,
                 subItems: [
-                    { name: 'Summary', path: `/console/projects/${currentProject.value?.id}/reports/summary` },
-                    { name: 'Custom', path: `/console/projects/${currentProject.value?.id}/reports/custom` },
+                    { name: 'Summary', path: `/console/projects/${projectId.value}/reports/summary` },
+                    { name: 'Custom', path: `/console/projects/${projectId.value}/reports/custom` },
                 ],
             },
         ],
@@ -264,5 +273,5 @@ const menuGroups = [
             }
         ],
     },
-]
+]);
 </script>
