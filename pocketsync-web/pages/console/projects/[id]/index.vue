@@ -52,11 +52,11 @@
 
             <!-- Sync Stats -->
             <div class="border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] rounded-lg shadow">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Sync Performance</h2>
+                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Sync performance</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <div class="flex justify-between mb-2">
-                            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Success Rate</h3>
+                            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Success rate</h3>
                             <span class="text-sm font-medium text-green-600 dark:text-green-400">{{
                                 currentProject.stats.syncSuccessRate || 0 }}%</span>
                         </div>
@@ -67,7 +67,7 @@
                     </div>
                     <div>
                         <div class="flex justify-between mb-2">
-                            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Failure Rate</h3>
+                            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Failure rate</h3>
                             <span class="text-sm font-medium text-red-600 dark:text-red-400">{{
                                 currentProject.stats.syncFailureRate || 0 }}%</span>
                         </div>
