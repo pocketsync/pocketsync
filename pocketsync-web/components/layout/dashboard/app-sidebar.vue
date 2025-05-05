@@ -221,14 +221,19 @@ const menuGroups = computed(() => [
         title: 'Monitoring',
         items: [
             {
-                name: 'Sync Sessions',
+                name: 'Sync sessions',
                 icon: TableIcon,
                 path: `/console/projects/${projectId.value}/monitoring/sessions`,
             },
             {
-                name: 'System Logs',
+                name: 'System logs',
                 icon: DocsIcon,
                 path: `/console/projects/${projectId.value}/logs`,
+            },
+            {
+                name: 'Sync conflicts',
+                icon: DocsIcon,
+                path: `/console/projects/${projectId.value}/conflicts`,
             },
             {
                 name: 'Analytics',
@@ -246,11 +251,11 @@ const menuGroups = computed(() => [
         title: 'Tools',
         items: [
             {
-                name: 'Data Export',
+                name: 'Data export',
                 icon: PlugInIcon,
                 subItems: [
-                    { name: 'Create New', path: `/console/projects/${projectId.value}/export/create` },
-                    { name: 'Export History', path: `/console/projects/${projectId.value}/export/history` },
+                    { name: 'Create new', path: `/console/projects/${projectId.value}/export/create` },
+                    { name: 'Export history', path: `/console/projects/${projectId.value}/export/history` },
                 ],
             },
             {
