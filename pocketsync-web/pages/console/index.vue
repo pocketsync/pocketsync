@@ -81,8 +81,6 @@ import ErrorAlert from '~/components/common/error-alert.vue'
 const projectsStore = useProjectsStore()
 const { projects, isLoading, error, paginationState } = storeToRefs(projectsStore)
 const { fetchProjects, loadMoreProjects } = projectsStore
-
-// Local state for tracking loading more state
 const loadingMore = ref(false)
 
 definePageMeta({

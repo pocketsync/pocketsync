@@ -210,6 +210,16 @@ export const useProjects = () => {
         }
     }
 
+    const getSyncActivity = async (projectId: string) => {
+        try {
+            const response = await projectsApi.getSyncActivity(projectId)
+            return response.data
+        } catch (error: any) {
+            errorToast(error.response?.data?.message || 'Failed to get sync activity')
+            return null
+        }
+    }
+
     return {
         projects,
         currentProject,
@@ -223,6 +233,7 @@ export const useProjects = () => {
         deleteProject,
         loadMoreProjects,
         generateAuthToken,
-        revokeToken
+        revokeToken,
+        getSyncActivity
     }
 }

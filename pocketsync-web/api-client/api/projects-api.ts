@@ -32,6 +32,8 @@ import type { ProjectResponseDto } from '../model';
 // @ts-ignore
 import type { ProjectResponseList } from '../model';
 // @ts-ignore
+import type { SyncActivityDto } from '../model';
+// @ts-ignore
 import type { UpdateProjectDto } from '../model';
 /**
  * ProjectsApi - axios parameter creator
@@ -225,6 +227,40 @@ export const ProjectsApiAxiosParamCreator = function (configuration?: Configurat
         },
         /**
          * 
+         * @summary Get sync activity for a project
+         * @param {string} projectId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getSyncActivity: async (projectId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'projectId' is not null or undefined
+            assertParamExists('getSyncActivity', 'projectId', projectId)
+            const localVarPath = `/projects/{projectId}/sync/activity`
+                .replace(`{${"projectId"}}`, encodeURIComponent(String(projectId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
          * @summary Revoke a project auth token
          * @param {string} tokenId 
          * @param {*} [options] Override http request option.
@@ -376,6 +412,19 @@ export const ProjectsApiFp = function(configuration?: Configuration) {
         },
         /**
          * 
+         * @summary Get sync activity for a project
+         * @param {string} projectId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getSyncActivity(projectId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<SyncActivityDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getSyncActivity(projectId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ProjectsApi.getSyncActivity']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
          * @summary Revoke a project auth token
          * @param {string} tokenId 
          * @param {*} [options] Override http request option.
@@ -462,6 +511,16 @@ export const ProjectsApiFactory = function (configuration?: Configuration, baseP
          */
         getProjectById(id: string, options?: RawAxiosRequestConfig): AxiosPromise<ProjectResponseDto> {
             return localVarFp.getProjectById(id, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary Get sync activity for a project
+         * @param {string} projectId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getSyncActivity(projectId: string, options?: RawAxiosRequestConfig): AxiosPromise<SyncActivityDto> {
+            return localVarFp.getSyncActivity(projectId, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -554,6 +613,18 @@ export class ProjectsApi extends BaseAPI {
      */
     public getProjectById(id: string, options?: RawAxiosRequestConfig) {
         return ProjectsApiFp(this.configuration).getProjectById(id, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary Get sync activity for a project
+     * @param {string} projectId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ProjectsApi
+     */
+    public getSyncActivity(projectId: string, options?: RawAxiosRequestConfig) {
+        return ProjectsApiFp(this.configuration).getSyncActivity(projectId, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

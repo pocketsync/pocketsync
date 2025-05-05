@@ -20,6 +20,7 @@ import { ProjectResponseDto } from './dto/responses/project.response.dto';
 import { OpenApiPaginationResponse, PaginatedResponse } from 'src/common/dto/paginated-response.dto';
 import { CreateAuthTokenDto } from './dto/create-auth-token.dto';
 import { AuthTokenResponseDto } from './dto/responses/auth-token.response.dto';
+import { SyncActivityDto } from './dto/responses/sync-activity.dto';
 
 @ApiTags('Projects')
 @ApiBearerAuth()
@@ -85,5 +86,13 @@ export class ProjectsController {
   @ApiResponse({ status: 404, description: 'Auth token not found' })
   async revokeAuthToken(@Request() req, @Param('tokenId') tokenId: string) {
     return this.projectsService.revokeAuthToken(req.user.id, tokenId);
+  }
+
+  @Get(':projectId/sync/activity')
+  @ApiOperation({ summary: 'Get sync activity for a project', operationId: 'getSyncActivity' })
+  @ApiResponse({ status: 200, description: 'Sync activity found', type: SyncActivityDto })
+  @ApiResponse({ status: 404, description: 'Project not found' })
+  async getSyncActivity(@Request() req, @Param('projectId') projectId: string) {
+    return this.projectsService.getSyncActivity(req.user.id, projectId);
   }
 }

@@ -4,7 +4,8 @@ import type {
     ProjectResponseDto,
     CreateProjectDto,
     UpdateProjectDto,
-    CreateAuthTokenDto
+    CreateAuthTokenDto,
+    SyncActivityDto
 } from '~/api-client/model'
 import { useProjects } from '~/composables/useProjects'
 
@@ -32,7 +33,8 @@ export const useProjectsStore = defineStore('projects', {
             limit: 10,
             total: 0,
             hasMore: false
-        } as PaginationState
+        } as PaginationState,
+        syncActivity: null as SyncActivityDto | null,
     }),
     actions: {
         async fetchProjects(page = 1, limit = 10) {
@@ -165,6 +167,11 @@ export const useProjectsStore = defineStore('projects', {
             } finally {
                 this.isLoading = false
             }
+        },
+
+        async getSyncActivity(projectId: string) {
+            const projectsComposable = useProjects()
+            this.syncActivity = await projectsComposable.getSyncActivity(projectId)
         },
 
         async generateAuthToken(projectId: string, body: CreateAuthTokenDto) {

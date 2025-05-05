@@ -49,6 +49,9 @@ docs/RegisterDto.md
 docs/ReportConflictDto.md
 docs/RequestPasswordResetDto.md
 docs/ResetPasswordDto.md
+docs/SyncActivityDataPoint.md
+docs/SyncActivityDto.md
+docs/SyncActivityPeriod.md
 docs/SyncApi.md
 docs/SyncChange.md
 docs/SyncChangeBatchDto.md
@@ -96,6 +99,9 @@ model/register-dto.ts
 model/report-conflict-dto.ts
 model/request-password-reset-dto.ts
 model/reset-password-dto.ts
+model/sync-activity-data-point.ts
+model/sync-activity-dto.ts
+model/sync-activity-period.ts
 model/sync-change-batch-dto.ts
 model/sync-change.ts
 model/sync-log-dto.ts
