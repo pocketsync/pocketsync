@@ -100,7 +100,7 @@ export class ProjectsService {
   async findOne(userId: string, id: string) {
     const project = await this.prisma.project.findFirst({
       where: {
-        id,
+        id: id,
         deletedAt: null
       },
       include: {

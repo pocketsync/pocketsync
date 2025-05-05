@@ -29,7 +29,10 @@
             </svg>
           </router-link>
         </li>
-        <li class="text-sm text-gray-800 dark:text-white/90">
+        <li v-if="items" class="text-sm text-gray-800 dark:text-white/90">
+          {{ pageTitle }}
+        </li>
+        <li v-else class="text-sm text-gray-800 dark:text-white/90">
           {{ pageTitle }}
         </li>
       </ol>
@@ -41,7 +44,8 @@
 import { defineProps } from 'vue'
 
 interface BreadcrumbProps {
-  pageTitle: string
+  pageTitle: string,
+  items?: Array<{ label: string, path: string }>
 }
 
 defineProps<BreadcrumbProps>()

@@ -1,8 +1,8 @@
 <template>
     <div class="container mx-auto px-4 py-6">
-        <PageBreadcrumb :pageTitle="currentProject?.name || 'Project Details'" :items="[
-            { name: 'Projects', href: '/console' },
-            { name: 'Project Details', href: '#' }
+        <PageBreadcrumb :pageTitle="currentProject?.name || 'Project details'" :items="[
+            { label: 'Projects', path: '/console' },
+            { label: 'Project details', path: '#' }
         ]" />
 
         <div v-if="isLoading" class="animate-pulse space-y-6 mt-6">
