@@ -124,6 +124,17 @@ export class SyncService {
                 return changes;
             });
 
+            // Add log
+            await this.syncLogsService.createLog(
+                appUser.projectId,
+                `${createdChanges.length} changes processed`,
+                LogLevel.INFO,
+                { tables: createdChanges.map(c => c.tableName).join(', ') },
+                appUser.userIdentifier,
+                device.deviceId,
+                syncSession.id
+            );
+
             // Calculate sync duration in milliseconds
             const syncDuration = Date.now() - now;
 
