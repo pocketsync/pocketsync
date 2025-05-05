@@ -5,6 +5,7 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   devtools: { enabled: true },
   ssr: true,
+  modules: ['@pinia/nuxt'],
   vite: {
     build: {
       rollupOptions: {

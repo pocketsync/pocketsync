@@ -199,14 +199,6 @@ const menuGroups = [
                 path: '/console',
             },
             {
-                name: 'Projects',
-                icon: FolderIcon,
-                subItems: [
-                    { name: 'Create new project', path: '/console/projects?action=create' },
-                    { name: 'All projects', path: '/console/projects' },
-                ],
-            },
-            {
                 name: 'Monitoring',
                 icon: TableIcon,
                 subItems: [
