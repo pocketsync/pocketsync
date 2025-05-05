@@ -215,6 +215,7 @@ export const useProjects = () => {
         currentProject,
         isLoading,
         error,
+        paginationState,
         fetchProjects,
         fetchProjectById,
         createProject,

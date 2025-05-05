@@ -1,142 +1,92 @@
 <template>
-    <PageBreadcrumb pageTitle="Dashboard" />
+    <!-- Header with Create Project Button -->
+    <div class="mb-6 flex items-center justify-end">
 
-    <AlphaStageWarningCard class="mb-8" />
-    <h1 class="text-xl font-semibold text-gray-900 dark:text-white">Getting Started with PocketSync</h1>
+        <button @click="createProject"
+            class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-3 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-colors duration-200">
+            <PlusIcon size="16" class="mr-1" /> Create Project
+        </button>
+    </div>
 
-    <div class="py-4">
-        <div class="prose max-w-none">
-            <p class="text-md text-gray-500 dark:text-gray-400">
-                Follow these steps to integrate PocketSync into your mobile application. PocketSync provides a
-                simple
-                yet powerful way to sync data between your app and your backend.
-            </p>
 
-            <!-- Project Setup Section -->
-            <div class="mt-8">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-white">1. Create a project</h2>
-                <div class="mt-4 rounded-lg bg-white dark:bg-gray-800 shadow">
-                    <div class="p-6">
-                        <p class="text-sm text-gray-500 dark:text-gray-400">
-                            First, create a new project to get your API keys and configure your sync settings.
-                        </p>
-                        <button @click="createProject"
-                            class="mt-4 items-center rounded-md flex flex-inline space-x-3 border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
-                            <PhPlus :size="20" />
-                            <span>Create new project</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
+    <div>
+        <!-- Error Alert -->
+        <ErrorAlert v-if="error" :error="error" title="Error loading projects" />
 
-            <!-- SDK Installation Section -->
-            <div class="mt-8">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-white">2. Install the SDK</h2>
-
-                <!-- Flutter Installation -->
-                <div class="rounded-lg bg-white dark:bg-gray-800 shadow">
-                    <div class="p-6">
-                        <h3 class="text-sm font-medium text-gray-900 dark:text-white">Flutter Installation</h3>
-                        <div class="mt-4">
-                            <div class="relative">
-                                <pre class="language-yaml rounded-lg bg-gray-800 dark:bg-gray-700 p-4"><code class="text-sm text-white">dependencies:
-  pocketsync_flutter: ^0.1.0</code></pre>
-                                <button @click="copyCode('flutter')"
-                                    class="absolute right-2 top-2 rounded-md bg-white/10 p-2 text-white hover:bg-white/20">
-                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SDK Integration Section -->
-            <div class="mt-8">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-white">3. Initialize the SDK</h2>
-
-                <!-- Flutter Integration -->
-                <div class="rounded-lg bg-white dark:bg-gray-800 shadow">
-                    <div class="p-6">
-                        <h3 class="text-sm font-medium text-gray-900 dark:text-white">Flutter Integration</h3>
-                        <div class="mt-4">
-                            <div class="relative">
-                                <pre class="language-dart rounded-lg bg-gray-800 dark:bg-gray-700 p-4"><code class="text-sm text-white">final pocketSync = await PocketSync.initialize(
-  dbPath: path,
-  options: PocketSyncOptions(
-    projectId: 'your-project-id',
-    authToken: 'your-auth-token',
-    serverUrl: 'https://api.pocketsync.dev',
-  ),
-  databaseOptions: DatabaseOptions(
-    onCreate: (db, version) async {
-      await db.execute(
-        'CREATE TABLE todos(id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, isCompleted INTEGER)',
-      );
-    },
-  ),
-);
-
-// Set user ID - In a real app, this would come from your auth system
-await PocketSync.instance.setUserId(userId: 'your-user-id');
-
-// Start syncing
-await PocketSync.instance.start();
-</code></pre>
-                                <button @click="copyCode('flutter-init')"
-                                    class="absolute right-2 top-2 rounded-md bg-white/10 p-2 text-white hover:bg-white/20">
-                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Next Steps Section -->
-                <div class="mt-8">
-                    <h2 class="text-lg font-medium text-gray-900 dark:text-white">4. Next Steps</h2>
-                    <div class="mt-4 rounded-lg bg-white dark:bg-gray-800 shadow">
-                        <div class="p-6">
-                            <div class="space-y-4">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">
-                                    Now that you've set up PocketSync, you can:
-                                </p>
-                                <ul class="list-disc pl-5 text-sm text-gray-500">
-                                    <li>Start using SQLite operations in your Flutter app - all changes will be
-                                        automatically tracked</li>
-                                    <li>Test offline data persistence and automatic sync when back online</li>
-                                    <li>Monitor sync status and conflicts in the project dashboard</li>
-                                    <li>Implement custom conflict resolution strategies if needed</li>
-                                </ul>
-                                <div class="mt-4">
-                                    <NuxtLink to="https://docs.pocketsync.dev" target="_blank" rel="noopener noreferrer"
-                                        class="text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-500">
-                                        View Documentation →
-                                    </NuxtLink>
-                                </div>
-                            </div>
-                        </div>
+        <!-- Loading State -->
+        <div v-if="isLoading && !projects.length" class="mt-8">
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <div v-for="i in 2" :key="i"
+                    class="animate-pulse rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+                    <div class="h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-700"></div>
+                    <div class="mt-4 space-y-3">
+                        <div class="h-3 w-1/2 rounded bg-gray-200 dark:bg-gray-700"></div>
+                        <div class="h-3 w-1/3 rounded bg-gray-200 dark:bg-gray-700"></div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
+        <!-- Projects Grid -->
+        <div v-else>
+            <div class="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <ProjectCard v-for="project in projects" :key="project.id" :project="project" />
+
+                <!-- Empty state -->
+                <div v-if="!isLoading && projects.length === 0"
+                    class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-12 text-center hover:border-gray-400 transition-colors duration-200 dark:border-gray-700 dark:hover:border-gray-600 dark:bg-gray-800">
+                    <component :is="FolderIcon" class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600" />
+                    <h3 class="mt-4 text-base font-semibold text-gray-900 dark:text-white">No projects yet</h3>
+                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Create your first project to get started.
+                    </p>
+                    <button @click="createProject"
+                        class="mt-6 inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-colors duration-200">
+                        <PlusIcon size="18" /> <span>Create project</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div v-if="projects.length > 0 && paginationState.hasMore" class="mt-8 flex justify-center">
+                <button @click="loadMore"
+                    class="inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-colors duration-200 dark:text-gray-300 dark:hover:text-white"
+                    :disabled="loadingMore">
+                    <span v-if="loadingMore" class="inline-flex items-center">
+                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-brand-500" xmlns="http://www.w3.org/2000/svg"
+                            fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
+                        Loading...
+                    </span>
+                    <span v-else>
+                        <ChevronDownIcon size="18" class="mr-1" /> Load more projects
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
 </template>
 
 <script setup lang="ts">
-import { PhPlus } from '@phosphor-icons/vue'
-import AlphaStageWarningCard from '~/components/layout/dashboard/alpha-stage-warning-card.vue'
-import PageBreadcrumb from '~/components/common/page-breadcrumb.vue'
+import { storeToRefs } from 'pinia'
+import { ref } from 'vue'
+import { FolderIcon, PlusIcon, ChevronDownIcon } from '~/components/icons'
+import ProjectCard from '~/components/projects/project-card.vue'
+import ErrorAlert from '~/components/common/error-alert.vue'
+
+const projectsStore = useProjectsStore()
+const { projects, isLoading, error, paginationState } = storeToRefs(projectsStore)
+const { fetchProjects, loadMoreProjects } = projectsStore
+
+// Local state for tracking loading more state
+const loadingMore = ref(false)
 
 definePageMeta({
-    layout: 'dashboard'
+    layout: 'dashboard-index'
 })
 
 useHead({
@@ -144,16 +94,23 @@ useHead({
 })
 
 const createProject = () => {
-    const router = useRouter()
-    router.push('/console/projects?action=create')
+    console.log('create project')
 }
 
-const copyCode = (section: any) => {
-    const codeElements = {
-        'flutter': 'dependencies:\n  pocketsync_flutter: ^1.0.0',
-        'flutter-init': 'final pocketSync = await PocketSync.instance.initialize(\n  options: PocketSyncOptions(\n    serverUrl: \'https://api.pocketsync.dev\',\n    projectId: \'your-project-id\',\n    authToken: \'your-auth-token\',\n  ),\n);\n\n// Regular SQLite operations are automatically tracked\nawait database.insert(\'users\', {\n  \'name\': \'John Doe\',\n  \'email\': \'john@example.com\'\n});\n\n// Changes are automatically synchronized when online\n// No additional code needed for sync'
+const loadMore = async () => {
+    if (loadingMore.value || !paginationState.value.hasMore) return
+
+    loadingMore.value = true
+    try {
+        await loadMoreProjects()
+    } catch (err) {
+        console.error('Error loading more projects:', err)
+    } finally {
+        loadingMore.value = false
     }
-
-    navigator.clipboard.writeText(codeElements[section])
 }
+
+onMounted(async () => {
+    await fetchProjects()
+})
 </script>
