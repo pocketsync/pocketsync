@@ -3,10 +3,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, provide, onMounted, watch, computed } from 'vue'
+import { ref, provide, onMounted, watch, computed, onBeforeMount } from 'vue'
 
 type Theme = 'light' | 'dark'
 
+// Use a ref to track the theme state
 const theme = ref<Theme>('light')
 const isInitialized = ref(false)
 
@@ -16,22 +17,48 @@ const toggleTheme = () => {
   theme.value = theme.value === 'light' ? 'dark' : 'light'
 }
 
-onMounted(() => {
-  const savedTheme = localStorage.getItem('theme') as Theme | null
-  const initialTheme = savedTheme || 'light' // Default to light theme
-
-  theme.value = initialTheme
-  isInitialized.value = true
+// Apply theme as early as possible in the component lifecycle
+onBeforeMount(() => {
+  if (process.client) {
+    const savedTheme = localStorage.getItem('theme') as Theme | null
+    const initialTheme = savedTheme || 'light' // Default to light theme
+    
+    theme.value = initialTheme
+    isInitialized.value = true
+    
+    // Apply the theme immediately
+    applyTheme(initialTheme)
+  }
 })
 
-watch([theme, isInitialized], ([newTheme, newIsInitialized]) => {
-  if (newIsInitialized) {
+// Also handle onMounted for safety
+onMounted(() => {
+  if (!isInitialized.value && process.client) {
+    const savedTheme = localStorage.getItem('theme') as Theme | null
+    const initialTheme = savedTheme || 'light' // Default to light theme
+    
+    theme.value = initialTheme
+    isInitialized.value = true
+    
+    // Apply the theme immediately
+    applyTheme(initialTheme)
+  }
+})
+
+// Function to apply theme to document
+function applyTheme(newTheme: Theme) {
+  if (newTheme === 'dark') {
+    document.documentElement.classList.add('dark')
+  } else {
+    document.documentElement.classList.remove('dark')
+  }
+}
+
+// Watch for theme changes and persist them
+watch(theme, (newTheme) => {
+  if (isInitialized.value && process.client) {
     localStorage.setItem('theme', newTheme)
-    if (newTheme === 'dark') {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
+    applyTheme(newTheme)
   }
 })
 
