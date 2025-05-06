@@ -68,7 +68,15 @@
                 </button>
             </div>
         </div>
-    </div>
+        </div>
+
+    <!-- Create Project Modal -->
+    <CreateProjectModal 
+        :is-open="showCreateProjectModal" 
+        :is-creating="isCreatingProject" 
+        @close="showCreateProjectModal = false" 
+        @create="handleCreateProject" 
+    />
 </template>
 
 <script setup lang="ts">
@@ -77,6 +85,8 @@ import { ref } from 'vue'
 import { FolderIcon, PlusIcon, ChevronDownIcon } from '~/components/icons'
 import ProjectCard from '~/components/projects/project-card.vue'
 import ErrorAlert from '~/components/common/error-alert.vue'
+import CreateProjectModal from '~/components/projects/create-project-modal.vue'
+import type { CreateProjectDto } from '~/api-client'
 
 const projectsStore = useProjectsStore()
 const { projects, isLoading, error, paginationState } = storeToRefs(projectsStore)
@@ -91,8 +101,28 @@ useHead({
     title: 'Dashboard - PocketSync'
 })
 
+// Project creation state
+const showCreateProjectModal = ref(false)
+const isCreatingProject = ref(false)
+
 const createProject = () => {
-    console.log('create project')
+    showCreateProjectModal.value = true
+}
+
+const handleCreateProject = async (projectData: CreateProjectDto) => {
+    isCreatingProject.value = true
+    try {
+        const result = await projectsStore.createProject(projectData)
+        if (result) {
+            showCreateProjectModal.value = false
+            // Navigate to the new project's dashboard
+            navigateTo(`/console/projects/${result.id}`)
+        }
+    } catch (err: any) {
+        console.error('Error creating project:', err)
+    } finally {
+        isCreatingProject.value = false
+    }
 }
 
 const loadMore = async () => {

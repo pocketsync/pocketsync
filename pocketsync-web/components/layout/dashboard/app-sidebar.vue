@@ -131,7 +131,7 @@
 
 <script setup lang="ts">
 import { PhCode } from '@phosphor-icons/vue';
-import { ChevronDownIcon, DocsIcon, HomeIcon, SupportIcon, TableIcon, HorizontalDots } from '~/components/icons';
+import { ChevronDownIcon, DocsIcon, HomeIcon, SupportIcon, TableIcon, HorizontalDots, SettingsIcon } from '~/components/icons';
 
 
 const route = useRoute()
@@ -250,6 +250,16 @@ const menuGroups = computed(() => [
                 name: 'Data exploration',
                 icon: TableIcon,
                 path: `/console/projects/${projectId.value}/data-exploration`,
+            },
+        ],
+    },
+    {
+        title: 'Settings',
+        items: [
+            {
+                name: 'Project settings',
+                icon: SettingsIcon,
+                path: `/console/projects/${projectId.value}/settings`,
             },
         ],
     },

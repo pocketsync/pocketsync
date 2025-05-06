@@ -59,7 +59,7 @@ export const useProjects = () => {
             case 404:
                 projects.value = []
                 currentProject.value = null
-                navigateTo('/console/projects')
+                navigateTo('/console')
                 return {
                     message: 'Project not found.',
                     code: 'NOT_FOUND'
