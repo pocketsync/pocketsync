@@ -6,6 +6,7 @@ api/authentication-api.ts
 api/conflicts-api.ts
 api/data-exports-api.ts
 api/debug-settings-api.ts
+api/device-changes-api.ts
 api/devices-api.ts
 api/notification-settings-api.ts
 api/projects-api.ts
@@ -33,6 +34,10 @@ docs/DataExportsApi.md
 docs/DebugSettingsApi.md
 docs/DebugSettingsDto.md
 docs/DefaultSuccessResponse.md
+docs/DeviceChangeDto.md
+docs/DeviceChangeResponseDto.md
+docs/DeviceChangeTimelineDto.md
+docs/DeviceChangesApi.md
 docs/DeviceDto.md
 docs/DeviceResponseDto.md
 docs/DevicesApi.md
@@ -85,6 +90,9 @@ model/data-export-job-response-dto.ts
 model/data-export-jobs-response-dto.ts
 model/debug-settings-dto.ts
 model/default-success-response.ts
+model/device-change-dto.ts
+model/device-change-response-dto.ts
+model/device-change-timeline-dto.ts
 model/device-dto.ts
 model/device-response-dto.ts
 model/index.ts

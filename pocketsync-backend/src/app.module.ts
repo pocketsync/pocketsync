@@ -11,6 +11,7 @@ import { SyncModule } from './modules/sync/sync.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { DataExportsModule } from './modules/data-exports/data-exports.module';
 import { ConflictsModule } from './modules/conflicts/conflicts.module';
+import { DeviceChangesModule } from './modules/device-changes/device-changes.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { ConflictsModule } from './modules/conflicts/conflicts.module';
     SyncModule,
     DataExportsModule,
     ConflictsModule,
+    DeviceChangesModule,
   ],
   providers: [
     {
