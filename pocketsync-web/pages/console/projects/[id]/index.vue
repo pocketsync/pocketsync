@@ -20,7 +20,7 @@
             <!-- Key Metrics -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] rounded-lg shadow">
-                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">App Users</h3>
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">App users</h3>
                     <p class="mt-2 text-3xl font-semibold text-gray-900 dark:text-white">{{
                         currentProject.stats.totalUsers || 0 }}</p>
                     <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -30,7 +30,7 @@
                 </div>
 
                 <div class="border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] rounded-lg shadow">
-                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Online Devices</h3>
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Online devices</h3>
                     <p class="mt-2 text-3xl font-semibold text-gray-900 dark:text-white">{{
                         currentProject.stats.onlineDevices || 0 }}</p>
                     <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -39,7 +39,7 @@
                 </div>
 
                 <div class="border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] rounded-lg shadow">
-                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Last Sync</h3>
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Last sync</h3>
                     <p class="mt-2 text-3xl font-semibold text-gray-900 dark:text-white">
                         {{ currentProject.stats.lastSync ? formatDistanceToNow(new Date(currentProject.stats.lastSync))
                         : 'Never' }}
