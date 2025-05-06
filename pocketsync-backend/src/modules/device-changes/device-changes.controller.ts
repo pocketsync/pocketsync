@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiQuery }
 import { DeviceChangesService } from './device-changes.service';
 import { DeviceChangeQueryDto } from './dto/device-change-query.dto';
 import { DeviceChangeResponseDto, DeviceChangeTimelineDto } from './dto/device-change-response.dto';
+import { TableChangesSummaryResponseDto } from './dto/table-changes-summary.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('device-changes')
@@ -52,6 +53,18 @@ export class DeviceChangesController {
   @ApiParam({ name: 'projectId', description: 'Project ID' })
   async getChangesByTable(@Param('projectId') projectId: string): Promise<Record<string, number>> {
     return this.deviceChangesService.getChangesByTable(projectId);
+  }
+  
+  @Get('tables-summary')
+  @ApiOperation({ summary: 'Get a detailed summary of changes by table with counts by operation type' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Detailed summary of changes by table',
+    type: TableChangesSummaryResponseDto
+  })
+  @ApiParam({ name: 'projectId', description: 'Project ID' })
+  async getTableChangesSummary(@Param('projectId') projectId: string): Promise<TableChangesSummaryResponseDto> {
+    return this.deviceChangesService.getTableChangesSummary(projectId);
   }
 
   @Get(':id')

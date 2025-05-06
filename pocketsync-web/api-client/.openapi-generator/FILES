@@ -70,6 +70,9 @@ docs/SyncMetricsControllerGetAggregatedMetrics200Response.md
 docs/SyncMetricsControllerGetAggregatedMetrics200ResponseDataInner.md
 docs/SyncSessionDto.md
 docs/SyncSessionsApi.md
+docs/TableChangeCountDto.md
+docs/TableChangesSummaryDto.md
+docs/TableChangesSummaryResponseDto.md
 docs/UpdateDebugSettingsDto.md
 docs/UpdateProfileDto.md
 docs/UpdateProjectDto.md
@@ -119,6 +122,9 @@ model/sync-metric-response-dto.ts
 model/sync-metrics-controller-get-aggregated-metrics200-response-data-inner.ts
 model/sync-metrics-controller-get-aggregated-metrics200-response.ts
 model/sync-session-dto.ts
+model/table-change-count-dto.ts
+model/table-changes-summary-dto.ts
+model/table-changes-summary-response-dto.ts
 model/update-debug-settings-dto.ts
 model/update-profile-dto.ts
 model/update-project-dto.ts
