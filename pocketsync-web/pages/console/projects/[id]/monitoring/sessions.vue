@@ -24,7 +24,6 @@
 import { onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { useSyncSessions } from '~/composables/useSyncSessions'
 import { useProjectsStore } from '~/stores/projectsStore'
 import { useSyncSessionsStore } from '~/stores/syncSessionsStore'
 import PageBreadcrumb from '~/components/common/page-breadcrumb.vue'
@@ -41,7 +40,6 @@ const projectsStore = useProjectsStore()
 const { currentProject } = storeToRefs(projectsStore)
 // Get sync sessions data
 const syncSessionsStore = useSyncSessionsStore()
-const syncSessions = useSyncSessions()
 const {
   sessions,
   sessionLogs,

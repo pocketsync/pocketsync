@@ -228,7 +228,7 @@ const menuGroups = computed(() => [
             {
                 name: 'System logs',
                 icon: DocsIcon,
-                path: `/console/projects/${projectId.value}/logs`,
+                path: `/console/projects/${projectId.value}/sync-logs`,
             },
             {
                 name: 'Sync conflicts',
@@ -256,14 +256,6 @@ const menuGroups = computed(() => [
                 subItems: [
                     { name: 'Create new', path: `/console/projects/${projectId.value}/export/create` },
                     { name: 'Export history', path: `/console/projects/${projectId.value}/export/history` },
-                ],
-            },
-            {
-                name: 'Reports',
-                icon: PieChartIcon,
-                subItems: [
-                    { name: 'Summary', path: `/console/projects/${projectId.value}/reports/summary` },
-                    { name: 'Custom', path: `/console/projects/${projectId.value}/reports/custom` },
                 ],
             },
         ],

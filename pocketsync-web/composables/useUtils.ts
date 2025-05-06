@@ -48,7 +48,8 @@ export function useUtils() {
     }
 
     const truncateId = (id: string): string => {
-        return id.slice(0, 8)
+        if (!id) return ''
+        return id.length > 8 ? `${id.slice(0, 8)}...` : id
     }
 
     return {
