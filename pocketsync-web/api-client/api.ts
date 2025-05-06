@@ -18,6 +18,7 @@ export * from './api/authentication-api';
 export * from './api/conflicts-api';
 export * from './api/data-exports-api';
 export * from './api/debug-settings-api';
+export * from './api/device-changes-api';
 export * from './api/devices-api';
 export * from './api/notification-settings-api';
 export * from './api/projects-api';
