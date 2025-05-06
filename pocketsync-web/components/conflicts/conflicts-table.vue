@@ -200,6 +200,7 @@ const props = defineProps({
 
 const emit = defineEmits(['load-more', 'resolve', 'view-details'])
 
+const { truncateId } = useUtils()
 // Table container ref for scroll position
 const tableContainer = ref<HTMLElement | null>(null)
 const scrollPosition = ref(0)
@@ -269,13 +270,6 @@ const filteredConflicts = computed(() => {
   
   return result
 })
-
-// Methods
-const truncateId = (id: string) => {
-  if (!id) return ''
-  if (id.length <= 10) return id
-  return `${id.substring(0, 7)}...`
-}
 
 const viewConflictDetails = (conflictId: string) => {
   const conflict = props.conflicts.find(c => c.id === conflictId)
