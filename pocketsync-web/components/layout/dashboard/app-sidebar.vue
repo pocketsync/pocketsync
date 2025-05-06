@@ -130,7 +130,7 @@
 </template>
 
 <script setup lang="ts">
-import { BarChartIcon, ChevronDownIcon, DocsIcon, HomeIcon, PieChartIcon, PlugInIcon, SupportIcon, TableIcon, HorizontalDots } from '~/components/icons';
+import { ChevronDownIcon, DocsIcon, HomeIcon, SupportIcon, TableIcon, HorizontalDots } from '~/components/icons';
 
 
 const route = useRoute()
@@ -234,11 +234,6 @@ const menuGroups = computed(() => [
                 name: 'Sync conflicts',
                 icon: DocsIcon,
                 path: `/console/projects/${projectId.value}/conflicts`,
-            },
-            {
-                name: 'Usage',
-                icon: BarChartIcon,
-               path: `/console/projects/${projectId.value}/usage`,
             },
         ],
     },

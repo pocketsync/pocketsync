@@ -75,7 +75,10 @@ export const useProjectsStore = defineStore('projects', {
                     this.isLoading = true
                     const result = await projectsComposable.fetchProjects(nextPage, this.paginationState.limit)
 
-                    this.projects = projectsComposable.projects.value
+                    if (result && result.data) {
+                        const projectsData = result.data as ProjectResponseDto[]
+                        this.projects = [...this.projects, ...projectsData]
+                    }
                     this.error = projectsComposable.error.value
 
                     if (result && result.data) {

@@ -100,7 +100,11 @@ export const useDeviceChangesStore = defineStore('deviceChanges', {
                         }
                     )
 
-                    this.deviceChanges = deviceChangesComposable.deviceChanges.value
+                    if (result) {
+                        const deviceChangesResponse = result as DeviceChangeResponseDto
+                        const newItems = deviceChangesResponse.items || []
+                        this.deviceChanges = [...this.deviceChanges, ...newItems]
+                    }
                     this.error = deviceChangesComposable.error.value
 
                     if (result) {
