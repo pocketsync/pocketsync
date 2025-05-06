@@ -28,6 +28,15 @@ export function useUtils() {
         return `${hours}h ${remainingMinutes}m ${remainingSeconds}s`
     }
 
+    const formatDate = (dateString: string) => {
+        try {
+            const date = new Date(dateString)
+            return format(date, 'MMM d, yyyy h:mm:ss a')
+        } catch (e) {
+            return dateString
+        }
+    }
+
     // Format date with full details
     const formatDateFull = (dateString: string) => {
         try {
@@ -45,6 +54,7 @@ export function useUtils() {
     return {
         getUserInitials,
         formatDuration,
+        formatDate,
         formatDateFull,
         truncateId
     }

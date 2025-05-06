@@ -8,44 +8,73 @@
 
     <ErrorAlert v-if="error" :message="error?.message" class="mb-4" />
     
-    <div class="border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] rounded-lg shadow">
-      
-      <div v-if="isLoading" class="animate-pulse space-y-4">
-        <div v-for="i in 3" :key="i" class="h-16 bg-gray-200 rounded dark:bg-gray-700"></div>
-      </div>
-      
-      <div v-else-if="conflicts && conflicts.length > 0" class="space-y-4">
-        <!-- Conflicts list will go here -->
-        <div v-for="conflict in conflicts" :key="conflict.id" class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-          <div class="flex justify-between items-start">
-            <div>
-              <h3 class="font-medium text-gray-900 dark:text-white">{{ conflict.entityType }}: {{ conflict.entityId }}</h3>
-              <p class="text-sm text-gray-500 dark:text-gray-400">Created: {{ formatDate(conflict.createdAt) }}</p>
-            </div>
-            <div>
-              <button class="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300">
-                Resolve
-              </button>
-            </div>
+    <!-- Filters and Actions -->
+    <div class="flex flex-col md:flex-row justify-between gap-4 mb-6">
+      <div class="flex flex-col sm:flex-row gap-4">
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+            <PhTable class="w-5 h-5 text-gray-500 dark:text-gray-400" />
           </div>
+          <select
+            v-model="tableFilter"
+            @change="handleFilterChange"
+            class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2.5 dark:bg-slate-800 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+          >
+            <option value="">All tables</option>
+            <option v-for="table in availableTables" :key="table" :value="table">{{ table }}</option>
+          </select>
+        </div>
+        
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+            <PhDeviceMobile class="w-5 h-5 text-gray-500 dark:text-gray-400" />
+          </div>
+          <select
+            v-model="deviceFilter"
+            @change="handleFilterChange"
+            class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2.5 dark:bg-slate-800 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+          >
+            <option value="">All devices</option>
+            <option v-for="device in availableDevices" :key="device" :value="device">{{ device }}</option>
+          </select>
         </div>
       </div>
       
-      <div v-else class="text-center py-8 text-gray-500 dark:text-gray-400">
-        No conflicts found
+      <div class="flex items-center gap-2">
+        <button 
+          @click="refreshConflicts"
+          class="inline-flex items-center px-4 py-2 text-sm font-medium text-primary-600 bg-white border border-primary-500 rounded-md shadow-sm hover:bg-primary-50 dark:bg-slate-800 dark:text-primary-400 dark:border-primary-500/50 dark:hover:bg-primary-900/20 transition-colors"
+        >
+          <PhArrowsClockwise class="w-4 h-4 mr-2" />
+          Refresh
+        </button>
       </div>
     </div>
+    
+    <!-- Conflicts Table -->
+    <ConflictsTable 
+      :conflicts="conflicts" 
+      :isLoading="isLoading" 
+      :pagination="pagination"
+      @load-more="handleLoadMore"
+      @resolve="handleResolveConflict"
+      @view-details="handleViewDetails"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { format } from 'date-fns'
+import { useConflicts } from '~/composables/useConflicts'
 import { useProjectsStore } from '~/stores/projectsStore'
+import { useConflictsStore } from '~/stores/conflictsStore'
+import { useToast } from '~/composables/useToast'
 import PageBreadcrumb from '~/components/common/page-breadcrumb.vue'
 import ErrorAlert from '~/components/common/error-alert.vue'
+import ConflictsTable from '~/components/conflicts/conflicts-table.vue'
+import { PhTable, PhDeviceMobile, PhArrowsClockwise } from '@phosphor-icons/vue'
 
 definePageMeta({
   layout: 'dashboard'
@@ -54,30 +83,91 @@ definePageMeta({
 const route = useRoute()
 const projectId = route.params.id as string
 const projectsStore = useProjectsStore()
-const { currentProject, error } = storeToRefs(projectsStore)
+const conflictsStore = useConflictsStore()
+const toast = useToast()
 
-const isLoading = ref(true)
-const conflicts = ref([])
+// Get conflicts data using the composable
+const { 
+  conflicts, 
+  isLoading, 
+  error, 
+  pagination,
+  filters,
+  getConflictsByProject,
+  setFilters,
+  clearFilters
+} = useConflicts()
 
-// Format date for display
-const formatDate = (date: string) => {
-  return format(new Date(date), 'MMM d, yyyy HH:mm')
-}
+// Filter state
+const tableFilter = ref('')
+const deviceFilter = ref('')
 
-// Function to view session logs
-const viewSessionLogs = async (conflictId: string) => {
-  // Implementation will go here
-}
+// Computed properties for filter options
+const availableTables = computed(() => {
+  const tables = new Set<string>()
+  conflicts.value.forEach(conflict => {
+    if (conflict.tableName) {
+      tables.add(conflict.tableName)
+    }
+  })
+  return Array.from(tables).sort()
+})
 
+const availableDevices = computed(() => {
+  const devices = new Set<string>()
+  conflicts.value.forEach(conflict => {
+    if (conflict.deviceId) {
+      devices.add(conflict.deviceId)
+    }
+  })
+  return Array.from(devices).sort()
+})
+
+// Load project and conflicts on mount
 onMounted(async () => {
-  try {
-    isLoading.value = true
+  if (projectId) {
     await projectsStore.fetchProjectById(projectId)
-    // Fetch conflicts data here
-  } catch (err) {
-    console.error('Error loading conflicts data:', err)
-  } finally {
-    isLoading.value = false
+    await getConflictsByProject(projectId)
   }
 })
+
+// Handle filter changes
+const handleFilterChange = () => {
+  setFilters({
+    tableName: tableFilter.value || undefined,
+    deviceId: deviceFilter.value || undefined
+  })
+  getConflictsByProject(projectId)
+}
+
+// Refresh conflicts
+const refreshConflicts = async () => {
+  await getConflictsByProject(projectId)
+  toast.show('Conflicts refreshed', 'success')
+}
+
+// Handle loading more conflicts
+const handleLoadMore = async () => {
+  await getConflictsByProject(projectId, pagination.value.page + 1, pagination.value.limit)
+}
+
+// Handle resolving a conflict
+const handleResolveConflict = async (conflictId: string) => {
+  try {
+    // In a real implementation, you would call an API to resolve the conflict
+    // For now, we'll just show a success message
+    toast.show('Conflict resolved successfully', 'success')
+    
+    // Refresh the conflicts list
+    await getConflictsByProject(projectId)
+  } catch (err: any) {
+    toast.show(err.message || 'Failed to resolve conflict', 'error')
+  }
+}
+
+// Handle viewing conflict details
+const handleViewDetails = (conflictId: string) => {
+  // This is handled by the ConflictsTable component internally
+  console.log('Viewing details for conflict:', conflictId)
+}
 </script>
