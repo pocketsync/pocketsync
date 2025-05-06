@@ -75,7 +75,7 @@ const { user, signOut } = useAuth()
 
 const menuItems = [
   { href: '/console/profile', icon: UserCircleIcon, text: 'Edit profile' },
-  { href: '/console/settings', icon: SettingsIcon, text: 'Account settings' },
+  { href: '/console/profile/settings', icon: SettingsIcon, text: 'Account settings' },
 ]
 
 const toggleDropdown = () => {
