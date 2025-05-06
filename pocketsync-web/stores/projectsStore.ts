@@ -5,7 +5,7 @@ import type {
     CreateProjectDto,
     UpdateProjectDto,
     CreateAuthTokenDto,
-    SyncActivityDto
+    SyncActivityDto,
 } from '~/api-client/model'
 import { useProjects } from '~/composables/useProjects'
 
@@ -102,8 +102,12 @@ export const useProjectsStore = defineStore('projects', {
             }
         },
 
-        async fetchProjectById(projectId: string) {
+        async fetchProjectById(projectId: string, refresh = false) {
             const projectsComposable = useProjects()
+
+            if (!refresh && this.currentProject?.id === projectId) {
+                return this.currentProject
+            }
 
             try {
                 this.isLoading = true

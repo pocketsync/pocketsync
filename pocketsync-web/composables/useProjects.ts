@@ -202,7 +202,6 @@ export const useProjects = () => {
     const revokeToken = async (tokenId: string) => {
         try {
             await projectsApi.revokeAuthToken(tokenId)
-            success('Token revoked successfully')
             return true
         } catch (error: any) {
             errorToast(error.response?.data?.message || 'Failed to revoke token')
