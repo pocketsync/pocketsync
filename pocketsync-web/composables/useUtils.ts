@@ -29,12 +29,14 @@ export function useUtils() {
     }
 
     const formatDate = (dateString: string) => {
-        try {
-            const date = new Date(dateString)
-            return format(date, 'MMM d, yyyy h:mm:ss a')
-        } catch (e) {
-            return dateString
-        }
+        const date = new Date(dateString)
+        return new Intl.DateTimeFormat('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        }).format(date)
     }
 
     // Format date with full details

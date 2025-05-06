@@ -130,6 +130,7 @@
 </template>
 
 <script setup lang="ts">
+import { PhCode } from '@phosphor-icons/vue';
 import { ChevronDownIcon, DocsIcon, HomeIcon, SupportIcon, TableIcon, HorizontalDots } from '~/components/icons';
 
 
@@ -214,6 +215,11 @@ const menuGroups = computed(() => [
                 name: 'Dashboard',
                 icon: HomeIcon,
                 path: `/console/projects/${projectId.value}`,
+            },
+            {
+                name: 'Integrations',
+                icon: PhCode,
+                path: `/console/projects/${projectId.value}/integrations`,
             },
         ],
     },
