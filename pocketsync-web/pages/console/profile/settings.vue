@@ -1,5 +1,14 @@
 <template>
     <div class="max-w-4xl mx-auto">
+        <NuxtLink to="/console"
+            class="mb-12 flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
+            <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd"
+                    d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z"
+                    clip-rule="evenodd" />
+            </svg>
+            <span class="text-sm font-medium">Back to console</span>
+        </NuxtLink>
         <!-- Page Header -->
         <div class="mb-8">
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Account settings</h1>
@@ -326,10 +335,9 @@
 import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { useAuth } from '~/composables/useAuth'
 import { useNotificationSettings } from '~/composables/useNotificationSettings'
-import type { NotificationSettingsDto } from '~/api-client'
 
 definePageMeta({
-    layout: 'dashboard'
+    layout: 'dashboard-index'
 })
 
 // @ts-ignore

@@ -35,10 +35,10 @@
           </button>
         </div>
         <div v-else>
-          <div class="flex items-center px-3 mx-12">
+          <NuxtLink to="/console" class="flex items-center px-3 mx-12 cursor-pointer">
             <img src="/images/logo/logo_full-light.svg" alt="Project Logo" class="h-8 w-auto dark:hidden" />
             <img src="/images/logo/logo_full-dark.svg" alt="Project Logo" class="h-8 w-auto hidden dark:block" />
-          </div>
+          </NuxtLink>
 
         </div>
       </div>
