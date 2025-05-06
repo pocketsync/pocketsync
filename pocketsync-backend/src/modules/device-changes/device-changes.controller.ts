@@ -14,7 +14,7 @@ export class DeviceChangesController {
   constructor(private readonly deviceChangesService: DeviceChangesService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get device changes with filtering and pagination' })
+  @ApiOperation({ summary: 'Get device changes with filtering and pagination', operationId: 'getDeviceChanges' })
   @ApiResponse({ 
     status: 200, 
     description: 'List of device changes with pagination',
@@ -29,7 +29,7 @@ export class DeviceChangesController {
   }
 
   @Get('tables')
-  @ApiOperation({ summary: 'Get unique table names from device changes' })
+  @ApiOperation({ summary: 'Get unique table names from device changes', operationId: 'getTableNames' })
   @ApiResponse({ 
     status: 200, 
     description: 'List of unique table names',
@@ -39,24 +39,9 @@ export class DeviceChangesController {
   async getTableNames(@Param('projectId') projectId: string): Promise<string[]> {
     return this.deviceChangesService.getTableNames(projectId);
   }
-
-  @Get('summary')
-  @ApiOperation({ summary: 'Get a summary of changes by table' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Summary of changes by table',
-    schema: {
-      type: 'object',
-      additionalProperties: { type: 'number' }
-    }
-  })
-  @ApiParam({ name: 'projectId', description: 'Project ID' })
-  async getChangesByTable(@Param('projectId') projectId: string): Promise<Record<string, number>> {
-    return this.deviceChangesService.getChangesByTable(projectId);
-  }
   
   @Get('tables-summary')
-  @ApiOperation({ summary: 'Get a detailed summary of changes by table with counts by operation type' })
+  @ApiOperation({ summary: 'Get a detailed summary of changes by table with counts by operation type', operationId: 'getTableChangesSummary' })
   @ApiResponse({ 
     status: 200, 
     description: 'Detailed summary of changes by table',
@@ -68,7 +53,7 @@ export class DeviceChangesController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a single device change by ID' })
+  @ApiOperation({ summary: 'Get a single device change by ID', operationId: 'getDeviceChangeById' })
   @ApiResponse({ 
     status: 200, 
     description: 'Device change details',
@@ -84,7 +69,7 @@ export class DeviceChangesController {
   }
 
   @Get('tables/:tableName/records/:recordId/timeline')
-  @ApiOperation({ summary: 'Get timeline of changes for a specific record' })
+  @ApiOperation({ summary: 'Get timeline of changes for a specific record', operationId: 'getRecordTimeline' })
   @ApiResponse({ 
     status: 200, 
     description: 'Timeline of changes for a specific record',

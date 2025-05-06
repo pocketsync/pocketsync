@@ -79,7 +79,7 @@
                                         },
                                     ]" />
                                 </button>
-                                <NuxtLink v-else-if="item.path" :to="item.path" :class="[
+                                <NuxtLink v-else-if="item.path" :to="item.path" :target="item.target" :class="[
                                     'menu-item group',
                                     {
                                         'menu-item-active': isActive(item.path),
@@ -113,7 +113,7 @@
                                                             subItem.path
                                                         ),
                                                     },
-                                                ]">
+                                                ]" :target="subItem.target">
                                                     {{ subItem.name }}
                                                 </NuxtLink>
                                             </li>
@@ -236,14 +236,9 @@ const menuGroups = computed(() => [
                 path: `/console/projects/${projectId.value}/conflicts`,
             },
             {
-                name: 'Analytics',
+                name: 'Usage',
                 icon: BarChartIcon,
-                subItems: [
-                    { name: 'Performance', path: `/console/projects/${projectId.value}/analytics/performance` },
-                    { name: 'Usage Statistics', path: `/console/projects/${projectId.value}/analytics/usage` },
-                    { name: 'Trends', path: `/console/projects/${projectId.value}/analytics/trends` },
-                    { name: 'Metrics', path: `/console/projects/${projectId.value}/analytics/metrics` },
-                ],
+               path: `/console/projects/${projectId.value}/usage`,
             },
         ],
     },
@@ -251,12 +246,9 @@ const menuGroups = computed(() => [
         title: 'Tools',
         items: [
             {
-                name: 'Data export',
-                icon: PlugInIcon,
-                subItems: [
-                    { name: 'Create new', path: `/console/projects/${projectId.value}/export/create` },
-                    { name: 'Export history', path: `/console/projects/${projectId.value}/export/history` },
-                ],
+                name: 'Data exploration',
+                icon: TableIcon,
+                path: `/console/projects/${projectId.value}/data-exploration`,
             },
         ],
     },
@@ -267,6 +259,7 @@ const menuGroups = computed(() => [
                 name: 'Documentation',
                 icon: SupportIcon,
                 path: 'https://docs.pocketsync.dev',
+                target: '_blank',
             }
         ],
     },
