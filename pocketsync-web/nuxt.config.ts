@@ -38,7 +38,25 @@ export default defineNuxtConfig({
     head: {
       bodyAttrs: {
         class: 'bg-gray-50 dark:bg-gray-900'
-      }
+      },
+      script: [
+        {
+          innerHTML: `(function() {
+            try {
+              const savedTheme = localStorage.getItem('theme') || 'light';
+              if (savedTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+              } else {
+                document.documentElement.classList.remove('dark');
+              }
+            } catch (e) {
+              console.error('Failed to apply theme:', e);
+            }
+          })();`,
+          type: 'text/javascript',
+          id: 'theme-script'
+        }
+      ]
     }
   }
 });
