@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DeviceChangeQueryDto } from './dto/device-change-query.dto';
 import { DeviceChangeResponseDto, DeviceChangeTimelineDto, DeviceChangeDto } from './dto/device-change-response.dto';
+import { TableChangesSummaryDto, TableChangesSummaryResponseDto } from './dto/table-changes-summary.dto';
 import { DeviceChange } from '@prisma/client';
 import { DeviceChangeMapper } from './mappers/device-change.mapper';
 
@@ -137,7 +138,7 @@ export class DeviceChangesService {
     >`
       SELECT "table_name" as "tableName", COUNT(*) as "count"
       FROM "device_changes"
-      WHERE "project_id" = ${projectId}
+      WHERE "project_id" = ${projectId}::uuid
       GROUP BY "table_name"
       ORDER BY "count" DESC
     `;
@@ -146,6 +147,62 @@ export class DeviceChangesService {
       acc[item.tableName] = Number(item.count);
       return acc;
     }, {});
+  }
+  
+  /**
+   * Get a detailed summary of changes by table with counts by operation type
+   */
+  async getTableChangesSummary(projectId: string): Promise<TableChangesSummaryResponseDto> {
+    const result = await this.prisma.$queryRaw<
+      Array<{ tableName: string; changeType: string; count: bigint }>
+    >`
+      SELECT 
+        "table_name" as "tableName", 
+        "change_type" as "changeType", 
+        COUNT(*) as "count"
+      FROM "device_changes"
+      WHERE "project_id" = ${projectId}::uuid
+      GROUP BY "table_name", "change_type"
+      ORDER BY "table_name", "change_type"
+    `;
+    
+    // Group by table name
+    const tableMap = new Map<string, { creates: number; updates: number; deletes: number; total: number }>();
+    
+    // Initialize with all tables
+    const tables = await this.getTableNames(projectId);
+    tables.forEach(tableName => {
+      tableMap.set(tableName, { creates: 0, updates: 0, deletes: 0, total: 0 });
+    });
+    
+    // Fill in the counts
+    result.forEach(row => {
+      const counts = tableMap.get(row.tableName) || { creates: 0, updates: 0, deletes: 0, total: 0 };
+      const count = Number(row.count);
+      
+      switch (row.changeType) {
+        case 'CREATE':
+          counts.creates += count;
+          break;
+        case 'UPDATE':
+          counts.updates += count;
+          break;
+        case 'DELETE':
+          counts.deletes += count;
+          break;
+      }
+      
+      counts.total += count;
+      tableMap.set(row.tableName, counts);
+    });
+    
+    // Convert to DTO format
+    const tables_summary = Array.from(tableMap.entries()).map(([tableName, counts]) => ({
+      tableName,
+      counts
+    }));
+    
+    return { tables: tables_summary };
   }
 
   /**

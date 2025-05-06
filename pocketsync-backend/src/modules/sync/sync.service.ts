@@ -117,10 +117,6 @@ export class SyncService {
                     });
                 }));
 
-                // We'll update the device after the transaction completes
-
-                // We'll update the session after the transaction completes
-
                 return changes;
             });
 
@@ -224,7 +220,6 @@ export class SyncService {
                 appUser.userIdentifier,
                 device.deviceId
             )
-
 
             // Notify other devices about the new changes
             this.notifyOtherDevices(appUser.userIdentifier, device.deviceId, createdChanges.length);
