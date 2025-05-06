@@ -35,51 +35,17 @@ export const DeviceChangesApiAxiosParamCreator = function (configuration?: Confi
     return {
         /**
          * 
-         * @summary Get a summary of changes by table
-         * @param {string} projectId Project ID
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        deviceChangesControllerGetChangesByTable: async (projectId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'projectId' is not null or undefined
-            assertParamExists('deviceChangesControllerGetChangesByTable', 'projectId', projectId)
-            const localVarPath = `/projects/{projectId}/device-changes/summary`
-                .replace(`{${"projectId"}}`, encodeURIComponent(String(projectId)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-
-    
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * 
          * @summary Get a single device change by ID
          * @param {string} projectId Project ID
          * @param {string} id Device change ID
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        deviceChangesControllerGetDeviceChangeById: async (projectId: string, id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        getDeviceChangeById: async (projectId: string, id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'projectId' is not null or undefined
-            assertParamExists('deviceChangesControllerGetDeviceChangeById', 'projectId', projectId)
+            assertParamExists('getDeviceChangeById', 'projectId', projectId)
             // verify required parameter 'id' is not null or undefined
-            assertParamExists('deviceChangesControllerGetDeviceChangeById', 'id', id)
+            assertParamExists('getDeviceChangeById', 'id', id)
             const localVarPath = `/projects/{projectId}/device-changes/{id}`
                 .replace(`{${"projectId"}}`, encodeURIComponent(String(projectId)))
                 .replace(`{${"id"}}`, encodeURIComponent(String(id)));
@@ -121,9 +87,9 @@ export const DeviceChangesApiAxiosParamCreator = function (configuration?: Confi
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        deviceChangesControllerGetDeviceChanges: async (projectId: string, tableName?: string, recordId?: string, changeType?: string, deviceId?: string, userIdentifier?: string, startDate?: string, endDate?: string, page?: number, limit?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        getDeviceChanges: async (projectId: string, tableName?: string, recordId?: string, changeType?: string, deviceId?: string, userIdentifier?: string, startDate?: string, endDate?: string, page?: number, limit?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'projectId' is not null or undefined
-            assertParamExists('deviceChangesControllerGetDeviceChanges', 'projectId', projectId)
+            assertParamExists('getDeviceChanges', 'projectId', projectId)
             const localVarPath = `/projects/{projectId}/device-changes`
                 .replace(`{${"projectId"}}`, encodeURIComponent(String(projectId)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
@@ -193,13 +159,13 @@ export const DeviceChangesApiAxiosParamCreator = function (configuration?: Confi
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        deviceChangesControllerGetRecordTimeline: async (projectId: string, tableName: string, recordId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        getRecordTimeline: async (projectId: string, tableName: string, recordId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'projectId' is not null or undefined
-            assertParamExists('deviceChangesControllerGetRecordTimeline', 'projectId', projectId)
+            assertParamExists('getRecordTimeline', 'projectId', projectId)
             // verify required parameter 'tableName' is not null or undefined
-            assertParamExists('deviceChangesControllerGetRecordTimeline', 'tableName', tableName)
+            assertParamExists('getRecordTimeline', 'tableName', tableName)
             // verify required parameter 'recordId' is not null or undefined
-            assertParamExists('deviceChangesControllerGetRecordTimeline', 'recordId', recordId)
+            assertParamExists('getRecordTimeline', 'recordId', recordId)
             const localVarPath = `/projects/{projectId}/device-changes/tables/{tableName}/records/{recordId}/timeline`
                 .replace(`{${"projectId"}}`, encodeURIComponent(String(projectId)))
                 .replace(`{${"tableName"}}`, encodeURIComponent(String(tableName)))
@@ -233,9 +199,9 @@ export const DeviceChangesApiAxiosParamCreator = function (configuration?: Confi
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        deviceChangesControllerGetTableChangesSummary: async (projectId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        getTableChangesSummary: async (projectId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'projectId' is not null or undefined
-            assertParamExists('deviceChangesControllerGetTableChangesSummary', 'projectId', projectId)
+            assertParamExists('getTableChangesSummary', 'projectId', projectId)
             const localVarPath = `/projects/{projectId}/device-changes/tables-summary`
                 .replace(`{${"projectId"}}`, encodeURIComponent(String(projectId)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
@@ -267,9 +233,9 @@ export const DeviceChangesApiAxiosParamCreator = function (configuration?: Confi
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        deviceChangesControllerGetTableNames: async (projectId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        getTableNames: async (projectId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'projectId' is not null or undefined
-            assertParamExists('deviceChangesControllerGetTableNames', 'projectId', projectId)
+            assertParamExists('getTableNames', 'projectId', projectId)
             const localVarPath = `/projects/{projectId}/device-changes/tables`
                 .replace(`{${"projectId"}}`, encodeURIComponent(String(projectId)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
@@ -306,29 +272,16 @@ export const DeviceChangesApiFp = function(configuration?: Configuration) {
     return {
         /**
          * 
-         * @summary Get a summary of changes by table
-         * @param {string} projectId Project ID
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async deviceChangesControllerGetChangesByTable(projectId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<{ [key: string]: number; }>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.deviceChangesControllerGetChangesByTable(projectId, options);
-            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['DeviceChangesApi.deviceChangesControllerGetChangesByTable']?.[localVarOperationServerIndex]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
-        },
-        /**
-         * 
          * @summary Get a single device change by ID
          * @param {string} projectId Project ID
          * @param {string} id Device change ID
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async deviceChangesControllerGetDeviceChangeById(projectId: string, id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<DeviceChangeResponseDto>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.deviceChangesControllerGetDeviceChangeById(projectId, id, options);
+        async getDeviceChangeById(projectId: string, id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<DeviceChangeResponseDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getDeviceChangeById(projectId, id, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['DeviceChangesApi.deviceChangesControllerGetDeviceChangeById']?.[localVarOperationServerIndex]?.url;
+            const localVarOperationServerBasePath = operationServerMap['DeviceChangesApi.getDeviceChangeById']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -347,10 +300,10 @@ export const DeviceChangesApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async deviceChangesControllerGetDeviceChanges(projectId: string, tableName?: string, recordId?: string, changeType?: string, deviceId?: string, userIdentifier?: string, startDate?: string, endDate?: string, page?: number, limit?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<DeviceChangeResponseDto>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.deviceChangesControllerGetDeviceChanges(projectId, tableName, recordId, changeType, deviceId, userIdentifier, startDate, endDate, page, limit, options);
+        async getDeviceChanges(projectId: string, tableName?: string, recordId?: string, changeType?: string, deviceId?: string, userIdentifier?: string, startDate?: string, endDate?: string, page?: number, limit?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<DeviceChangeResponseDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getDeviceChanges(projectId, tableName, recordId, changeType, deviceId, userIdentifier, startDate, endDate, page, limit, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['DeviceChangesApi.deviceChangesControllerGetDeviceChanges']?.[localVarOperationServerIndex]?.url;
+            const localVarOperationServerBasePath = operationServerMap['DeviceChangesApi.getDeviceChanges']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -362,10 +315,10 @@ export const DeviceChangesApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async deviceChangesControllerGetRecordTimeline(projectId: string, tableName: string, recordId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<DeviceChangeTimelineDto>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.deviceChangesControllerGetRecordTimeline(projectId, tableName, recordId, options);
+        async getRecordTimeline(projectId: string, tableName: string, recordId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<DeviceChangeTimelineDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getRecordTimeline(projectId, tableName, recordId, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['DeviceChangesApi.deviceChangesControllerGetRecordTimeline']?.[localVarOperationServerIndex]?.url;
+            const localVarOperationServerBasePath = operationServerMap['DeviceChangesApi.getRecordTimeline']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -375,10 +328,10 @@ export const DeviceChangesApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async deviceChangesControllerGetTableChangesSummary(projectId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TableChangesSummaryResponseDto>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.deviceChangesControllerGetTableChangesSummary(projectId, options);
+        async getTableChangesSummary(projectId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TableChangesSummaryResponseDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getTableChangesSummary(projectId, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['DeviceChangesApi.deviceChangesControllerGetTableChangesSummary']?.[localVarOperationServerIndex]?.url;
+            const localVarOperationServerBasePath = operationServerMap['DeviceChangesApi.getTableChangesSummary']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -388,10 +341,10 @@ export const DeviceChangesApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async deviceChangesControllerGetTableNames(projectId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<string>>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.deviceChangesControllerGetTableNames(projectId, options);
+        async getTableNames(projectId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<string>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getTableNames(projectId, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['DeviceChangesApi.deviceChangesControllerGetTableNames']?.[localVarOperationServerIndex]?.url;
+            const localVarOperationServerBasePath = operationServerMap['DeviceChangesApi.getTableNames']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
     }
@@ -406,24 +359,14 @@ export const DeviceChangesApiFactory = function (configuration?: Configuration, 
     return {
         /**
          * 
-         * @summary Get a summary of changes by table
-         * @param {string} projectId Project ID
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        deviceChangesControllerGetChangesByTable(projectId: string, options?: RawAxiosRequestConfig): AxiosPromise<{ [key: string]: number; }> {
-            return localVarFp.deviceChangesControllerGetChangesByTable(projectId, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * 
          * @summary Get a single device change by ID
          * @param {string} projectId Project ID
          * @param {string} id Device change ID
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        deviceChangesControllerGetDeviceChangeById(projectId: string, id: string, options?: RawAxiosRequestConfig): AxiosPromise<DeviceChangeResponseDto> {
-            return localVarFp.deviceChangesControllerGetDeviceChangeById(projectId, id, options).then((request) => request(axios, basePath));
+        getDeviceChangeById(projectId: string, id: string, options?: RawAxiosRequestConfig): AxiosPromise<DeviceChangeResponseDto> {
+            return localVarFp.getDeviceChangeById(projectId, id, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -441,8 +384,8 @@ export const DeviceChangesApiFactory = function (configuration?: Configuration, 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        deviceChangesControllerGetDeviceChanges(projectId: string, tableName?: string, recordId?: string, changeType?: string, deviceId?: string, userIdentifier?: string, startDate?: string, endDate?: string, page?: number, limit?: number, options?: RawAxiosRequestConfig): AxiosPromise<DeviceChangeResponseDto> {
-            return localVarFp.deviceChangesControllerGetDeviceChanges(projectId, tableName, recordId, changeType, deviceId, userIdentifier, startDate, endDate, page, limit, options).then((request) => request(axios, basePath));
+        getDeviceChanges(projectId: string, tableName?: string, recordId?: string, changeType?: string, deviceId?: string, userIdentifier?: string, startDate?: string, endDate?: string, page?: number, limit?: number, options?: RawAxiosRequestConfig): AxiosPromise<DeviceChangeResponseDto> {
+            return localVarFp.getDeviceChanges(projectId, tableName, recordId, changeType, deviceId, userIdentifier, startDate, endDate, page, limit, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -453,8 +396,8 @@ export const DeviceChangesApiFactory = function (configuration?: Configuration, 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        deviceChangesControllerGetRecordTimeline(projectId: string, tableName: string, recordId: string, options?: RawAxiosRequestConfig): AxiosPromise<DeviceChangeTimelineDto> {
-            return localVarFp.deviceChangesControllerGetRecordTimeline(projectId, tableName, recordId, options).then((request) => request(axios, basePath));
+        getRecordTimeline(projectId: string, tableName: string, recordId: string, options?: RawAxiosRequestConfig): AxiosPromise<DeviceChangeTimelineDto> {
+            return localVarFp.getRecordTimeline(projectId, tableName, recordId, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -463,8 +406,8 @@ export const DeviceChangesApiFactory = function (configuration?: Configuration, 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        deviceChangesControllerGetTableChangesSummary(projectId: string, options?: RawAxiosRequestConfig): AxiosPromise<TableChangesSummaryResponseDto> {
-            return localVarFp.deviceChangesControllerGetTableChangesSummary(projectId, options).then((request) => request(axios, basePath));
+        getTableChangesSummary(projectId: string, options?: RawAxiosRequestConfig): AxiosPromise<TableChangesSummaryResponseDto> {
+            return localVarFp.getTableChangesSummary(projectId, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -473,8 +416,8 @@ export const DeviceChangesApiFactory = function (configuration?: Configuration, 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        deviceChangesControllerGetTableNames(projectId: string, options?: RawAxiosRequestConfig): AxiosPromise<Array<string>> {
-            return localVarFp.deviceChangesControllerGetTableNames(projectId, options).then((request) => request(axios, basePath));
+        getTableNames(projectId: string, options?: RawAxiosRequestConfig): AxiosPromise<Array<string>> {
+            return localVarFp.getTableNames(projectId, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -488,18 +431,6 @@ export const DeviceChangesApiFactory = function (configuration?: Configuration, 
 export class DeviceChangesApi extends BaseAPI {
     /**
      * 
-     * @summary Get a summary of changes by table
-     * @param {string} projectId Project ID
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof DeviceChangesApi
-     */
-    public deviceChangesControllerGetChangesByTable(projectId: string, options?: RawAxiosRequestConfig) {
-        return DeviceChangesApiFp(this.configuration).deviceChangesControllerGetChangesByTable(projectId, options).then((request) => request(this.axios, this.basePath));
-    }
-
-    /**
-     * 
      * @summary Get a single device change by ID
      * @param {string} projectId Project ID
      * @param {string} id Device change ID
@@ -507,8 +438,8 @@ export class DeviceChangesApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof DeviceChangesApi
      */
-    public deviceChangesControllerGetDeviceChangeById(projectId: string, id: string, options?: RawAxiosRequestConfig) {
-        return DeviceChangesApiFp(this.configuration).deviceChangesControllerGetDeviceChangeById(projectId, id, options).then((request) => request(this.axios, this.basePath));
+    public getDeviceChangeById(projectId: string, id: string, options?: RawAxiosRequestConfig) {
+        return DeviceChangesApiFp(this.configuration).getDeviceChangeById(projectId, id, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -528,8 +459,8 @@ export class DeviceChangesApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof DeviceChangesApi
      */
-    public deviceChangesControllerGetDeviceChanges(projectId: string, tableName?: string, recordId?: string, changeType?: string, deviceId?: string, userIdentifier?: string, startDate?: string, endDate?: string, page?: number, limit?: number, options?: RawAxiosRequestConfig) {
-        return DeviceChangesApiFp(this.configuration).deviceChangesControllerGetDeviceChanges(projectId, tableName, recordId, changeType, deviceId, userIdentifier, startDate, endDate, page, limit, options).then((request) => request(this.axios, this.basePath));
+    public getDeviceChanges(projectId: string, tableName?: string, recordId?: string, changeType?: string, deviceId?: string, userIdentifier?: string, startDate?: string, endDate?: string, page?: number, limit?: number, options?: RawAxiosRequestConfig) {
+        return DeviceChangesApiFp(this.configuration).getDeviceChanges(projectId, tableName, recordId, changeType, deviceId, userIdentifier, startDate, endDate, page, limit, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -542,8 +473,8 @@ export class DeviceChangesApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof DeviceChangesApi
      */
-    public deviceChangesControllerGetRecordTimeline(projectId: string, tableName: string, recordId: string, options?: RawAxiosRequestConfig) {
-        return DeviceChangesApiFp(this.configuration).deviceChangesControllerGetRecordTimeline(projectId, tableName, recordId, options).then((request) => request(this.axios, this.basePath));
+    public getRecordTimeline(projectId: string, tableName: string, recordId: string, options?: RawAxiosRequestConfig) {
+        return DeviceChangesApiFp(this.configuration).getRecordTimeline(projectId, tableName, recordId, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -554,8 +485,8 @@ export class DeviceChangesApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof DeviceChangesApi
      */
-    public deviceChangesControllerGetTableChangesSummary(projectId: string, options?: RawAxiosRequestConfig) {
-        return DeviceChangesApiFp(this.configuration).deviceChangesControllerGetTableChangesSummary(projectId, options).then((request) => request(this.axios, this.basePath));
+    public getTableChangesSummary(projectId: string, options?: RawAxiosRequestConfig) {
+        return DeviceChangesApiFp(this.configuration).getTableChangesSummary(projectId, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -566,8 +497,8 @@ export class DeviceChangesApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof DeviceChangesApi
      */
-    public deviceChangesControllerGetTableNames(projectId: string, options?: RawAxiosRequestConfig) {
-        return DeviceChangesApiFp(this.configuration).deviceChangesControllerGetTableNames(projectId, options).then((request) => request(this.axios, this.basePath));
+    public getTableNames(projectId: string, options?: RawAxiosRequestConfig) {
+        return DeviceChangesApiFp(this.configuration).getTableNames(projectId, options).then((request) => request(this.axios, this.basePath));
     }
 }
 

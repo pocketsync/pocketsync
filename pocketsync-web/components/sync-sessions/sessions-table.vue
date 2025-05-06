@@ -220,7 +220,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['load-logs', 'load-more'])
+const emit = defineEmits(['load-logs', 'load-more', 'view-details'])
 
 // Local state
 const isLoadingMore = ref(false)
@@ -346,8 +346,14 @@ const viewSessionDetails = (sessionId: string) => {
     selectedSession.value = session
     isDetailsModalOpen.value = true
     isLogsModalOpen.value = false
+    emit('view-details', sessionId)
   }
 }
+
+// Expose method to parent components through defineExpose
+defineExpose({
+  openSessionDetails: viewSessionDetails
+})
 
 // View session logs in modal
 const viewSessionLogs = async (sessionId: string) => {
