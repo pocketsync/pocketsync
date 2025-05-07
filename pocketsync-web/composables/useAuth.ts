@@ -1,3 +1,4 @@
+import { useState } from '#app'
 import { ref } from 'vue'
 import { AuthenticationApi } from '~/api-client'
 import type { LoginDto, UserResponseDto } from '~/api-client'
@@ -19,7 +20,8 @@ type AuthErrorCode =
 
 export const useAuth = () => {
     const user = useState<UserResponseDto | null>('user', () => null)
-    const isAuthenticated = ref(false)
+    const isAuthenticated = useState<boolean>('isAuthenticated', () => false)
+    const isSessionValidated = useState<boolean>('isSessionValidated', () => false)
     const isLoading = ref(false)
     const error = ref<AuthError | null>(null)
 
@@ -75,7 +77,11 @@ export const useAuth = () => {
             refreshTokenCookie.value = refreshToken
             user.value = response.data.user
             isAuthenticated.value = true
+            isSessionValidated.value = true
         } catch (err: any) {
+            isAuthenticated.value = false
+            isSessionValidated.value = false
+            user.value = null
             error.value = handleAuthError(err)
             throw error.value
         } finally {
@@ -108,10 +114,19 @@ export const useAuth = () => {
     const signOut = async () => {
         error.value = null
         try {
+            const accessTokenCookie = useCookie(ACCESS_TOKEN_COOKIE_NAME, cookieOptions)
+            const refreshTokenCookie = useCookie(REFRESH_TOKEN_COOKIE_NAME, cookieOptions)
+            accessTokenCookie.value = null
+            refreshTokenCookie.value = null
+
             user.value = null
             isAuthenticated.value = false
-            navigateTo('/auth/login')
+            isSessionValidated.value = false
+            await navigateTo('/auth/login') 
         } catch (err: any) {
+            user.value = null
+            isAuthenticated.value = false
+            isSessionValidated.value = false
             error.value = {
                 message: 'Error during sign out. Please try again.',
                 code: 'UNKNOWN_ERROR'
@@ -121,8 +136,17 @@ export const useAuth = () => {
     }
 
     const getCurrentUser = async () => {
-        if (isAuthenticated.value) {
-            return;
+        if (isSessionValidated.value && user.value) {
+            if (!isAuthenticated.value) isAuthenticated.value = true;
+            return user.value; 
+        }
+
+        const accessTokenCookie = useCookie(ACCESS_TOKEN_COOKIE_NAME)
+        if (!accessTokenCookie.value) {
+            user.value = null
+            isAuthenticated.value = false
+            isSessionValidated.value = false
+            return null; 
         }
 
         error.value = null
@@ -130,12 +154,14 @@ export const useAuth = () => {
             const response = await authApi.getCurrentUser()
             user.value = response.data
             isAuthenticated.value = true
+            isSessionValidated.value = true
             return response.data
         } catch (err: any) {
             user.value = null
             isAuthenticated.value = false
-            error.value = handleAuthError(err)
-            throw error.value
+            isSessionValidated.value = false
+            throw handleAuthError(err); 
+        } finally {
         }
     }
 
@@ -180,8 +206,12 @@ export const useAuth = () => {
             refreshTokenCookie.value = refreshToken
             user.value = response.data.user
             isAuthenticated.value = true
+            isSessionValidated.value = true
             return response.data
         } catch (err: any) {
+            isAuthenticated.value = false
+            isSessionValidated.value = false
+            user.value = null
             error.value = handleAuthError(err)
             throw error.value
         } finally {
@@ -225,7 +255,7 @@ export const useAuth = () => {
             refreshTokenCookie.value = refreshToken
             await getCurrentUser()
         } catch (err: any) {
-            error.value = handleAuthError(err)
+            error.value = handleAuthError(err) 
             throw error.value
         } finally {
             isLoading.value = false
@@ -262,6 +292,7 @@ export const useAuth = () => {
     return {
         user,
         isAuthenticated,
+        isSessionValidated,
         isLoading,
         error,
         signIn,
