@@ -5,6 +5,8 @@
                 class="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-primary-400 to-primary-300 opacity-20 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem] animate-pulse duration-[4000ms]">
             </div>
         </div>
+        
+        <img src="/images/shape/grid-02.svg" alt="" class="absolute inset-0 -z-10 h-full w-full object-cover object-right md:object-center opacity-20" />
 
         <div class="mx-auto max-w-7xl px-6 pb-24 pt-10 sm:pb-32 lg:flex lg:px-8 lg:py-40">
             <div class="mx-auto max-w-2xl flex-shrink-0 lg:mx-0 lg:max-w-xl lg:pt-8">

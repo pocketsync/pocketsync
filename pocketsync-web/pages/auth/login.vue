@@ -164,8 +164,7 @@
                     <div class="flex flex-col items-center max-w-xs">
                         <NuxtLink to="/" class="block mb-4">
                             <div class="flex items-center space-x-3">
-                                <img src="/images/logo/logo_full-light.svg" alt="Logo" class="w-64 dark:hidden" />
-                                <img src="/images/logo/logo_full-dark.svg" alt="Logo" class="w-64 hidden dark:block" />
+                                <img src="/images/logo/logo_full-dark.svg" alt="Logo" class="w-64" />
                             </div>
                         </NuxtLink>
                         <p class="text-center text-gray-400 dark:text-white/60">
