@@ -202,8 +202,8 @@
                     <div class="flex flex-col items-center max-w-xs">
                         <NuxtLink to="/" class="block mb-4">
                             <div class="flex items-center space-x-3">
-                                <img class="w-6 h-6" src="/images/logo/logo_icon.svg" alt="Logo" />
-                                <h1 class="text-2xl font-bold text-white dark:text-black">PocketSync</h1>
+                                <img src="/images/logo/logo_full-light.svg" alt="Logo" class="w-64 dark:hidden" />
+                                <img src="/images/logo/logo_full-dark.svg" alt="Logo" class="w-64 hidden dark:block" />
                             </div>
                         </NuxtLink>
                         <p class="text-center text-gray-400 dark:text-white/60">
