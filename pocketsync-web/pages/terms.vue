@@ -1,8 +1,8 @@
 <template>
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h1 class="text-3xl font-bold text-gray-900 mb-8">Terms of Service</h1>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-8">Terms of Service</h1>
         
-        <div class="space-y-8 prose prose-blue max-w-none">
+        <div class="space-y-8 prose prose-blue max-w-none dark:prose-invert text-black dark:text-white">
             <section>
                 <h2 class="font-bold text-xl">Acceptance of terms</h2>
                 <p>By accessing or using PocketSync's services, you agree to be bound by these Terms of Service and all applicable laws and regulations. If you do not agree with any of these terms, you are prohibited from using or accessing our service.</p>

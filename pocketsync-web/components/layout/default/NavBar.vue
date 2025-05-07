@@ -1,28 +1,28 @@
 <template>
-    <nav class="bg-white border-b border-gray-200 fixed w-full z-30 top-0">
+    <nav class="bg-white border-b border-gray-200 dark:bg-gray-900 dark:border-gray-800 fixed w-full z-30 top-0">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex">
                     <div class="flex-shrink-0 flex items-center">
                         <NuxtLink to="/" class="flex items-center">
-                            <img src="/images/logo/logo_full-light.svg" alt="PocketSync" class="hidden sm:block h-6" />
-                            <img src="/images/logo/logo_full-dark.svg" alt="PocketSync" class="block sm:hidden h-8" />
+                            <img src="/images/logo/logo_full-light.svg" alt="PocketSync" class="hidden sm:block h-6 dark:hidden" />
+                            <img src="/images/logo/logo_full-dark.svg" alt="PocketSync" class="block sm:hidden h-8 dark:block" />
                         </NuxtLink>
                     </div>
                     <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-                        <NuxtLink to="/" class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900"
+                        <NuxtLink to="/" class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 dark:text-white"
                             active-class="border-b-2 border-primary-500">
                             Home
                         </NuxtLink>
 
                         <NuxtLink to="/about"
-                            class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900"
+                            class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900 dark:text-white"
                             active-class="border-b-2 border-primary-500">
                             About
                         </NuxtLink>
 
                         <NuxtLink to="https://docs.pocketsync.dev" target="_blank" rel="noopener"
-                            class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900"
+                            class="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900 dark:text-white"
                             active-class="border-b-2 border-primary-500">
                             <span>Documentation</span>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
