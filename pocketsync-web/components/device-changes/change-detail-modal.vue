@@ -5,7 +5,7 @@
         <div class="relative transform overflow-hidden rounded-lg bg-white dark:bg-slate-800 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-6xl">
           <div class="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
             <h3 class="text-lg font-medium leading-6 text-gray-900 dark:text-white">
-              Change Details
+              Change details
             </h3>
             <button @click="close" class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
               <span class="sr-only">Close</span>
@@ -86,9 +86,17 @@
                   <!-- Device ID -->
                   <div class="flex flex-col items-start">
                     <span class="w-28 text-sm font-medium text-gray-500 dark:text-gray-400">Device ID:</span>
-                    <span class="text-sm text-gray-800 dark:text-gray-200 truncate max-w-[200px]">
-                      {{ selectedChange.deviceId }}
-                    </span>
+                    <div class="flex items-center">
+                      <span class="text-sm text-gray-800 dark:text-gray-200 truncate max-w-[200px]">
+                        {{ selectedChange.deviceId }}
+                      </span>
+                      <button @click="copyToClipboard(selectedChange.deviceId)"
+                        class="ml-2 p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-700 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
 
                   <!-- Client Timestamp -->

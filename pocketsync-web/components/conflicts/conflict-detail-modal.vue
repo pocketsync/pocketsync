@@ -107,79 +107,83 @@
             <!-- Data Comparison -->
             <div class="mb-6">
               <h4 class="text-md font-medium text-gray-900 dark:text-white mb-4">Data comparison</h4>
-              
+
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <!-- Client Data -->
                 <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                   <h5 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client data</h5>
-                  <pre class="text-xs bg-gray-50 dark:bg-slate-700/30 p-3 rounded overflow-auto max-h-[300px] custom-scrollbar hljs" v-html="formatJson(selectedConflict.clientData?.new || selectedConflict.clientData)"></pre>
+                  <pre
+                    class="text-xs bg-gray-50 dark:bg-slate-700/30 p-3 rounded overflow-auto max-h-[300px] custom-scrollbar hljs"
+                    v-html="formatJson(selectedConflict.clientData?.new || selectedConflict.clientData)"></pre>
                 </div>
-                
+
                 <!-- Server Data -->
                 <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                   <h5 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Server data</h5>
-                  <pre class="text-xs bg-gray-50 dark:bg-slate-700/30 p-3 rounded overflow-auto max-h-[300px] custom-scrollbar hljs" v-html="formatJson(selectedConflict.serverData?.new || selectedConflict.serverData)"></pre>
+                  <pre
+                    class="text-xs bg-gray-50 dark:bg-slate-700/30 p-3 rounded overflow-auto max-h-[300px] custom-scrollbar hljs"
+                    v-html="formatJson(selectedConflict.serverData?.new || selectedConflict.serverData)"></pre>
                 </div>
               </div>
             </div>
 
             <!-- Visual Diff -->
             <div class="mb-6">
-              <h4 class="text-md font-medium text-gray-900 dark:text-white mb-4">Changes</h4>
-              
+              <h4 class="text-md font-medium text-gray-900 dark:text-white mb-4">Visual Diff</h4>
+
               <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                <div v-if="Object.keys(dataDiff.changed).length > 0" class="mb-4">
-                  <h5 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Modified fields</h5>
-                  <div class="space-y-2">
-                    <div v-for="(diff, key) in dataDiff.changed" :key="`changed-${key}`" 
-                      class="bg-yellow-50 dark:bg-yellow-900/10 p-3 rounded border-l-4 border-yellow-500">
-                      <div class="flex justify-between">
-                        <span class="font-medium text-gray-700 dark:text-gray-300">{{ key }}</span>
+                <div v-if="Object.keys(dataDiff.changed).length > 0 || 
+               Object.keys(dataDiff.added).length > 0 || 
+               Object.keys(dataDiff.removed).length > 0">
+                  <div class="space-y-3">
+                    <!-- Changed fields -->
+                    <div v-for="(diff, key) in dataDiff.changed" :key="`changed-${key}`" class="diff-block">
+                      <div
+                        class="diff-header bg-gray-100 dark:bg-slate-700 p-2 rounded-t border border-gray-200 dark:border-gray-600">
+                        <span class="font-medium">{{ key }}</span>
                       </div>
-                      <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                        <div>
-                          <span class="text-xs text-gray-500 dark:text-gray-400">Client:</span>
-                          <pre class="text-xs mt-1 bg-white dark:bg-slate-800 p-2 rounded hljs" v-html="formatJson(diff.client)"></pre>
+                      <div
+                        class="diff-content border border-t-0 border-gray-200 dark:border-gray-600 rounded-b overflow-hidden">
+                        <div class="bg-red-100 dark:bg-red-900/20 p-2 border-l-4 border-red-500">
+                          <span class="text-xs font-mono">- {{ JSON.stringify(diff.server) }}</span>
                         </div>
-                        <div>
-                          <span class="text-xs text-gray-500 dark:text-gray-400">Server:</span>
-                          <pre class="text-xs mt-1 bg-white dark:bg-slate-800 p-2 rounded hljs" v-html="formatJson(diff.server)"></pre>
+                        <div class="bg-green-100 dark:bg-green-900/20 p-2 border-l-4 border-green-500">
+                          <span class="text-xs font-mono">+ {{ JSON.stringify(diff.client) }}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Added fields -->
+                    <div v-for="(value, key) in dataDiff.added" :key="`added-${key}`" class="diff-block">
+                      <div
+                        class="diff-header bg-gray-100 dark:bg-slate-700 p-2 rounded-t border border-gray-200 dark:border-gray-600">
+                        <span class="font-medium">{{ key }}</span>
+                      </div>
+                      <div
+                        class="diff-content border border-t-0 border-gray-200 dark:border-gray-600 rounded-b overflow-hidden">
+                        <div class="bg-green-100 dark:bg-green-900/20 p-2 border-l-4 border-green-500">
+                          <span class="text-xs font-mono">+ {{ JSON.stringify(value) }}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Removed fields -->
+                    <div v-for="(value, key) in dataDiff.removed" :key="`removed-${key}`" class="diff-block">
+                      <div
+                        class="diff-header bg-gray-100 dark:bg-slate-700 p-2 rounded-t border border-gray-200 dark:border-gray-600">
+                        <span class="font-medium">{{ key }}</span>
+                      </div>
+                      <div
+                        class="diff-content border border-t-0 border-gray-200 dark:border-gray-600 rounded-b overflow-hidden">
+                        <div class="bg-red-100 dark:bg-red-900/20 p-2 border-l-4 border-red-500">
+                          <span class="text-xs font-mono">- {{ JSON.stringify(value) }}</span>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-                
-                <div v-if="Object.keys(dataDiff.added).length > 0" class="mb-4">
-                  <h5 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Added fields (client only)</h5>
-                  <div class="space-y-2">
-                    <div v-for="(value, key) in dataDiff.added" :key="`added-${key}`" 
-                      class="bg-green-50 dark:bg-green-900/10 p-3 rounded border-l-4 border-green-500">
-                      <div class="flex justify-between">
-                        <span class="font-medium text-gray-700 dark:text-gray-300">{{ key }}</span>
-                      </div>
-                      <pre class="text-xs mt-1 bg-white dark:bg-slate-800 p-2 rounded">{{ JSON.stringify(value, null, 2) }}</pre>
-                    </div>
-                  </div>
-                </div>
-                
-                <div v-if="Object.keys(dataDiff.removed).length > 0">
-                  <h5 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Removed fields (server only)</h5>
-                  <div class="space-y-2">
-                    <div v-for="(value, key) in dataDiff.removed" :key="`removed-${key}`" 
-                      class="bg-red-50 dark:bg-red-900/10 p-3 rounded border-l-4 border-red-500">
-                      <div class="flex justify-between">
-                        <span class="font-medium text-gray-700 dark:text-gray-300">{{ key }}</span>
-                      </div>
-                      <pre class="text-xs mt-1 bg-white dark:bg-slate-800 p-2 rounded">{{ JSON.stringify(value, null, 2) }}</pre>
-                    </div>
-                  </div>
-                </div>
-                
-                <div v-if="Object.keys(dataDiff.changed).length === 0 && 
-                           Object.keys(dataDiff.added).length === 0 && 
-                           Object.keys(dataDiff.removed).length === 0" 
-                     class="text-center py-4 text-gray-500 dark:text-gray-400">
+
+                <div v-else class="text-center py-4 text-gray-500 dark:text-gray-400">
                   No differences found
                 </div>
               </div>
@@ -188,7 +192,7 @@
             <!-- Resolved Data (if resolved) -->
             <div v-if="isResolved(selectedConflict)" class="mb-6">
               <h4 class="text-md font-medium text-gray-900 dark:text-white mb-4">Resolution</h4>
-              
+
               <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                 <div class="flex justify-between items-center mb-2">
                   <h5 class="text-sm font-medium text-gray-700 dark:text-gray-300">Resolved data</h5>
@@ -196,7 +200,9 @@
                     Resolved at: {{ formatDateFull(selectedConflict.resolvedAt) }}
                   </span>
                 </div>
-                <pre class="text-xs bg-gray-50 dark:bg-slate-700/30 p-3 rounded overflow-auto max-h-[300px] custom-scrollbar hljs" v-html="formatJson(selectedConflict.resolvedData?.new || selectedConflict.resolvedData)"></pre>
+                <pre
+                  class="text-xs bg-gray-50 dark:bg-slate-700/30 p-3 rounded overflow-auto max-h-[300px] custom-scrollbar hljs"
+                  v-html="formatJson(selectedConflict.resolvedData?.new || selectedConflict.resolvedData)"></pre>
               </div>
             </div>
           </div>
@@ -218,128 +224,128 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
-import { useUtils } from '~/composables/useUtils'
-import { useConflicts } from '~/composables/useConflicts'
-import { useToast } from '~/composables/useToast'
-import Modal from '~/components/Modal.vue'
-import { PhCopy } from '@phosphor-icons/vue'
-import type { ConflictDto } from '~/api-client/model'
-import hljs from 'highlight.js/lib/core'
-import json from 'highlight.js/lib/languages/json'
-import 'highlight.js/styles/atom-one-dark.css'
+  import { computed, onMounted } from 'vue'
+  import { useUtils } from '~/composables/useUtils'
+  import { useConflicts } from '~/composables/useConflicts'
+  import { useToast } from '~/composables/useToast'
+  import Modal from '~/components/Modal.vue'
+  import { PhCopy } from '@phosphor-icons/vue'
+  import type { ConflictDto } from '~/api-client/model'
+  import hljs from 'highlight.js/lib/core'
+  import json from 'highlight.js/lib/languages/json'
+  import 'highlight.js/styles/atom-one-dark.css'
 
-const { formatDateFull } = useUtils()
-const { formatResolutionStrategy, isResolved, getConflictStatus, getStatusClass, getDataDiff } = useConflicts()
-const toast = useToast()
+  const { formatDateFull } = useUtils()
+  const { formatResolutionStrategy, isResolved, getConflictStatus, getStatusClass, getDataDiff } = useConflicts()
+  const toast = useToast()
 
-// Register JSON language for highlight.js
-onMounted(() => {
-  hljs.registerLanguage('json', json)
-})
+  // Register JSON language for highlight.js
+  onMounted(() => {
+    hljs.registerLanguage('json', json)
+  })
 
-// Format and highlight JSON
-const formatJson = (data: any): string => {
-  try {
-    const formatted = JSON.stringify(data, null, 2)
-    return hljs.highlight(formatted, { language: 'json' }).value
-  } catch (err) {
-    return JSON.stringify(data, null, 2)
+  // Format and highlight JSON
+  const formatJson = (data: any): string => {
+    try {
+      const formatted = JSON.stringify(data, null, 2)
+      return hljs.highlight(formatted, { language: 'json' }).value
+    } catch (err) {
+      return JSON.stringify(data, null, 2)
+    }
   }
-}
 
-const props = defineProps({
-  isOpen: {
-    type: Boolean,
-    default: false
-  },
-  selectedConflict: {
-    type: Object as () => ConflictDto | null,
-    required: false,
-    default: null
+  const props = defineProps({
+    isOpen: {
+      type: Boolean,
+      default: false
+    },
+    selectedConflict: {
+      type: Object as () => ConflictDto | null,
+      required: false,
+      default: null
+    }
+  })
+
+  const emit = defineEmits(['close', 'resolve'])
+
+  const dataDiff = computed(() => {
+    if (!props.selectedConflict) return { added: {}, removed: {}, changed: {} }
+    return getDataDiff(props.selectedConflict.clientData['new'], props.selectedConflict.serverData['new'])
+  })
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+    toast.show('Copied to clipboard', 'info')
   }
-})
 
-const emit = defineEmits(['close', 'resolve'])
+  const close = () => {
+    emit('close')
+  }
 
-const dataDiff = computed(() => {
-  if (!props.selectedConflict) return { added: {}, removed: {}, changed: {} }
-  return getDataDiff(props.selectedConflict.clientData, props.selectedConflict.serverData)
-})
-
-const copyToClipboard = (text: string) => {
-  navigator.clipboard.writeText(text)
-  toast.show('Copied to clipboard', 'info')
-}
-
-const close = () => {
-  emit('close')
-}
-
-const resolveConflict = () => {
-  if (!props.selectedConflict) return
-  emit('resolve', props.selectedConflict.id)
-}
+  const resolveConflict = () => {
+    if (!props.selectedConflict) return
+    emit('resolve', props.selectedConflict.id)
+  }
 </script>
 
 <style scoped>
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
-}
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+  }
 
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
 
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(156, 163, 175, 0.5);
-  border-radius: 20px;
-}
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.5);
+    border-radius: 20px;
+  }
 
-.dark .custom-scrollbar {
-  scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
-}
+  .dark .custom-scrollbar {
+    scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+  }
 
-.dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(156, 163, 175, 0.3);
-}
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.3);
+  }
 
-pre {
-  overflow-x: auto;
-}
+  pre {
+    overflow-x: auto;
+  }
 
-/* Override highlight.js theme for better dark mode compatibility */
-.dark .hljs {
-  background: transparent;
-}
+  /* Override highlight.js theme for better dark mode compatibility */
+  .dark .hljs {
+    background: transparent;
+  }
 
-.hljs-attr {
-  color: #7ee787;
-}
+  .hljs-attr {
+    color: #7ee787;
+  }
 
-.dark .hljs-attr {
-  color: #7ee787;
-}
+  .dark .hljs-attr {
+    color: #7ee787;
+  }
 
-.hljs-string {
-  color: #a5d6ff;
-}
+  .hljs-string {
+    color: #a5d6ff;
+  }
 
-.dark .hljs-string {
-  color: #a5d6ff;
-}
+  .dark .hljs-string {
+    color: #a5d6ff;
+  }
 
-.hljs-number {
-  color: #f2cc60;
-}
+  .hljs-number {
+    color: #f2cc60;
+  }
 
-.dark .hljs-number {
-  color: #f2cc60;
-}
+  .dark .hljs-number {
+    color: #f2cc60;
+  }
 </style>
