@@ -1,29 +1,47 @@
 <template>
-  <section id="use-cases" class="py-16 md:py-24 bg-gray-950 text-white">
-    <div class="container mx-auto px-4">
+  <section id="use-cases" class="py-16 md:py-24 bg-gray-50 dark:bg-gray-950 text-gray-800 dark:text-white relative overflow-hidden">
+    <!-- Decorative blurs for the section -->
+    <div class="absolute top-1/3 left-1/4 w-64 h-64 bg-primary-600/5 dark:bg-primary-600/10 rounded-full blur-[100px] -z-1"></div>
+    <div class="absolute bottom-1/3 right-1/3 w-64 h-64 bg-primary-400/5 dark:bg-primary-400/10 rounded-full blur-[100px] -z-1"></div>
+    
+    <div class="container mx-auto px-4 relative z-10">
       <SectionHeader :title="headerTitle" :description="headerDescription" />
-      <div class="overflow-hidden">
+      
+      <!-- Scrolling container with gradient edges -->
+      <div class="relative overflow-hidden">
+        <!-- Left gradient edge -->
+        <div class="absolute left-0 top-0 bottom-0 w-16 md:w-24 z-20 pointer-events-none bg-gradient-to-r from-gray-50 dark:from-gray-950 to-transparent"></div>
+        
+        <!-- Right gradient edge -->
+        <div class="absolute right-0 top-0 bottom-0 w-16 md:w-24 z-20 pointer-events-none bg-gradient-to-l from-gray-50 dark:from-gray-950 to-transparent"></div>
+        
         <div 
-          class="scroll-container flex gap-6 md:gap-8 py-4 hover:animation-play-state-paused"
+          class="scroll-container flex gap-6 md:gap-8 py-4 hover:animation-play-state-paused px-4"
         >
           <!-- First set of cards -->
           <div v-for="useCase in useCases" :key="`first-${useCase.title}`"
-               class="flex-shrink-0 w-72 md:w-80 bg-slate-800/80 backdrop-blur-sm p-6 rounded-md border border-slate-700 
+               class="flex-shrink-0 w-72 md:w-80 bg-white/90 dark:bg-slate-800/80 backdrop-blur-sm p-6 rounded-md 
+                      border border-gray-200 dark:border-slate-700 
                       transition-all duration-300 group flex flex-col items-center text-center 
-                      hover:border-primary-500 hover:bg-slate-700/70 hover:shadow-2xl hover:shadow-primary-500/25">
-            <div v-html="useCase.icon" class="mb-4 w-16 h-16 text-primary-500 transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110"></div>
-            <h3 class="text-xl font-semibold mb-2 text-gray-100 transition-colors duration-300 group-hover:text-primary-400">{{ useCase.title }}</h3>
-            <p class="text-gray-400 text-sm mb-4 transition-opacity duration-300 group-hover:opacity-90">{{ useCase.description }}</p>
+                      hover:border-primary-500/50 dark:hover:border-primary-500 
+                      hover:bg-gray-100 dark:hover:bg-slate-700/70 
+                      hover:shadow-lg hover:shadow-primary-500/10 dark:hover:shadow-2xl dark:hover:shadow-primary-500/25">
+            <div v-html="useCase.icon" class="mb-4 w-16 h-16 text-primary-600 dark:text-primary-500 transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110"></div>
+            <h3 class="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100 transition-colors duration-300 group-hover:text-primary-600 dark:group-hover:text-primary-400">{{ useCase.title }}</h3>
+            <p class="text-gray-600 dark:text-gray-400 text-sm mb-4 transition-opacity duration-300 group-hover:text-gray-700 dark:group-hover:opacity-90">{{ useCase.description }}</p>
           </div>
           
           <!-- Duplicate set for seamless looping -->
           <div v-for="useCase in useCases" :key="`second-${useCase.title}`"
-               class="flex-shrink-0 w-72 md:w-80 bg-slate-800/80 backdrop-blur-sm p-6 rounded-md border border-slate-700 
+               class="flex-shrink-0 w-72 md:w-80 bg-white/90 dark:bg-slate-800/80 backdrop-blur-sm p-6 rounded-md 
+                      border border-gray-200 dark:border-slate-700 
                       transition-all duration-300 group flex flex-col items-center text-center 
-                      hover:border-primary-500 hover:bg-slate-700/70 hover:shadow-2xl hover:shadow-primary-500/25">
-            <div v-html="useCase.icon" class="mb-4 w-16 h-16 text-primary-500 transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110"></div>
-            <h3 class="text-xl font-semibold mb-2 text-gray-100 transition-colors duration-300 group-hover:text-primary-400">{{ useCase.title }}</h3>
-            <p class="text-gray-400 text-sm mb-4 transition-opacity duration-300 group-hover:opacity-90">{{ useCase.description }}</p>
+                      hover:border-primary-500/50 dark:hover:border-primary-500 
+                      hover:bg-gray-100 dark:hover:bg-slate-700/70 
+                      hover:shadow-lg hover:shadow-primary-500/10 dark:hover:shadow-2xl dark:hover:shadow-primary-500/25">
+            <div v-html="useCase.icon" class="mb-4 w-16 h-16 text-primary-600 dark:text-primary-500 transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110"></div>
+            <h3 class="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100 transition-colors duration-300 group-hover:text-primary-600 dark:group-hover:text-primary-400">{{ useCase.title }}</h3>
+            <p class="text-gray-600 dark:text-gray-400 text-sm mb-4 transition-opacity duration-300 group-hover:text-gray-700 dark:group-hover:opacity-90">{{ useCase.description }}</p>
           </div>
         </div>
       </div>
@@ -64,7 +82,7 @@ const useCases = ref([
     description: 'Ensure application functionality and data access in areas with poor or no internet connectivity.'
   },
   {
-    icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75v-1.5m-4.631 8.332a23.842 23.842 0 0 1-5.454-1.31A8.967 8.967 0 0 1 6 9.75v-1.5M12 9.75v-1.5M8.25 9.75v-1.5M3 9.75v-1.5M21 9.75v-1.5m-18 0v-1.5m0 8.25v-1.5m0 1.5h18m-1.5-1.5v-1.5m0 1.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm-3-3a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>',
+    icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v15h5v-15m0 5h5m-5 5h5m-5 5h5m-5-5h5m-5-5h5m0 5h5m-5-5h5m-5 5h5M4 4l14 14m-14 0l14-14" /></svg>',
     title: 'IoT data synchronization',
     description: 'Efficiently sync data from a multitude of IoT devices to your central platform for analysis and action.'
   }
