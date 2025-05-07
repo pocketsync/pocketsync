@@ -1,8 +1,8 @@
 <template>
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h1 class="text-3xl font-bold text-gray-900 mb-8">Privacy Policy</h1>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-8">Privacy Policy</h1>
 
-        <div class="space-y-8 prose prose-blue max-w-none">
+        <div class="space-y-8 prose prose-blue max-w-none dark:prose-invert text-black dark:text-white">
             <section>
                 <h2 class="font-bold text-xl">Introduction</h2>
                 <p>At PocketSync, we take your privacy seriously. This Privacy Policy explains how we collect, use,

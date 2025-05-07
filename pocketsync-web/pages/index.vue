@@ -1,19 +1,23 @@
 <template>
-  <div>
+  <div class="bg-gray-950 min-h-screen text-white">
     <HeroSection />
-    <LocalFirstSection />
-    <FeaturesSection />
+    <HowItWorksSection />
+    <UseCasesSection />
+    <KeyFeaturesSection />
     <PricingSection />
+    <CtaSection />
   </div>
 </template>
 
 <script setup>
-import HeroSection from '~/components/home/hero-section.vue'
-import LocalFirstSection from '~/components/home/local-first-section.vue'
-import FeaturesSection from '~/components/home/features-section.vue'
-import PricingSection from '~/components/home/pricing-section.vue'
+import HeroSection from '~/components/landing/hero-section.vue';
+import HowItWorksSection from '~/components/landing/how-it-works-section.vue';
+import UseCasesSection from '~/components/landing/use-cases-section.vue';
+import KeyFeaturesSection from '~/components/landing/key-features-section.vue';
+import PricingSection from '~/components/landing/pricing-section.vue';
+import CtaSection from '~/components/landing/cta-section.vue';
 
 definePageMeta({
   layout: 'default',
-})
+});
 </script>
