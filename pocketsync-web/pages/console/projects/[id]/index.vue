@@ -85,7 +85,7 @@
                 <div class="flex flex-wrap items-start justify-between gap-5">
                     <div>
                         <h3 class="mb-1 text-lg font-semibold text-gray-800 dark:text-white/90">
-                            Sync Activity
+                            Sync activity
                         </h3>
                         <span class="block text-theme-sm text-gray-500 dark:text-gray-400">
                             Sync activity of last {{ timeRange }}
@@ -101,17 +101,14 @@
                         </button>
                     </div>
                 </div>
-                <div class="custom-scrollbar max-w-full overflow-x-auto h-80 mt-4">
+                <div :class="{'custom-scrollbar max-w-full overflow-x-auto': syncActivity, 'flex items-center justify-center': !syncActivity}" class="h-80 mt-4">
                     <SyncActivityChart 
                         v-if="syncActivity" 
                         :activity-data="getSyncActivityData(timeRange)" 
                         :time-range="timeRange"
                     />
-                    <div v-else-if="isLoadingActivity" class="flex items-center justify-center h-full">
+                    <div v-if="isLoadingActivity" class="flex items-center justify-center h-full">
                         <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
-                    </div>
-                    <div v-else class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
-                        No sync activity data available
                     </div>
                 </div>
             </div>
@@ -120,7 +117,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useRoute } from 'vue-router';
 import { format, formatDistanceToNow } from 'date-fns';

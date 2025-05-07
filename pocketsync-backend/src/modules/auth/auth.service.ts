@@ -118,8 +118,21 @@ export class AuthService {
 
   async login(loginDto: LoginDto): Promise<AuthenticatedResponseDto> {
     const user = await this.findUserByEmail(loginDto.email);
-    if (!user || !user.passwordHash) {
+    if (!user) {
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (!user.passwordHash) {
+      // Check if user has social connections
+      const socialConnections = await this.prisma.userSocialConnection.findFirst({
+        where: { userId: user.id }
+      });
+      
+      if (socialConnections) {
+        throw new UnauthorizedException('This account uses social login. Please sign in with your social provider.');
+      } else {
+        throw new UnauthorizedException('Invalid credentials');
+      }
     }
 
     const isPasswordValid = await bcrypt.compare(loginDto.password, user.passwordHash);

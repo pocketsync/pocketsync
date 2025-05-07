@@ -4,7 +4,7 @@
     <div :class="{ 'hidden': activityData.length > 0 }" class="flex items-center justify-center h-full">
       <p class="text-gray-500 dark:text-gray-400">No sync activity data available</p>
     </div>
-    <canvas ref="chartRef" :class="{ 'hidden': activityData.length === 0 }"></canvas>
+    <canvas ref="chartRef" :class="{ 'hidden': activityData.length === 0 }" :style="{ 'display': activityData.length === 0 ? 'none' : 'block' }"></canvas>
   </div>
 </template>
 
