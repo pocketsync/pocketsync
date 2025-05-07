@@ -1,24 +1,31 @@
 <template>
-  <section id="how-it-works" class="py-16 md:py-24 bg-gray-950 text-white">
-    <div class="container mx-auto px-4">
+  <section id="how-it-works" class="py-16 md:py-24 bg-gray-50 dark:bg-gray-950 text-gray-800 dark:text-white relative overflow-hidden">
+    <!-- Decorative blurs for the section -->
+    <div class="absolute top-1/3 right-1/4 w-64 h-64 bg-primary-600/5 dark:bg-primary-600/10 rounded-full blur-[100px] -z-1"></div>
+    <div class="absolute bottom-1/3 left-1/3 w-64 h-64 bg-primary-400/5 dark:bg-primary-400/10 rounded-full blur-[100px] -z-1"></div>
+    
+    <div class="container mx-auto px-4 relative z-10">
       <SectionHeader :title="headerTitle" :description="headerDescription" />
       
       <!-- Pipeline Workflow -->
       <div class="relative py-8">
         <!-- Background Pipeline Line -->
-        <div class="absolute top-1/2 left-0 right-0 h-2 bg-gradient-to-r from-gray-800 via-primary-500/30 to-gray-800 transform -translate-y-1/2 rounded-full"></div>
+        <div class="absolute top-1/2 left-0 right-0 h-2 bg-gradient-to-r from-gray-200 via-primary-500/30 to-gray-200 dark:from-gray-800 dark:via-primary-500/30 dark:to-gray-800 transform -translate-y-1/2 rounded-full"></div>
         
         <!-- Steps -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6 relative z-10">
           <div v-for="(step, index) in steps" :key="step.title" 
-               class="group relative bg-gray-900/80 backdrop-blur-sm rounded-md border border-gray-700 p-6 
+               class="group relative bg-white/90 dark:bg-gray-900/80 backdrop-blur-sm rounded-md 
+                      border border-gray-200 dark:border-gray-700 p-6 
                       transition-all duration-300 flex flex-col items-center text-center
-                      hover:border-primary-500 hover:bg-gray-800/90 hover:shadow-lg hover:shadow-primary-500/10">
+                      hover:border-primary-500 hover:bg-gray-100 dark:hover:bg-gray-800/90 
+                      hover:shadow-lg hover:shadow-primary-500/5 dark:hover:shadow-primary-500/10">
             
             <!-- Step Number Node -->
             <div class="absolute -top-5 left-1/2 transform -translate-x-1/2 w-10 h-10 rounded-full 
-                        bg-gray-900 border-2 border-primary-500 text-white flex items-center justify-center 
-                        font-bold text-lg z-20 transition-all duration-300 group-hover:scale-110 group-hover:bg-primary-500">
+                        bg-white dark:bg-gray-900 border-2 border-primary-500 text-primary-600 dark:text-primary-500 
+                        flex items-center justify-center font-bold text-lg z-20 transition-all duration-300 
+                        group-hover:scale-110 group-hover:bg-primary-500 group-hover:text-white dark:group-hover:text-white">
               {{ index + 1 }}
             </div>
             
@@ -26,16 +33,21 @@
             <div v-if="index < steps.length - 1" 
                  class="hidden md:block absolute top-1/2 -right-4 transform -translate-y-1/2 w-8 h-8 z-10">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" 
-                   class="w-full h-full text-primary-500/70 group-hover:text-primary-400 transition-colors duration-300">
+                   class="w-full h-full text-primary-500/50 dark:text-primary-500/70 group-hover:text-primary-500/80 dark:group-hover:text-primary-400 transition-colors duration-300">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
             </div>
             
             <!-- Step Content -->
             <div class="mt-6 flex flex-col h-full">
-              <div v-html="step.icon" class="mb-4 w-12 h-12 text-primary-500 mx-auto transition-transform duration-300 group-hover:scale-110"></div>
-              <h3 class="text-lg font-semibold mb-2 text-gray-100 transition-colors duration-300 group-hover:text-primary-400">{{ step.title }}</h3>
-              <p class="text-gray-400 text-sm flex-grow">{{ step.description }}</p>
+              <div v-html="step.icon" class="mb-4 w-12 h-12 text-primary-600 dark:text-primary-500 mx-auto transition-transform duration-300 group-hover:scale-110 group-hover:text-primary-500 dark:group-hover:text-primary-400"></div>
+              <h3 class="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100 transition-colors duration-300 group-hover:text-primary-600 dark:group-hover:text-primary-400">{{ step.title }}</h3>
+              <p class="text-gray-600 dark:text-gray-400 text-sm flex-grow group-hover:text-gray-700 dark:group-hover:text-gray-300">{{ step.description }}</p>
+            </div>
+            
+            <!-- Decorative shapes inside each card - subtle in light mode, more visible in dark mode -->
+            <div class="absolute top-0 right-0 w-24 h-24 opacity-5 dark:opacity-10 -z-1">
+              <img src="/images/shape/grid-01.svg" alt="grid" class="w-full h-full" />
             </div>
           </div>
         </div>
