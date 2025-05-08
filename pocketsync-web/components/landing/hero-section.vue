@@ -26,14 +26,14 @@
                 <div class="absolute -left-16 -top-16 w-32 h-32 bg-primary-400/5 rounded-full blur-[40px]"></div>
                 
                 <h1 class="mt-10 text-4xl font-bold tracking-tight text-white sm:text-6xl bg-clip-text bg-gradient-to-r from-white to-gray-200">
-                    Seamless offline-first sync, simplified
+                    Build offline-first apps without the headaches
                 </h1>
                 <p class="mt-6 text-lg leading-8 text-gray-300 opacity-90">Build apps that work offline and sync
                     effortlessly across devices with our lightweight, developer-friendly solution.
                 </p>
                 <div class="mt-10 flex items-center gap-x-6">
                     <NuxtLink to="/auth/register"
-                        class="rounded-md bg-white/10 backdrop-blur-sm px-6 py-3 text-sm font-medium text-white border border-white/20 shadow-sm hover:bg-white/20 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-white/40 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary-500/20">
+                        class="inline-block bg-white text-primary-700 font-semibold px-8 py-2 rounded-md shadow-lg hover:bg-gray-50 hover:text-primary-800 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-primary-300 transition-all duration-300">
                         Get started
                     </NuxtLink>
                     <NuxtLink to="https://docs.pocketsync.dev" target="_blank" rel="noopener"
