@@ -131,7 +131,7 @@
 
 <script setup lang="ts">
 import { PhCode } from '@phosphor-icons/vue';
-import { ChevronDownIcon, DocsIcon, HomeIcon, SupportIcon, TableIcon, HorizontalDots, SettingsIcon } from '~/components/icons';
+import { ChevronDownIcon, DocsIcon, HomeIcon, SupportIcon, TableIcon, HorizontalDots, SettingsIcon, PlugInIcon, PageIcon, WarningIcon} from '~/components/icons';
 
 
 const route = useRoute()
@@ -228,17 +228,17 @@ const menuGroups = computed(() => [
         items: [
             {
                 name: 'Sync sessions',
-                icon: TableIcon,
+                icon: PlugInIcon,
                 path: `/console/projects/${projectId.value}/monitoring/sessions`,
             },
             {
                 name: 'System logs',
-                icon: DocsIcon,
+                icon: PageIcon,
                 path: `/console/projects/${projectId.value}/sync-logs`,
             },
             {
                 name: 'Sync conflicts',
-                icon: DocsIcon,
+                icon: WarningIcon,
                 path: `/console/projects/${projectId.value}/conflicts`,
             },
         ],
