@@ -139,16 +139,16 @@
                     <!-- Changed fields -->
                     <div v-for="(diff, key) in dataDiff.changed" :key="`changed-${key}`" class="diff-block">
                       <div
-                        class="diff-header bg-gray-100 dark:bg-slate-700 p-2 rounded-t border border-gray-200 dark:border-gray-600">
-                        <span class="font-medium">{{ key }}</span>
+                        class="diff-header bg-gray-100 dark:bg-slate-700 p-2 rounded-t border border-gray-200 dark:border-gray-600 flex justify-between items-center">
+                        <span class="font-medium text-gray-800 dark:text-gray-200">{{ key }}</span>
                       </div>
                       <div
                         class="diff-content border border-t-0 border-gray-200 dark:border-gray-600 rounded-b overflow-hidden">
                         <div class="bg-red-100 dark:bg-red-900/20 p-2 border-l-4 border-red-500">
-                          <span class="text-xs font-mono">- {{ JSON.stringify(diff.server) }}</span>
+                          <span class="text-xs font-mono text-red-800 dark:text-red-200">- {{ JSON.stringify(diff.server) }}</span>
                         </div>
                         <div class="bg-green-100 dark:bg-green-900/20 p-2 border-l-4 border-green-500">
-                          <span class="text-xs font-mono">+ {{ JSON.stringify(diff.client) }}</span>
+                          <span class="text-xs font-mono text-green-800 dark:text-green-200">+ {{ JSON.stringify(diff.client) }}</span>
                         </div>
                       </div>
                     </div>
@@ -162,7 +162,7 @@
                       <div
                         class="diff-content border border-t-0 border-gray-200 dark:border-gray-600 rounded-b overflow-hidden">
                         <div class="bg-green-100 dark:bg-green-900/20 p-2 border-l-4 border-green-500">
-                          <span class="text-xs font-mono">+ {{ JSON.stringify(value) }}</span>
+                          <span class="text-xs font-mono text-green-800 dark:text-green-200">+ {{ JSON.stringify(value) }}</span>
                         </div>
                       </div>
                     </div>
@@ -176,7 +176,7 @@
                       <div
                         class="diff-content border border-t-0 border-gray-200 dark:border-gray-600 rounded-b overflow-hidden">
                         <div class="bg-red-100 dark:bg-red-900/20 p-2 border-l-4 border-red-500">
-                          <span class="text-xs font-mono">- {{ JSON.stringify(value) }}</span>
+                          <span class="text-xs font-mono text-red-800 dark:text-red-200">- {{ JSON.stringify(value) }}</span>
                         </div>
                       </div>
                     </div>

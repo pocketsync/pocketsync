@@ -152,7 +152,7 @@
             <span v-if="isLoadingMore" class="animate-spin mr-2">
               <PhArrowsClockwise class="h-4 w-4" />
             </span>
-            Load More
+            Load more
           </button>
         </div>
 

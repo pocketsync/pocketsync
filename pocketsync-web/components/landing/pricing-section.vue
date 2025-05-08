@@ -27,7 +27,7 @@
           <div class="p-8 md:p-10">
             <!-- Featured message -->
             <div class="mb-8 rounded-lg bg-primary-50 dark:bg-primary-900/30 p-6 text-center shadow-sm transition-all duration-300 hover:shadow-md border border-primary-100 dark:border-primary-800/50">
-              <p class="text-xl font-semibold text-primary-700 dark:text-primary-300 mb-2">Early Access Pass</p>
+              <p class="text-xl font-semibold text-primary-700 dark:text-primary-300 mb-2">Early access pass</p>
               <p class="text-gray-600 dark:text-gray-300">Get all features with no limitations. We'll provide plenty of notice before introducing any paid plans.</p>
             </div>
             

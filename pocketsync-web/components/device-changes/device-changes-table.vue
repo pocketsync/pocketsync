@@ -199,7 +199,7 @@
             @click="loadMore" 
             class="px-4 py-2 text-primary-600 font-medium hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/20 flex items-center"
           >
-            Load More
+            Load more
           </button>
         </div>
 
