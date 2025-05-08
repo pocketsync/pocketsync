@@ -5,6 +5,7 @@ import { SyncService } from './sync.service';
 import { SocketAuthGuard } from '../../common/guards/socket-auth.guard';
 import { SyncNotificationDto } from './dto/sync-notification.dto';
 import { DeviceChange } from '@prisma/client';
+import { RedisService } from '../../common/services/redis.service';
 
 @WebSocketGateway({
     cors: {
@@ -16,70 +17,64 @@ import { DeviceChange } from '@prisma/client';
 export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly logger = new Logger(SyncGateway.name);
 
-    // Map to store client-to-device mapping
-    private clientDeviceMap = new Map<string, { userId: string, deviceId: string }>();
-
     @WebSocketServer()
     server: Server;
 
     constructor(
         @Inject(forwardRef(() => SyncService))
         private readonly syncService: SyncService,
+        private readonly redisService: RedisService,
     ) { }
 
     async handleConnection(client: Socket) {
-        // Verify connection has required authentication headers
-        const token = client.handshake.headers.authorization;
-        if (!token) {
-            this.logger.warn(`Client ${client.id} attempted connection without authorization header`);
-            client.disconnect();
-            return;
-        }
-
-        const projectId = client.handshake.headers['x-project-id'];
-        if (!projectId) {
-            this.logger.warn(`Client ${client.id} attempted connection without projectId`);
-            client.disconnect();
-            return;
-        }
-
-        // Check if client has device information
-        if (!client.handshake.headers['x-device-id'] || !client.handshake.headers['x-user-id']) {
+        const deviceId = client.handshake.headers['x-device-id'] as string;
+        const userId = client.handshake.headers['x-user-id'] as string;
+        
+        if (!deviceId || !userId) {
             this.logger.warn(`Client ${client.id} attempted connection without deviceId or userId`);
             client.disconnect();
             return;
         }
-
-        this.logger.log(`Client connected: ${client.id}`);
+        
+        this.logger.log(`Client connected: ${client.id} (User: ${userId}, Device: ${deviceId})`);
     }
 
     async handleDisconnect(client: Socket) {
-        // Clean up the client-to-device mapping when a client disconnects
-        this.clientDeviceMap.delete(client.id);
-        this.logger.log(`Client disconnected: ${client.id}`);
+        try {
+            const clientInfo = await this.redisService.getClientInfo(client.id);
+            if (clientInfo) {
+                await this.redisService.removeOnlineDevice(clientInfo.userId, clientInfo.deviceId);
+                await this.redisService.removeClientInfo(client.id);
+                this.logger.log(`Client disconnected: ${client.id} (User: ${clientInfo.userId}, Device: ${clientInfo.deviceId})`);
+            } else {
+                this.logger.log(`Client disconnected: ${client.id} (No stored info)`);
+            }
+        } catch (error) {
+            this.logger.error(`Error handling client disconnect: ${error.message}`);
+        }
     }
 
     @SubscribeMessage('subscribe')
-    handleSubscribe(client: Socket, payload: { userId: string, deviceId: string, since: number }) {
+    async handleSubscribe(client: Socket, payload: { userId: string, deviceId: string, since: number }) {
         if (!payload.userId || !payload.deviceId) {
             this.logger.warn(`Client ${client.id} tried to subscribe without userId or deviceId`);
             return { success: false, error: 'userId and deviceId are required' };
         }
 
-        // Store the client-to-device mapping
-        this.clientDeviceMap.set(client.id, {
-            userId: payload.userId,
-            deviceId: payload.deviceId
-        });
+        try {
+            await this.redisService.storeClientInfo(client.id, payload.userId, payload.deviceId);
+            await this.redisService.addOnlineDevice(payload.userId, payload.deviceId, client.id);
 
-        // Join the user's room
-        client.join(`user-${payload.userId}`);
-        this.logger.log(`Client ${client.id} subscribed to updates for user ${payload.userId} with device ${payload.deviceId}`);
+            client.join(`user-${payload.userId}`);
+            this.logger.log(`Client ${client.id} subscribed to updates for user ${payload.userId} with device ${payload.deviceId}`);
 
-        // This should be an acknoledgement of the subscription
-        this.syncService.verifyMissedChanges(payload.userId, payload.deviceId, payload.since);
+            this.syncService.verifyMissedChanges(payload.userId, payload.deviceId, payload.since);
 
-        return { success: true };
+            return { success: true };
+        } catch (error) {
+            this.logger.error(`Error handling subscription: ${error.message}`);
+            return { success: false, error: 'Internal server error' };
+        }
     }
 
     /**
@@ -98,7 +93,6 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.logger.debug(`Preparing to send notification to user ${userId} devices (except ${sourceDeviceId})`);
 
         try {
-            // Get all socket IDs in the user's room
             const roomName = `user-${userId}`;
             const roomSockets = await this.server.in(roomName).fetchSockets();
 
@@ -107,18 +101,14 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 return;
             }
 
-            // Send to all clients in the room except the source device
             let notifiedCount = 0;
             for (const socket of roomSockets) {
-                const clientInfo = this.clientDeviceMap.get(socket.id);
+                const clientInfo = await this.redisService.getClientInfo(socket.id);
 
-                // Skip if this client is from the source device
                 if (clientInfo && clientInfo.deviceId === sourceDeviceId) {
                     this.logger.debug(`Skipping notification to source device ${sourceDeviceId} (socket: ${socket.id})`);
                     continue;
                 }
-
-                // Send the notification to this client
                 socket.emit('sync-changes', payload);
                 this.logger.debug(`Sent notification to socket ${socket.id} (device: ${clientInfo?.deviceId || 'unknown'})`);
                 notifiedCount++;
@@ -137,11 +127,10 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
     async notifyMissedChanges(userId: string, deviceId: string, changes: DeviceChange[]) {
         this.logger.debug(`Preparing to notify device ${deviceId} about ${changes.length} missed changes`);
 
-        // 1. We want to send notifications only to the socket with deviceId
         const roomName = `user-${userId}`;
         const roomSockets = await this.server.in(roomName).fetchSockets();
         for (const socket of roomSockets) {
-            const clientInfo = this.clientDeviceMap.get(socket.id);
+            const clientInfo = await this.redisService.getClientInfo(socket.id);
             if (clientInfo && clientInfo.deviceId === deviceId) {
                 socket.emit('sync-changes', {
                     type: 'missed_changes',
@@ -150,18 +139,6 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
                     timestamp: Date.now()
                 } as SyncNotificationDto);
             }
-        }
-    }
-
-    /**
-     * Map database change type to client-side operation type
-     */
-    private mapChangeTypeToOperation(changeType: string): string {
-        switch (changeType) {
-            case 'CREATE': return 'insert';
-            case 'UPDATE': return 'update';
-            case 'DELETE': return 'delete';
-            default: return 'update';
         }
     }
 }
