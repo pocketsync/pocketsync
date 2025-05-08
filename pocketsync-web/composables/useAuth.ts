@@ -253,9 +253,18 @@ export const useAuth = () => {
             const refreshTokenCookie = useCookie(REFRESH_TOKEN_COOKIE_NAME, cookieOptions)
             accessTokenCookie.value = accessToken
             refreshTokenCookie.value = refreshToken
-            await getCurrentUser()
+            
+            const userData = await authApi.getCurrentUser()
+            
+            user.value = userData.data
+            isAuthenticated.value = true
+            isSessionValidated.value = true
+            return userData.data
         } catch (err: any) {
-            error.value = handleAuthError(err) 
+            user.value = null
+            isAuthenticated.value = false
+            isSessionValidated.value = false
+            error.value = handleAuthError(err)
             throw error.value
         } finally {
             isLoading.value = false
