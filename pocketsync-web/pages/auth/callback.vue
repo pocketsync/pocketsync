@@ -22,8 +22,7 @@
                     <div class="flex flex-col items-center max-w-xs">
                         <NuxtLink to="/" class="block mb-4">
                             <div class="flex items-center space-x-3">
-                                <img class="w-6 h-6" src="/images/logo/logo_icon.svg" alt="Logo" />
-                                <h1 class="text-2xl font-bold text-white dark:text-black">PocketSync</h1>
+                                <img src="/images/logo/logo_full-dark.svg" alt="Logo" class="w-64" />
                             </div>
                         </NuxtLink>
                         <p class="text-center text-gray-400 dark:text-white/60">
@@ -37,13 +36,13 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from '#app'
 import CommonGridShape from '~/components/common/common-grid-shape.vue'
 
 const route = useRoute()
 const router = useRouter()
-const { error, handleSocialCallback } = useAuth()
+const { error, handleSocialCallback, user, isAuthenticated } = useAuth()
 
 useHead({
     title: 'Authentication - PocketSync'
@@ -68,9 +67,10 @@ onMounted(async () => {
 
     try {
         await handleSocialCallback(accessToken, refreshToken)
+        await nextTick()
         router.push('/console')
     } catch (err) {
-        // Error is already handled by the composable
+        console.error('Social authentication error:', err)
         router.push('/auth/login')
     }
 })
