@@ -4,7 +4,7 @@
       class="flex items-center text-gray-700 dark:text-gray-400"
       @click.prevent="toggleDropdown"
     >
-      <span class="mr-3 overflow-hidden rounded-full h-11 w-11">
+      <span :class="[compact ? 'mr-0' : 'mr-3', 'overflow-hidden rounded-full']" :style="compact ? 'height: 2.5rem; width: 2.5rem;' : 'height: 2.75rem; width: 2.75rem;'">
         <img v-if="user?.avatarUrl" :src="user.avatarUrl" alt="User" />
         <div v-else
             class="h-full w-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center text-primary-600 font-medium">
@@ -12,9 +12,9 @@
         </div>
       </span>
 
-      <span class="block mr-1 font-medium text-theme-sm">{{ user?.firstName }} {{ user?.lastName }}</span>
+      <span v-if="!compact" class="block mr-1 font-medium text-theme-sm">{{ user?.firstName }} {{ user?.lastName }}</span>
 
-      <ChevronDownIcon :class="{ 'rotate-180': dropdownOpen }" />
+      <ChevronDownIcon v-if="!compact" :class="{ 'rotate-180': dropdownOpen }" />
     </button>
 
     <!-- Dropdown Start -->
@@ -72,6 +72,13 @@ const dropdownOpen = ref(false)
 const dropdownRef = ref(null)
 
 const { user, signOut } = useAuth()
+
+const props = defineProps({
+  compact: {
+    type: Boolean,
+    default: false
+  }
+})
 
 const menuItems = [
   { href: '/console/profile', icon: UserCircleIcon, text: 'Edit profile' },

@@ -6,7 +6,7 @@
                     <div class="flex-shrink-0 flex items-center">
                         <NuxtLink to="/" class="flex items-center">
                             <img src="/images/logo/logo_full-light.svg" alt="PocketSync" class="hidden sm:block h-6 dark:hidden" />
-                            <img src="/images/logo/logo_full-dark.svg" alt="PocketSync" class="block sm:hidden h-8 dark:block" />
+                            <img src="/images/logo/logo_full-dark.svg" alt="PocketSync" class="block sm:hidden h-6 dark:block" />
                         </NuxtLink>
                     </div>
                     <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
@@ -35,10 +35,10 @@
                 </div>
                 <div class="flex items-center">
                     <NuxtLink :to="user ? '/console' : '/auth/login'"
-                        class="get-started-btn ml-8 inline-flex items-center justify-center px-6 py-2.5 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transform transition-all duration-200 hover:scale-105 hover:shadow-lg">
+                        class="get-started-btn ml-8 inline-flex items-center justify-center px-6 py-2.5 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transform transition-all duration-200 hover:scale-105 hover:shadow-lg whitespace-nowrap">
                         {{ user ? 'Go to Console' : 'Get Started' }}
                         <svg xmlns="http://www.w3.org/2000/svg"
-                            class="h-4 w-4 ml-2 transform transition-transform group-hover:translate-x-1" fill="none"
+                            class="h-4 w-4 ml-2 transform transition-transform group-hover:translate-x-1 flex-shrink-0" fill="none"
                             viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M13 7l5 5m0 0l-5 5m5-5H6" />

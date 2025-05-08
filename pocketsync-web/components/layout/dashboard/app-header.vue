@@ -2,9 +2,17 @@
   <header
     class="sticky top-0 flex w-full bg-white border-gray-200 z-99999 dark:border-gray-800 dark:bg-gray-900 lg:border-b">
     <div class="flex flex-col items-center justify-between grow lg:flex-row lg:px-6">
-      <div
+      <!-- Dashboard Index Layout Mobile Header (Logo left, User Menu right) -->
+      <div v-if="!showMenuToggle"
+        class="flex items-center justify-between w-full px-3 py-3 border-b border-gray-200 dark:border-gray-800 lg:border-b-0 lg:px-0 lg:py-4">
+        <HeaderLogo :isDashboardIndex="true" />
+        <UserMenu class="lg:hidden" :compact="true" />
+      </div>
+      
+      <!-- Regular Dashboard Layout Header -->
+      <div v-else
         class="flex items-center justify-between w-full gap-2 px-3 py-3 border-b border-gray-200 dark:border-gray-800 sm:gap-4 lg:justify-normal lg:border-b-0 lg:px-0 lg:py-4">
-        <button v-if="showMenuToggle" @click="handleToggle"
+        <button @click="handleToggle"
           class="flex items-center justify-center w-10 h-10 text-gray-500 border-gray-200 rounded-lg z-99999 dark:border-gray-800 dark:text-gray-400 lg:h-11 lg:w-11 lg:border"
           :class="[
             isMobileOpen
@@ -24,7 +32,7 @@
           </svg>
         </button>
         <HeaderLogo />
-        <div v-if="showMenuToggle">
+        <div>
           <button @click="toggleApplicationMenu"
             class="flex items-center justify-center w-10 h-10 text-gray-700 rounded-lg z-99999 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 lg:hidden">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -34,12 +42,11 @@
             </svg>
           </button>
         </div>
-        <div v-else>
+        <div class="hidden lg:block">
           <NuxtLink to="/console" class="flex items-center px-3 mx-12 cursor-pointer">
             <img src="/images/logo/logo_full-light.svg" alt="Project Logo" class="h-5 w-auto dark:hidden" />
             <img src="/images/logo/logo_full-dark.svg" alt="Project Logo" class="h-5 w-auto hidden dark:block" />
           </NuxtLink>
-
         </div>
       </div>
 
@@ -48,7 +55,7 @@
         <div class="flex items-center gap-2 2xsm:gap-3">
           <ThemeToggler />
         </div>
-        <UserMenu />
+        <UserMenu sm:hidden />
       </div>
     </div>
   </header>
