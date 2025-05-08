@@ -27,7 +27,7 @@ export default defineNuxtConfig({
     Sitemap: 'https://pocketsync.dev/sitemap.xml'
   },
   sitemap: {
-    hostname: process.env.NODE_ENV === 'production' ? 'https://codelia.dev' : 'http://localhost:3000',
+    hostname: process.env.NODE_ENV === 'production' ? 'https://pocketsync.dev' : 'http://localhost:3000',
     gzip: true,
     exclude: [
       '/auth/**',
@@ -36,9 +36,16 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      bodyAttrs: {
-        class: 'bg-gray-50 dark:bg-gray-900'
+      titleTemplate: '%s - PocketSync',
+      htmlAttrs: {
+        lang: 'en'
       },
+      meta: [
+        { charset: 'utf-8' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        { hid: 'description', name: 'description', content: 'PocketSync is a powerful local-first synchronization solution that helps you keep your data in sync across all your devices while maintaining privacy and security.' },
+        { name: 'format-detection', content: 'telephone=no' }
+      ],
       script: [
         {
           innerHTML: `(function() {
@@ -56,7 +63,10 @@ export default defineNuxtConfig({
           type: 'text/javascript',
           id: 'theme-script'
         }
-      ]
+      ],
+      bodyAttrs: {
+        class: 'bg-gray-50 dark:bg-gray-900'
+      },
     }
   }
 });
