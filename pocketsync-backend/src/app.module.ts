@@ -12,6 +12,7 @@ import { PrismaModule } from './modules/prisma/prisma.module';
 import { DataExportsModule } from './modules/data-exports/data-exports.module';
 import { ConflictsModule } from './modules/conflicts/conflicts.module';
 import { DeviceChangesModule } from './modules/device-changes/device-changes.module';
+import { RedisModule } from './common/services/redis.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { DeviceChangesModule } from './modules/device-changes/device-changes.mod
         },
       ],
     }),
+    RedisModule,
     AuthModule,
     ProjectsModule,
     EmailModule,
