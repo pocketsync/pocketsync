@@ -55,7 +55,7 @@ model Device {
   syncSessions   SyncSession[]
   lastSyncStatus SyncStatus?    @map("last_sync_status")
 
-  @@id([deviceId, userIdentifier])
+  @@id([deviceId, userIdentifier, projectId])
   @@map("devices")
 }
 
@@ -81,7 +81,7 @@ model DeviceChange {
   deletedAt       DateTime?    @map("deleted_at") @db.Timestamp()
   syncSessionId   String?      @map("sync_session_id") @db.Uuid
   syncSession     SyncSession? @relation(fields: [syncSessionId], references: [id])
-  device          Device       @relation(fields: [deviceId, userIdentifier], references: [deviceId, userIdentifier])
+  device          Device       @relation(fields: [deviceId, userIdentifier, projectId], references: [deviceId, userIdentifier, projectId])
   appUser         AppUser      @relation(fields: [userIdentifier, projectId], references: [userIdentifier, projectId])
   project         Project      @relation(fields: [projectId], references: [id])
 
@@ -107,7 +107,7 @@ model SyncLog {
   syncSessionId  String?      @map("sync_session_id") @db.Uuid
   project        Project      @relation(fields: [projectId], references: [id])
   appUser        AppUser?     @relation(fields: [userIdentifier, projectId], references: [userIdentifier, projectId])
-  device         Device?      @relation(fields: [deviceId, userIdentifier], references: [deviceId, userIdentifier])
+  device         Device?      @relation(fields: [deviceId, userIdentifier, projectId], references: [deviceId, userIdentifier, projectId])
   syncSession    SyncSession? @relation(fields: [syncSessionId], references: [id])
 
   @@map("sync_logs")
@@ -159,12 +159,13 @@ model SyncSession {
   id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   deviceId       String         @map("device_id") @db.VarChar(255)
   userIdentifier String         @map("user_identifier") @db.VarChar(255)
+  projectId      String         @map("project_id") @db.Uuid
   startTime      DateTime       @default(now()) @map("start_time") @db.Timestamp()
   endTime        DateTime?      @map("end_time") @db.Timestamp()
   status         SyncStatus     @default(IN_PROGRESS)
   changesCount   Int            @default(0) @map("changes_count")
   syncDuration   Int?           @map("sync_duration")
-  device         Device         @relation(fields: [deviceId, userIdentifier], references: [deviceId, userIdentifier])
+  device         Device         @relation(fields: [deviceId, userIdentifier, projectId], references: [deviceId, userIdentifier, projectId])
   deviceChanges  DeviceChange[]
   logs           SyncLog[]
   conflicts      Conflict[]

@@ -12,12 +12,13 @@ export class DevicesService {
   /**
    * Get a device by ID and user identifier
    */
-  async getDevice(deviceId: string, userIdentifier: string): Promise<DeviceDto> {
+  async getDevice(deviceId: string, userIdentifier: string, projectId: string): Promise<DeviceDto> {
     const device = await this.prisma.device.findUnique({
       where: {
-        deviceId_userIdentifier: {
+        deviceId_userIdentifier_projectId: {
           deviceId,
-          userIdentifier
+          userIdentifier,
+          projectId
         }
       }
     });
@@ -117,9 +118,10 @@ export class DevicesService {
   ): Promise<DeviceDto> {
     const device = await this.prisma.device.upsert({
       where: {
-        deviceId_userIdentifier: {
+        deviceId_userIdentifier_projectId: {
           deviceId,
-          userIdentifier
+          userIdentifier,
+          projectId
         }
       },
       update: {
@@ -142,12 +144,13 @@ export class DevicesService {
   /**
    * Update device last seen timestamp
    */
-  async updateLastSeen(deviceId: string, userIdentifier: string): Promise<DeviceDto> {
+  async updateLastSeen(deviceId: string, userIdentifier: string, projectId: string): Promise<DeviceDto> {
     const device = await this.prisma.device.update({
       where: {
-        deviceId_userIdentifier: {
+        deviceId_userIdentifier_projectId: {
           deviceId,
-          userIdentifier
+          userIdentifier,
+          projectId
         }
       },
       data: {
@@ -164,13 +167,15 @@ export class DevicesService {
   async updateSyncStatus(
     deviceId: string,
     userIdentifier: string,
+    projectId: string,
     status: SyncStatus
   ): Promise<DeviceDto> {
     const device = await this.prisma.device.update({
       where: {
-        deviceId_userIdentifier: {
+        deviceId_userIdentifier_projectId: {
           deviceId,
-          userIdentifier
+          userIdentifier,
+          projectId
         }
       },
       data: {
@@ -185,12 +190,13 @@ export class DevicesService {
   /**
    * Delete a device (soft delete)
    */
-  async deleteDevice(deviceId: string, userIdentifier: string): Promise<DeviceDto> {
+  async deleteDevice(deviceId: string, userIdentifier: string, projectId: string): Promise<DeviceDto> {
     const device = await this.prisma.device.update({
       where: {
-        deviceId_userIdentifier: {
+        deviceId_userIdentifier_projectId: {
           deviceId,
-          userIdentifier
+          userIdentifier,
+          projectId
         }
       },
       data: {
