@@ -48,12 +48,12 @@ export const useAuth = () => {
                 }
             case 401:
                 return {
-                    message: 'Invalid credentials. Please check your email and password.',
+                    message: data.message || 'Invalid credentials. Please check your email and password.',
                     code: 'INVALID_CREDENTIALS'
                 }
             case 403:
                 return {
-                    message: 'Access denied. Please check your permissions.',
+                    message: data.message || 'Access denied. Please check your permissions.',
                     code: 'ACCESS_DENIED'
                 }
             default:
