@@ -5,6 +5,7 @@ import { Device } from 'src/common/entities/device.entity';
 export interface IUserDevice {
   appUser: AppUser;
   device: Device;
+  projectId: string;
 }
 
 export const UserDevice = createParamDecorator(
@@ -19,6 +20,7 @@ export const UserDevice = createParamDecorator(
     return {
       appUser: request.appUser,
       device: request.device,
+      projectId: request.headers['x-project-id'],
     };
   },
 );

@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Query } from '@nestjs/common';
+import { Controller, Post, Get, Body, Query, Headers } from '@nestjs/common';
 import { SyncService } from './sync.service';
 import { SyncChange, SyncChangeBatchDto } from './dto/sync-change-batch.dto';
 import { ApiHeader, ApiOperation, ApiResponse } from '@nestjs/swagger';
@@ -31,7 +31,7 @@ export class SyncController {
     type: DefaultSuccessResponse
   })
   uploadChanges(@UserDevice() userDevice: IUserDevice, @Body() changes: SyncChangeBatchDto) {
-    return this.syncService.uploadChanges(userDevice.appUser, userDevice.device, changes);
+    return this.syncService.uploadChanges(userDevice.projectId, userDevice.appUser, userDevice.device, changes);
   }
 
   @Get('/download')
@@ -42,6 +42,6 @@ export class SyncController {
     type: [SyncChange]
   })
   downloadChanges(@UserDevice() userDevice: IUserDevice, @Query('since') since: number) {
-    return this.syncService.downloadChanges(userDevice.appUser, userDevice.device, since);
+    return this.syncService.downloadChanges(userDevice.projectId, userDevice.appUser, userDevice.device, since);
   }
 }

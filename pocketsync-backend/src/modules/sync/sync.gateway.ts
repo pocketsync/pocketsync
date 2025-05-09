@@ -29,9 +29,11 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
     async handleConnection(client: Socket) {
         const deviceId = client.handshake.headers['x-device-id'] as string;
         const userId = client.handshake.headers['x-user-id'] as string;
+        const projectId = client.handshake.headers['x-project-id'] as string;
+        console.log('Client connected:', client.id, 'User:', userId, 'Device:', deviceId);
         
-        if (!deviceId || !userId) {
-            this.logger.warn(`Client ${client.id} attempted connection without deviceId or userId`);
+        if (!deviceId || !userId || !projectId) {
+            this.logger.warn(`Client ${client.id} attempted connection without deviceId or userId or projectId`);
             client.disconnect();
             return;
         }
@@ -55,7 +57,7 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     @SubscribeMessage('subscribe')
-    async handleSubscribe(client: Socket, payload: { userId: string, deviceId: string, since: number }) {
+    async handleSubscribe(client: Socket, payload: { userId: string, deviceId: string, since: number, projectId: string }) {
         if (!payload.userId || !payload.deviceId) {
             this.logger.warn(`Client ${client.id} tried to subscribe without userId or deviceId`);
             return { success: false, error: 'userId and deviceId are required' };
@@ -68,7 +70,7 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
             client.join(`user-${payload.userId}`);
             this.logger.log(`Client ${client.id} subscribed to updates for user ${payload.userId} with device ${payload.deviceId}`);
 
-            this.syncService.verifyMissedChanges(payload.userId, payload.deviceId, payload.since);
+            this.syncService.verifyMissedChanges(payload.userId, payload.deviceId, payload.since, payload.projectId);
 
             return { success: true };
         } catch (error) {

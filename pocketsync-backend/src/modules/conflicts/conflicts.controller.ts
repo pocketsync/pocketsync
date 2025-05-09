@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards, Headers } from '@nestjs/common';
 import { ApiHeader, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ConflictsService } from './conflicts.service';
 import { ConflictDto } from './dto/conflict.dto';
@@ -34,11 +34,12 @@ export class ConflictsController {
   @UseGuards(SdkAuthGuard)
   async reportConflict(
     @UserDevice() userDevice: IUserDevice,
+    @Headers('x-project-id') projectId: string,
     @Body() reportConflictDto: ReportConflictDto,
     @Query('syncSessionId') syncSessionId?: string
   ): Promise<ConflictDto> {
     return this.conflictsService.reportConflict(
-      userDevice.appUser.projectId,
+      projectId,
       userDevice.appUser.userIdentifier,
       userDevice.device.deviceId,
       reportConflictDto,

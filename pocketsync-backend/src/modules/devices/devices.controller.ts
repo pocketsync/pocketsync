@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Put, Delete, Body, Param, Query, UseGuards, Headers } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { DevicesService } from './devices.service';
 import { DeviceDto } from './dto/device.dto';
@@ -110,9 +110,10 @@ export class DevicesController {
   async updateDeviceInfo(
     @Param('deviceId') deviceId: string,
     @Param('userIdentifier') userIdentifier: string,
+    @Headers('x-project-id') projectId: string,
     @Body() deviceInfo: Record<string, any>
   ): Promise<DeviceDto> {
-    return this.devicesService.updateDeviceInfo(deviceId, userIdentifier, deviceInfo);
+    return this.devicesService.updateDeviceInfo(deviceId, userIdentifier, projectId, deviceInfo);
   }
 
   @Put(':deviceId/user/:userIdentifier/status')

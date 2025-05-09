@@ -30,7 +30,10 @@ export class UserDeviceMiddleware implements NestMiddleware {
       // Find or create the app user
       let prismaAppUser = await this.prisma.appUser.findUnique({
         where: {
-          userIdentifier,
+          userIdentifier_projectId: {
+            userIdentifier,
+            projectId,
+          },
         },
         include: {
           devices: true,
@@ -57,6 +60,7 @@ export class UserDeviceMiddleware implements NestMiddleware {
           data: {
             deviceId,
             userIdentifier,
+            projectId,
             lastSeenAt: new Date(),
           },
         });
@@ -76,7 +80,7 @@ export class UserDeviceMiddleware implements NestMiddleware {
       }
 
       // Convert Prisma models to our entity types using mappers
-      const appUser = AppUsersMapper.toAppUser(prismaAppUser);
+      const appUser = AppUsersMapper.toAppUser(prismaAppUser, projectId);
       const device = DeviceMapper.toDevice(prismaDevice);
 
       // Add the appUser and device to the request object

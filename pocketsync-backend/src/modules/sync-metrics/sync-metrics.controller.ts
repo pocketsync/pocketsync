@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards, Headers } from '@nestjs/common';
 import { ApiHeader, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { SyncMetricsService } from './sync-metrics.service';
 import { SyncMetricDto } from './dto/sync-metric.dto';
@@ -32,10 +32,11 @@ export class SyncMetricsController {
   @UseGuards(SdkAuthGuard)
   async recordMetric(
     @UserDevice() userDevice: IUserDevice,
+    @Headers('x-project-id') projectId: string,
     @Body() metricData: { metricType: string; value: number; metadata?: Record<string, any> }
   ): Promise<SyncMetricDto> {
     return this.syncMetricsService.recordMetric(
-      userDevice.appUser.projectId,
+      projectId,
       metricData.metricType,
       metricData.value,
       metricData.metadata,

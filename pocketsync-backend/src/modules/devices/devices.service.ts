@@ -112,6 +112,7 @@ export class DevicesService {
   async updateDeviceInfo(
     deviceId: string,
     userIdentifier: string,
+    projectId: string,
     deviceInfo: Record<string, any>
   ): Promise<DeviceDto> {
     const device = await this.prisma.device.upsert({
@@ -128,6 +129,7 @@ export class DevicesService {
       create: {
         deviceId,
         userIdentifier,
+        projectId,
         deviceInfo,
         lastSeenAt: new Date(),
         createdAt: new Date()
