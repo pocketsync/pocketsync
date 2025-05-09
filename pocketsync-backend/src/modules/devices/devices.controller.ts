@@ -91,9 +91,10 @@ export class DevicesController {
   @ApiResponse({ status: 404, description: 'Device not found' })
   async getDevice(
     @Param('deviceId') deviceId: string,
-    @Param('userIdentifier') userIdentifier: string
+    @Param('userIdentifier') userIdentifier: string,
+    @Headers('x-project-id') projectId: string
   ): Promise<DeviceDto> {
-    return this.devicesService.getDevice(deviceId, userIdentifier);
+    return this.devicesService.getDevice(deviceId, userIdentifier, projectId);
   }
 
   @Put(':deviceId/user/:userIdentifier/info')
@@ -130,9 +131,10 @@ export class DevicesController {
   async updateSyncStatus(
     @Param('deviceId') deviceId: string,
     @Param('userIdentifier') userIdentifier: string,
+    @Headers('x-project-id') projectId: string,
     @Body() body: { status: SyncStatus }
   ): Promise<DeviceDto> {
-    return this.devicesService.updateSyncStatus(deviceId, userIdentifier, body.status);
+    return this.devicesService.updateSyncStatus(deviceId, userIdentifier, projectId, body.status);
   }
 
   @Delete(':deviceId/user/:userIdentifier')
@@ -148,8 +150,9 @@ export class DevicesController {
   @ApiResponse({ status: 404, description: 'Device not found' })
   async deleteDevice(
     @Param('deviceId') deviceId: string,
-    @Param('userIdentifier') userIdentifier: string
+    @Param('userIdentifier') userIdentifier: string,
+    @Headers('x-project-id') projectId: string
   ): Promise<DeviceDto> {
-    return this.devicesService.deleteDevice(deviceId, userIdentifier);
+    return this.devicesService.deleteDevice(deviceId, userIdentifier, projectId);
   }
 }

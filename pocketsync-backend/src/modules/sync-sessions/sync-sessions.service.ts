@@ -12,13 +12,14 @@ export class SyncSessionsService {
   /**
    * Create a new sync session
    */
-  async createSession(deviceId: string, userIdentifier: string): Promise<SyncSessionDto> {
+  async createSession(deviceId: string, userIdentifier: string, projectId: string): Promise<SyncSessionDto> {
     this.logger.log(`Creating new sync session for device ${deviceId} and user ${userIdentifier}`);
     
     const session = await this.prisma.syncSession.create({
       data: {
         deviceId,
         userIdentifier,
+        projectId,
         status: 'IN_PROGRESS'
       }
     });

@@ -62,11 +62,12 @@ export class SyncService {
         // Create a new sync session using the dedicated service
         const syncSession = await this.syncSessionsService.createSession(
             device.deviceId,
-            appUser.userIdentifier
+            appUser.userIdentifier,
+            projectId
         );
 
         // Update device last seen timestamp
-        await this.devicesService.updateLastSeen(device.deviceId, appUser.userIdentifier);
+        await this.devicesService.updateLastSeen(device.deviceId, appUser.userIdentifier, projectId);
 
         // Log the start of the sync session
         await this.syncLogsService.createLog(
@@ -142,14 +143,15 @@ export class SyncService {
             );
 
             // Update device last change timestamp and sync status
-            await this.devicesService.updateSyncStatus(device.deviceId, appUser.userIdentifier, 'SUCCESS');
+            await this.devicesService.updateSyncStatus(device.deviceId, appUser.userIdentifier, projectId, 'SUCCESS');
 
             // Update device last change timestamp
             await this.prisma.device.update({
                 where: {
-                    deviceId_userIdentifier: {
+                    deviceId_userIdentifier_projectId: {
                         deviceId: device.deviceId,
-                        userIdentifier: appUser.userIdentifier
+                        userIdentifier: appUser.userIdentifier,
+                        projectId
                     }
                 },
                 data: {
@@ -239,7 +241,7 @@ export class SyncService {
             );
 
             // Update device sync status to failed
-            await this.devicesService.updateSyncStatus(device.deviceId, appUser.userIdentifier, 'FAILED');
+            await this.devicesService.updateSyncStatus(device.deviceId, appUser.userIdentifier, projectId, 'FAILED');
 
             // Log the failure of the sync session
             await this.syncLogsService.createLog(
@@ -269,10 +271,11 @@ export class SyncService {
         const syncSession = await this.syncSessionsService.createSession(
             device.deviceId,
             appUser.userIdentifier,
+            projectId
         );
 
         try {
-            await this.devicesService.updateLastSeen(device.deviceId, appUser.userIdentifier);
+            await this.devicesService.updateLastSeen(device.deviceId, appUser.userIdentifier, projectId);
             if (isNaN(since)) {
                 await this.syncLogsService.createLog(
                     projectId,

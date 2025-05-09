@@ -68,9 +68,10 @@ export class UserDeviceMiddleware implements NestMiddleware {
         // Update the last seen timestamp
         prismaDevice = await this.prisma.device.update({
           where: {
-            deviceId_userIdentifier: {
+            deviceId_userIdentifier_projectId: {
               deviceId,
               userIdentifier,
+              projectId,
             },
           },
           data: {
