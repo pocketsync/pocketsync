@@ -11,7 +11,7 @@
                     <div>
                         <h3 class="text-lg font-medium text-gray-900 dark:text-white">Business inquiries or support</h3>
                         <p class="mt-2 text-gray-600 dark:text-gray-300">For business and partnership inquiries, please email us at
-                            hello@pocketsync.dev</p>
+                            <a href="mailto:hello@pocketsync.dev" class="text-primary font-semibold">hello@pocketsync.dev</a></p>
                     </div>
                     <div>
                         <h3 class="text-lg font-medium text-gray-900 dark:text-white">Office hours</h3>
