@@ -121,7 +121,8 @@ import DeleteProjectModal from '~/components/projects/delete-project-modal.vue'
 import type { UpdateProjectDto } from '~/api-client'
 
 definePageMeta({
-  layout: 'dashboard'
+  layout: 'dashboard',
+  middleware: 'auth'
 })
 
 const route = useRoute()

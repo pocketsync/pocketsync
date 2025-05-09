@@ -11,7 +11,7 @@
           </linearGradient>
         </defs>
       </svg>
-      <svg class="absolute bottom-0 right-0 w-1/3 h-1/3 opacity-15" viewBox="0 0 150 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg class="absolute bottom-[-15%] right-0 w-1/3 h-1/3 opacity-15" viewBox="0 0 150 150" fill="none" xmlns="http://www.w3.org/2000/svg">
         <circle cx="75" cy="75" r="75" fill="url(#gradient2)" />
         <defs>
           <linearGradient id="gradient2" x1="0" y1="0" x2="150" y2="150">

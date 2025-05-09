@@ -5,6 +5,8 @@
                 <div class="col-span-1 md:col-span-1">
                     <h3 class="text-sm font-bold text-gray-900 dark:text-white tracking-wider uppercase mb-6">Product</h3>
                     <div class="space-y-4">
+                        <NuxtLink to="/console" class="text-base text-gray-600 dark:text-white hover:text-primary-600 transition-colors duration-200 block">Console
+                        </NuxtLink>
                         <NuxtLink to="https://docs.pocketsync.dev"
                             target="_blank" rel="noopener noreferrer"
                             class="text-base text-gray-600 dark:text-white hover:text-primary-600 transition-colors duration-200 block">Documentation

@@ -14,7 +14,8 @@ import { useProjectsStore } from '~/stores/projectsStore';
 import { storeToRefs } from 'pinia';
 
 definePageMeta({
-    layout: 'dashboard'
+    layout: 'dashboard',
+    middleware: 'auth'
 })
 
 const projectsStore = useProjectsStore()

@@ -127,7 +127,8 @@ import ErrorAlert from '~/components/common/error-alert.vue';
 import SyncActivityChart from '~/components/charts/SyncActivityChart.vue';
 
 definePageMeta({
-    layout: 'dashboard'
+    layout: 'dashboard',
+    middleware: 'auth'
 });
 
 enum TimeRange {

@@ -248,7 +248,8 @@ import LogsTable from '~/components/sync-logs/logs-table.vue'
 import PageBreadcrumb from '~/components/common/page-breadcrumb.vue'
 
 definePageMeta({
-  layout: 'dashboard'
+  layout: 'dashboard',
+  middleware: 'auth'
 })
 
 const route = useRoute()

@@ -128,9 +128,6 @@
                     <button @click="viewConflictDetails(conflict.id)" class="text-gray-500 hover:text-primary-500 dark:text-gray-400 dark:hover:text-primary-400">
                       <PhInfo size="20" />
                     </button>
-                    <button v-if="!isResolved(conflict)" @click="resolveConflict(conflict.id)" class="text-gray-500 hover:text-primary-500 dark:text-gray-400 dark:hover:text-primary-400">
-                      <PhCheck size="20" />
-                    </button>
                   </div>
                 </td>
               </tr>
@@ -198,7 +195,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['load-more', 'resolve', 'view-details'])
+const emit = defineEmits(['load-more', 'view-details'])
 
 const { truncateId } = useUtils()
 // Table container ref for scroll position
@@ -277,10 +274,6 @@ const viewConflictDetails = (conflictId: string) => {
     selectedConflict.value = conflict
     isDetailsModalOpen.value = true
   }
-}
-
-const resolveConflict = (conflictId: string) => {
-  emit('resolve', conflictId)
 }
 
 const loadMoreConflicts = () => {

@@ -337,7 +337,8 @@ import { useAuth } from '~/composables/useAuth'
 import { useNotificationSettings } from '~/composables/useNotificationSettings'
 
 definePageMeta({
-    layout: 'dashboard-index'
+    layout: 'dashboard-index',
+    middleware: 'auth'
 })
 
 // @ts-ignore
@@ -347,8 +348,6 @@ useHead({
 
 const { user, isLoading: authLoading, error: authError, updateProfile, changePassword } = useAuth()
 const { settings, isLoading: notificationLoading, error: notificationError, fetchSettings, updateSettings } = useNotificationSettings()
-
-// Combined loading and error states
 const isLoading = computed(() => {
     const shouldConsiderNotificationLoading = activeTab.value === 'notifications'
     return authLoading || (shouldConsiderNotificationLoading && notificationLoading)
@@ -360,7 +359,6 @@ const error = computed(() => {
     return authError || notificationError
 })
 
-// Helper function to safely get error message
 const getErrorMessage = (err: any): string => {
     if (!err) return 'An unexpected error occurred'
     if (typeof err === 'string') return err
@@ -368,10 +366,8 @@ const getErrorMessage = (err: any): string => {
     return 'An unexpected error occurred'
 }
 
-// Tab state
 const activeTab = ref('profile')
 
-// Form state for profile
 const profileForm = reactive({
     firstName: '',
     lastName: ''
@@ -385,7 +381,6 @@ const formErrors = reactive({
 const isUpdating = ref(false)
 const updateSuccess = ref(false)
 
-// Form state for password
 const passwordForm = reactive({
     currentPassword: '',
     newPassword: '',
@@ -401,7 +396,6 @@ const passwordErrors = reactive({
 const isChangingPassword = ref(false)
 const passwordUpdateSuccess = ref(false)
 
-// Form state for notifications
 const notificationForm = reactive({
     emailEnabled: true,
     marketingEnabled: false
@@ -410,7 +404,6 @@ const notificationForm = reactive({
 const isSavingNotifications = ref(false)
 const notificationUpdateSuccess = ref(false)
 
-// Initialize form with user data when available
 watch(() => user.value, (newUser) => {
     if (newUser) {
         profileForm.firstName = newUser.firstName || ''
@@ -418,74 +411,58 @@ watch(() => user.value, (newUser) => {
     }
 }, { immediate: true })
 
-// Check if hash in URL to set active tab and fetch notification settings
 onMounted(async () => {
-    // Set active tab based on URL hash
     const hash = window.location.hash.replace('#', '')
     if (hash === 'security' || hash === 'notifications') {
         activeTab.value = hash
     }
     
-    // Only fetch notification settings if we're on the notifications tab
     if (activeTab.value === 'notifications') {
         try {
             await fetchSettings()
-            // If we get here, settings.value should be populated from the composable
             if (settings.value) {
                 notificationForm.emailEnabled = settings.value.emailEnabled
                 notificationForm.marketingEnabled = settings.value.marketingEnabled
             }
         } catch (err) {
             console.error('Error fetching notification settings:', err)
-            // Don't propagate the error to prevent the UI from showing an error message
-            // for a non-critical feature
         }
     }
 })
 
-// Function to switch tabs and update URL
 const switchTab = async (tab: string) => {
     activeTab.value = tab
     
-    // Update URL with hash
     if (process.client) {
         const url = new URL(window.location.href)
         url.hash = tab === 'profile' ? '' : `#${tab}`
         window.history.pushState({}, '', url.toString())
     }
     
-    // Fetch notification settings when switching to notifications tab
     if (tab === 'notifications') {
         try {
             await fetchSettings()
-            // If we get here, settings.value should be populated from the composable
             if (settings.value) {
                 notificationForm.emailEnabled = settings.value.emailEnabled
                 notificationForm.marketingEnabled = settings.value.marketingEnabled
             }
         } catch (err) {
             console.error('Error fetching notification settings:', err)
-            // Don't propagate the error to prevent the UI from showing an error message
-            // for a non-critical feature
         }
     }
 }
 
-// Validate profile form
 const validateProfileForm = () => {
     let isValid = true
     
-    // Reset errors
     formErrors.firstName = ''
     formErrors.lastName = ''
     
-    // Validate first name
     if (!profileForm.firstName.trim()) {
         formErrors.firstName = 'First name is required'
         isValid = false
     }
     
-    // Validate last name
     if (!profileForm.lastName.trim()) {
         formErrors.lastName = 'Last name is required'
         isValid = false
@@ -494,7 +471,6 @@ const validateProfileForm = () => {
     return isValid
 }
 
-// Update profile
 const updateUserProfile = async () => {
     if (!validateProfileForm()) return
     
@@ -510,14 +486,12 @@ const updateUserProfile = async () => {
         })
         updateSuccess.value = true
         
-        // Hide success message after 3 seconds
         setTimeout(() => {
             updateSuccess.value = false
         }, 3000)
     } catch (err: any) {
         console.error('Error updating profile:', err)
         
-        // Handle validation errors from API
         if (err.details) {
             if (err.details.firstName) {
                 formErrors.firstName = err.details.firstName[0]
@@ -531,22 +505,18 @@ const updateUserProfile = async () => {
     }
 }
 
-// Validate password form
 const validatePasswordForm = () => {
     let isValid = true
     
-    // Reset errors
     passwordErrors.currentPassword = ''
     passwordErrors.newPassword = ''
     passwordErrors.confirmPassword = ''
     
-    // Validate current password
     if (!passwordForm.currentPassword) {
         passwordErrors.currentPassword = 'Current password is required'
         isValid = false
     }
     
-    // Validate new password
     if (!passwordForm.newPassword) {
         passwordErrors.newPassword = 'New password is required'
         isValid = false
@@ -555,7 +525,6 @@ const validatePasswordForm = () => {
         isValid = false
     }
     
-    // Validate confirm password
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
         passwordErrors.confirmPassword = 'Passwords do not match'
         isValid = false
@@ -564,7 +533,6 @@ const validatePasswordForm = () => {
     return isValid
 }
 
-// Change password
 const changeUserPassword = async () => {
     if (!validatePasswordForm()) return
     
@@ -579,21 +547,18 @@ const changeUserPassword = async () => {
             } 
         })
         
-        // Reset form
         passwordForm.currentPassword = ''
         passwordForm.newPassword = ''
         passwordForm.confirmPassword = ''
         
         passwordUpdateSuccess.value = true
         
-        // Hide success message after 3 seconds
         setTimeout(() => {
             passwordUpdateSuccess.value = false
         }, 3000)
     } catch (err: any) {
         console.error('Error changing password:', err)
         
-        // Handle validation errors from API
         if (err.code === 'INVALID_CREDENTIALS') {
             passwordErrors.currentPassword = 'Current password is incorrect'
         } else if (err.details) {
@@ -609,7 +574,6 @@ const changeUserPassword = async () => {
     }
 }
 
-// Save notification settings
 const saveNotificationSettings = async () => {
     isSavingNotifications.value = true
     notificationUpdateSuccess.value = false
@@ -622,7 +586,6 @@ const saveNotificationSettings = async () => {
         
         notificationUpdateSuccess.value = true
         
-        // Hide success message after 3 seconds
         setTimeout(() => {
             notificationUpdateSuccess.value = false
         }, 3000)

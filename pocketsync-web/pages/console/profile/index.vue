@@ -219,7 +219,8 @@ import { useAuth } from '~/composables/useAuth'
 import { useUtils } from '~/composables/useUtils'
 
 definePageMeta({
-    layout: 'dashboard-index'
+    layout: 'dashboard-index',
+    middleware: 'auth'
 })
 
 useHead({

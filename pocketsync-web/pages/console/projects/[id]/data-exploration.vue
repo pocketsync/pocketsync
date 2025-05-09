@@ -45,7 +45,8 @@ import { useProjectsStore } from '~/stores/projectsStore';
 import { useDeviceChangesStore } from '~/stores/deviceChangesStore';
 
 definePageMeta({
-    layout: 'dashboard'
+    layout: 'dashboard',
+    middleware: 'auth'
 })
 
 const route = useRoute()

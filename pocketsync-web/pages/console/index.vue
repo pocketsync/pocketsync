@@ -94,7 +94,8 @@ const { fetchProjects, loadMoreProjects } = projectsStore
 const loadingMore = ref(false)
 
 definePageMeta({
-    layout: 'dashboard-index'
+    layout: 'dashboard-index',
+    middleware: 'auth'
 })
 
 useHead({

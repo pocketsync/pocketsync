@@ -57,7 +57,6 @@
       :isLoading="isLoading" 
       :pagination="pagination"
       @load-more="handleLoadMore"
-      @resolve="handleResolveConflict"
       @view-details="handleViewDetails"
     />
   </div>
@@ -77,7 +76,8 @@ import ConflictsTable from '~/components/conflicts/conflicts-table.vue'
 import { PhTable, PhDeviceMobile, PhArrowsClockwise } from '@phosphor-icons/vue'
 
 definePageMeta({
-  layout: 'dashboard'
+  layout: 'dashboard',
+  middleware: 'auth'
 })
 
 const route = useRoute()
@@ -86,7 +86,6 @@ const projectsStore = useProjectsStore()
 const conflictsStore = useConflictsStore()
 const toast = useToast()
 
-// Get conflicts data using the composable
 const { 
   conflicts, 
   isLoading, 
@@ -98,11 +97,9 @@ const {
   clearFilters
 } = useConflicts()
 
-// Filter state
 const tableFilter = ref('')
 const deviceFilter = ref('')
 
-// Computed properties for filter options
 const availableTables = computed(() => {
   const tables = new Set<string>()
   conflicts.value.forEach(conflict => {
@@ -123,7 +120,6 @@ const availableDevices = computed(() => {
   return Array.from(devices).sort()
 })
 
-// Load project and conflicts on mount
 onMounted(async () => {
   if (projectId) {
     await projectsStore.fetchProjectById(projectId)
@@ -131,7 +127,6 @@ onMounted(async () => {
   }
 })
 
-// Handle filter changes
 const handleFilterChange = () => {
   setFilters({
     tableName: tableFilter.value || undefined,
@@ -140,34 +135,16 @@ const handleFilterChange = () => {
   getConflictsByProject(projectId)
 }
 
-// Refresh conflicts
 const refreshConflicts = async () => {
   await getConflictsByProject(projectId)
   toast.show('Conflicts refreshed', 'success')
 }
 
-// Handle loading more conflicts
 const handleLoadMore = async () => {
   await getConflictsByProject(projectId, pagination.value.page + 1, pagination.value.limit)
 }
 
-// Handle resolving a conflict
-const handleResolveConflict = async (conflictId: string) => {
-  try {
-    // In a real implementation, you would call an API to resolve the conflict
-    // For now, we'll just show a success message
-    toast.show('Conflict resolved successfully', 'success')
-    
-    // Refresh the conflicts list
-    await getConflictsByProject(projectId)
-  } catch (err: any) {
-    toast.show(err.message || 'Failed to resolve conflict', 'error')
-  }
-}
-
-// Handle viewing conflict details
 const handleViewDetails = (conflictId: string) => {
-  // This is handled by the ConflictsTable component internally
   console.log('Viewing details for conflict:', conflictId)
 }
 </script>

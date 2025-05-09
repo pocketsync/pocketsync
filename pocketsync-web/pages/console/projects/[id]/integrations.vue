@@ -224,7 +224,8 @@ import TokenCreatedModal from '~/components/auth-tokens/token-created-modal.vue'
 import RevokeTokenModal from '~/components/auth-tokens/revoke-token-modal.vue';
 
 definePageMeta({
-    layout: 'dashboard'
+    layout: 'dashboard',
+    middleware: 'auth'
 })
 
 const route = useRoute()
