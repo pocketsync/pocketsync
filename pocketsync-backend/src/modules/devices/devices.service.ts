@@ -116,6 +116,25 @@ export class DevicesService {
     projectId: string,
     deviceInfo: Record<string, any>
   ): Promise<DeviceDto> {
+    const appUser = await this.prisma.appUser.findUnique({
+      where: {
+        userIdentifier_projectId: {
+          userIdentifier,
+          projectId
+        }
+      }
+    });
+
+    if (!appUser) {
+      this.logger.log(`Creating new AppUser for userIdentifier: ${userIdentifier} in project: ${projectId}`);
+      await this.prisma.appUser.create({
+        data: {
+          userIdentifier,
+          projectId
+        }
+      });
+    }
+
     const device = await this.prisma.device.upsert({
       where: {
         deviceId_userIdentifier_projectId: {
