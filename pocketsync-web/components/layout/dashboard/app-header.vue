@@ -5,7 +5,7 @@
       <!-- Dashboard Index Layout Mobile Header (Logo left, User Menu right) -->
       <div v-if="!showMenuToggle"
         class="flex items-center justify-between w-full px-3 py-3 border-b border-gray-200 dark:border-gray-800 lg:border-b-0 lg:px-0 lg:py-4">
-        <HeaderLogo :isDashboardIndex="true" />
+        <HeaderLogo :isDashboardIndex="true" class="lg:hidden" />
         <UserMenu class="lg:hidden" :compact="true" />
       </div>
       
@@ -42,12 +42,6 @@
             </svg>
           </button>
         </div>
-        <div class="hidden lg:block">
-          <NuxtLink to="/console" class="flex items-center px-3 mx-12 cursor-pointer">
-            <img src="/images/logo/logo_full-light.svg" alt="Project Logo" class="h-5 w-auto dark:hidden" />
-            <img src="/images/logo/logo_full-dark.svg" alt="Project Logo" class="h-5 w-auto hidden dark:block" />
-          </NuxtLink>
-        </div>
       </div>
 
       <div :class="[isApplicationMenuOpen ? 'flex' : 'hidden']"
@@ -55,7 +49,7 @@
         <div class="flex items-center gap-2 2xsm:gap-3">
           <ThemeToggler />
         </div>
-        <UserMenu sm:hidden />
+        <UserMenu class="lg:hidden" />
       </div>
     </div>
   </header>

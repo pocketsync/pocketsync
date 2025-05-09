@@ -6,8 +6,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ProjectMapper } from './mappers/project.mapper';
 import { CreateAuthTokenDto } from './dto/create-auth-token.dto';
-import { SyncActivityDto, SyncActivityPeriod, SyncActivityDataPoint } from './dto/responses/sync-activity.dto';
+import { SyncActivityDto, SyncActivityPeriod } from './dto/responses/sync-activity.dto';
 import { SyncSession } from '@prisma/client';
+import { AppUsersMapper } from 'src/common/mappers/app-users.mapper';
 
 @Injectable()
 export class ProjectsService {
@@ -384,5 +385,27 @@ export class ProjectsService {
       data,
       total
     };
+  }
+
+  async getAppUsers(userId: string, projectId: string, paginationQuery: PaginationQueryDto) {
+    await this.findOne(userId, projectId);
+
+    const skip = ((paginationQuery.page ?? 1) - 1) * (paginationQuery.limit ?? 10);
+    const [data, total] = await Promise.all([
+      this.prisma.appUser.findMany({
+        where: { projectId },
+        include: {
+          devices: true
+        },
+        skip,
+        take: paginationQuery.limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.appUser.count({
+        where: { projectId },
+      }),
+    ]);
+
+    return AppUsersMapper.mapToPaginatedResponse(data, total, paginationQuery.page ?? 1, paginationQuery.limit ?? 10);
   }
 }

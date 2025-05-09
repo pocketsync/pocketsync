@@ -1,3 +1,5 @@
+export * from './app-user-dto';
+export * from './app-user-list';
 export * from './auth-token-response-dto';
 export * from './authenticated-response-dto';
 export * from './change-password-dto';

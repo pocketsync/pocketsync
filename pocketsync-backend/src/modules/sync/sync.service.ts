@@ -1,7 +1,6 @@
 import { Injectable, BadRequestException, Logger, Inject, forwardRef } from '@nestjs/common';
-import { SyncChangeBatchDto, SyncChange, ChangeType, ChangeDataKey } from './dto/sync-change-batch.dto';
-import { AppUser } from 'src/common/entities/app-user.entity';
-import { Device } from 'src/common/entities/device.entity';
+import { SyncChangeBatchDto, SyncChange, ChangeType } from './dto/sync-change-batch.dto';
+import { AppUserDto } from 'src/common/entities/app-user.entity';
 import { PrismaService } from '../../modules/prisma/prisma.service';
 import { ChangeOptimizerService } from './services/change-optimizer.service';
 import { SyncGateway } from './sync.gateway';
@@ -14,6 +13,7 @@ import { SyncMetricsService } from '../sync-metrics/sync-metrics.service';
 import { DebugSettingsService } from '../debug-settings/debug-settings.service';
 import { DevicesService } from '../devices/devices.service';
 import { TrackedSyncMetric } from './dto/tracked-sync-metric.enum';
+import { DeviceDto } from '../devices/dto/device.dto';
 
 @Injectable()
 export class SyncService {
@@ -34,7 +34,7 @@ export class SyncService {
     /**
      * Process and store incoming changes from a client
      */
-    async uploadChanges(projectId: string, appUser: AppUser, device: Device, changeBatch: SyncChangeBatchDto) {
+    async uploadChanges(projectId: string, appUser: AppUserDto, device: DeviceDto, changeBatch: SyncChangeBatchDto) {
         if (!changeBatch.changes || changeBatch.changes.length === 0) {
             this.syncLogsService.createLog(
                 projectId,
@@ -266,7 +266,7 @@ export class SyncService {
      * Retrieve changes for a client since a specific timestamp
      * Applies optimization to reduce the number of changes sent
      */
-    async downloadChanges(projectId: string, appUser: AppUser, device: Device, since: number) {
+    async downloadChanges(projectId: string, appUser: AppUserDto, device: DeviceDto, since: number) {
         // Create a new sync session for download
         const syncSession = await this.syncSessionsService.createSession(
             device.deviceId,

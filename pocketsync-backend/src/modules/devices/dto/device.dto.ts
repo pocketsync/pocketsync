@@ -17,16 +17,18 @@ export class DeviceDto {
   @ApiProperty({
     description: 'Last time the device was seen',
     example: '2023-01-01T12:00:00Z',
-    required: false
+    required: false,
+    type: Date
   })
-  lastSeenAt?: Date;
+  lastSeenAt?: Date | null;
 
   @ApiProperty({
     description: 'Last time the device made a change',
     example: '2023-01-01T12:00:00Z',
-    required: false
+    required: false,
+    type: Date
   })
-  lastChangeAt?: Date;
+  lastChangeAt?: Date | null;
 
   @ApiProperty({
     description: 'When the device was created',
@@ -37,9 +39,10 @@ export class DeviceDto {
   @ApiProperty({
     description: 'When the device was deleted',
     example: '2023-01-01T12:00:00Z',
-    required: false
+    required: false,
+    type: Date
   })
-  deletedAt?: Date;
+  deletedAt?: Date | null;
 
   @ApiProperty({
     description: 'Device information',
@@ -49,7 +52,8 @@ export class DeviceDto {
       model: 'iPhone 13',
       appVersion: '1.0.0'
     },
-    required: false
+    required: false,
+    type: Object
   })
   deviceInfo?: Record<string, any>;
 

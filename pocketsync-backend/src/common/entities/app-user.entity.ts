@@ -1,6 +1,8 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiExtraModels, ApiProperty } from "@nestjs/swagger";
+import { DeviceDto } from "src/modules/devices/dto/device.dto";
 
-export class AppUser {
+@ApiExtraModels(DeviceDto)
+export class AppUserDto {
     @ApiProperty({
         description: 'Unique identifier for the app user',
         example: 'user123'
@@ -12,6 +14,13 @@ export class AppUser {
         example: '123e4567-e89b-12d3-a456-426614174000'
     })
     projectId: string;
+
+    @ApiProperty({
+        description: 'Devices associated with this user',
+        isArray: true,
+        type: () => DeviceDto
+    })
+    devices: DeviceDto[];
 
     @ApiProperty({
         description: 'When the user was created',

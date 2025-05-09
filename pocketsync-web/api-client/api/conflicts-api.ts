@@ -241,18 +241,18 @@ export const ConflictsApiAxiosParamCreator = function (configuration?: Configura
         /**
          * 
          * @summary Report a conflict from a client
-         * @param {string} syncSessionId 
          * @param {string} xProjectId Project ID
+         * @param {string} syncSessionId 
          * @param {string} authorization Project auth token
          * @param {ReportConflictDto} reportConflictDto 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        conflictsControllerReportConflict: async (syncSessionId: string, xProjectId: string, authorization: string, reportConflictDto: ReportConflictDto, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'syncSessionId' is not null or undefined
-            assertParamExists('conflictsControllerReportConflict', 'syncSessionId', syncSessionId)
+        conflictsControllerReportConflict: async (xProjectId: string, syncSessionId: string, authorization: string, reportConflictDto: ReportConflictDto, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'xProjectId' is not null or undefined
             assertParamExists('conflictsControllerReportConflict', 'xProjectId', xProjectId)
+            // verify required parameter 'syncSessionId' is not null or undefined
+            assertParamExists('conflictsControllerReportConflict', 'syncSessionId', syncSessionId)
             // verify required parameter 'authorization' is not null or undefined
             assertParamExists('conflictsControllerReportConflict', 'authorization', authorization)
             // verify required parameter 'reportConflictDto' is not null or undefined
@@ -372,15 +372,15 @@ export const ConflictsApiFp = function(configuration?: Configuration) {
         /**
          * 
          * @summary Report a conflict from a client
-         * @param {string} syncSessionId 
          * @param {string} xProjectId Project ID
+         * @param {string} syncSessionId 
          * @param {string} authorization Project auth token
          * @param {ReportConflictDto} reportConflictDto 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async conflictsControllerReportConflict(syncSessionId: string, xProjectId: string, authorization: string, reportConflictDto: ReportConflictDto, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ConflictDto>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.conflictsControllerReportConflict(syncSessionId, xProjectId, authorization, reportConflictDto, options);
+        async conflictsControllerReportConflict(xProjectId: string, syncSessionId: string, authorization: string, reportConflictDto: ReportConflictDto, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ConflictDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.conflictsControllerReportConflict(xProjectId, syncSessionId, authorization, reportConflictDto, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ConflictsApi.conflictsControllerReportConflict']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -452,15 +452,15 @@ export const ConflictsApiFactory = function (configuration?: Configuration, base
         /**
          * 
          * @summary Report a conflict from a client
-         * @param {string} syncSessionId 
          * @param {string} xProjectId Project ID
+         * @param {string} syncSessionId 
          * @param {string} authorization Project auth token
          * @param {ReportConflictDto} reportConflictDto 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        conflictsControllerReportConflict(syncSessionId: string, xProjectId: string, authorization: string, reportConflictDto: ReportConflictDto, options?: RawAxiosRequestConfig): AxiosPromise<ConflictDto> {
-            return localVarFp.conflictsControllerReportConflict(syncSessionId, xProjectId, authorization, reportConflictDto, options).then((request) => request(axios, basePath));
+        conflictsControllerReportConflict(xProjectId: string, syncSessionId: string, authorization: string, reportConflictDto: ReportConflictDto, options?: RawAxiosRequestConfig): AxiosPromise<ConflictDto> {
+            return localVarFp.conflictsControllerReportConflict(xProjectId, syncSessionId, authorization, reportConflictDto, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -537,16 +537,16 @@ export class ConflictsApi extends BaseAPI {
     /**
      * 
      * @summary Report a conflict from a client
-     * @param {string} syncSessionId 
      * @param {string} xProjectId Project ID
+     * @param {string} syncSessionId 
      * @param {string} authorization Project auth token
      * @param {ReportConflictDto} reportConflictDto 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof ConflictsApi
      */
-    public conflictsControllerReportConflict(syncSessionId: string, xProjectId: string, authorization: string, reportConflictDto: ReportConflictDto, options?: RawAxiosRequestConfig) {
-        return ConflictsApiFp(this.configuration).conflictsControllerReportConflict(syncSessionId, xProjectId, authorization, reportConflictDto, options).then((request) => request(this.axios, this.basePath));
+    public conflictsControllerReportConflict(xProjectId: string, syncSessionId: string, authorization: string, reportConflictDto: ReportConflictDto, options?: RawAxiosRequestConfig) {
+        return ConflictsApiFp(this.configuration).conflictsControllerReportConflict(xProjectId, syncSessionId, authorization, reportConflictDto, options).then((request) => request(this.axios, this.basePath));
     }
 }
 

@@ -1,10 +1,10 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { AppUser } from 'src/common/entities/app-user.entity';
-import { Device } from 'src/common/entities/device.entity';
+import { AppUserDto } from 'src/common/entities/app-user.entity';
+import { DeviceDto } from 'src/modules/devices/dto/device.dto';
 
 export interface IUserDevice {
-  appUser: AppUser;
-  device: Device;
+  appUser: AppUserDto;
+  device: DeviceDto;
   projectId: string;
 }
 

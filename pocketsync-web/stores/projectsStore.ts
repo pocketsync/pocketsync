@@ -6,6 +6,8 @@ import type {
     UpdateProjectDto,
     CreateAuthTokenDto,
     SyncActivityDto,
+    AppUserList,
+    AppUserDto
 } from '~/api-client/model'
 import { useProjects } from '~/composables/useProjects'
 
@@ -35,6 +37,13 @@ export const useProjectsStore = defineStore('projects', {
             hasMore: false
         } as PaginationState,
         syncActivity: null as SyncActivityDto | null,
+        appUsers: null as AppUserList | null,
+        appUsersPagination: {
+            page: 1,
+            limit: 10,
+            total: 0,
+            totalPages: 0
+        },
     }),
     actions: {
         async fetchProjects(page = 1, limit = 10) {
@@ -189,6 +198,28 @@ export const useProjectsStore = defineStore('projects', {
         async revokeToken(tokenId: string) {
             const projectsComposable = useProjects()
             return await projectsComposable.revokeToken(tokenId)
+        },
+
+        async getAppUsers(projectId: string, page = 1, limit = 10) {
+            const projectsComposable = useProjects()
+            
+            try {
+                this.isLoading = true
+                const result = await projectsComposable.getAppUsers(projectId, page, limit)
+                this.appUsers = result
+                this.appUsersPagination = {
+                    page: result.currentPage || 1,
+                    limit,
+                    total: result.total || 0,
+                    totalPages: result.totalPages || 0
+                }
+                return result
+            } catch (err) {
+                this.error = projectsComposable.error.value
+                throw err
+            } finally {
+                this.isLoading = false
+            }
         }
     },
 })

@@ -1,15 +1,15 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { PrismaService } from '../../../modules/prisma/prisma.service';
-import { AppUser } from 'src/common/entities/app-user.entity';
-import { Device } from 'src/common/entities/device.entity';
+import { AppUserDto } from 'src/common/entities/app-user.entity';
+import { DeviceDto } from 'src/modules/devices/dto/device.dto';
 import { AppUsersMapper } from 'src/common/mappers/app-users.mapper';
 import { DeviceMapper } from 'src/common/mappers/device.mapper';
 
 // Extend the Express Request interface
 interface RequestWithUserDevice extends Request {
-  appUser?: AppUser;
-  device?: Device;
+  appUser?: AppUserDto;
+  device?: DeviceDto;
   project?: { id: string };
 }
 
@@ -52,7 +52,6 @@ export class UserDeviceMiddleware implements NestMiddleware {
         });
       }
 
-      // Find or create the device
       let prismaDevice = prismaAppUser.devices.find(d => d.deviceId === deviceId);
 
       if (!prismaDevice) {
@@ -65,7 +64,6 @@ export class UserDeviceMiddleware implements NestMiddleware {
           },
         });
       } else {
-        // Update the last seen timestamp
         prismaDevice = await this.prisma.device.update({
           where: {
             deviceId_userIdentifier_projectId: {
@@ -80,11 +78,9 @@ export class UserDeviceMiddleware implements NestMiddleware {
         });
       }
 
-      // Convert Prisma models to our entity types using mappers
-      const appUser = AppUsersMapper.toAppUser(prismaAppUser, projectId);
+      const appUser = AppUsersMapper.toAppUser(prismaAppUser, prismaAppUser.devices, projectId);
       const device = DeviceMapper.toDevice(prismaDevice);
 
-      // Add the appUser and device to the request object
       req.appUser = appUser;
       req.device = device;
     } catch (error) {

@@ -17,11 +17,12 @@ import { Query } from '@nestjs/common';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ProjectResponseDto } from './dto/responses/project.response.dto';
-import { OpenApiPaginationResponse, PaginatedResponse } from 'src/common/dto/paginated-response.dto';
+import { OpenApiPaginationResponse } from 'src/common/dto/paginated-response.dto';
 import { CreateAuthTokenDto } from './dto/create-auth-token.dto';
 import { AuthTokenResponseDto } from './dto/responses/auth-token.response.dto';
 import { SyncActivityDto } from './dto/responses/sync-activity.dto';
-
+import { AppUserDto } from 'src/common/entities/app-user.entity';
+  
 @ApiTags('Projects')
 @ApiBearerAuth()
 @Controller('projects')
@@ -94,5 +95,19 @@ export class ProjectsController {
   @ApiResponse({ status: 404, description: 'Project not found' })
   async getSyncActivity(@Request() req, @Param('projectId') projectId: string) {
     return this.projectsService.getSyncActivity(req.user.id, projectId);
+  }
+
+  /**
+   * Get app users for a project
+   * @param projectId The ID of the project
+   * @param paginationQuery Pagination query
+   * @returns A paginated list of app users
+   */
+  @Get(':projectId/app-users')
+  @ApiOperation({ summary: 'Get app users for a project', operationId: 'getAppUsers' })
+  @OpenApiPaginationResponse(AppUserDto)
+  @ApiResponse({ status: 404, description: 'Project not found' })
+  async getAppUsers(@Request() req, @Param('projectId') projectId: string, @Query() paginationQuery: PaginationQueryDto) {
+    return this.projectsService.getAppUsers(req.user.id, projectId, paginationQuery);
   }
 }

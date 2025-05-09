@@ -17,6 +17,8 @@ api/sync-sessions-api.ts
 base.ts
 common.ts
 configuration.ts
+docs/AppUserDto.md
+docs/AppUserList.md
 docs/AuthTokenResponseDto.md
 docs/AuthenticatedResponseDto.md
 docs/AuthenticationApi.md
@@ -80,6 +82,8 @@ docs/UserResponseDto.md
 docs/VerifyEmailDto.md
 git_push.sh
 index.ts
+model/app-user-dto.ts
+model/app-user-list.ts
 model/auth-token-response-dto.ts
 model/authenticated-response-dto.ts
 model/change-password-dto.ts

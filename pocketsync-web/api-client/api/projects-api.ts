@@ -22,6 +22,8 @@ import { DUMMY_BASE_URL, assertParamExists, setApiKeyToObject, setBasicAuthToObj
 // @ts-ignore
 import { BASE_PATH, COLLECTION_FORMATS, type RequestArgs, BaseAPI, RequiredError, operationServerMap } from '../base';
 // @ts-ignore
+import type { AppUserList } from '../model';
+// @ts-ignore
 import type { AuthTokenResponseDto } from '../model';
 // @ts-ignore
 import type { CreateAuthTokenDto } from '../model';
@@ -161,6 +163,50 @@ export const ProjectsApiAxiosParamCreator = function (configuration?: Configurat
          */
         getAllProjects: async (page?: number, limit?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/projects`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            if (page !== undefined) {
+                localVarQueryParameter['page'] = page;
+            }
+
+            if (limit !== undefined) {
+                localVarQueryParameter['limit'] = limit;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary Get app users for a project
+         * @param {string} projectId 
+         * @param {number} [page] Page number (starts from 1)
+         * @param {number} [limit] Number of items per page
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getAppUsers: async (projectId: string, page?: number, limit?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'projectId' is not null or undefined
+            assertParamExists('getAppUsers', 'projectId', projectId)
+            const localVarPath = `/projects/{projectId}/app-users`
+                .replace(`{${"projectId"}}`, encodeURIComponent(String(projectId)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
             let baseOptions;
@@ -399,6 +445,21 @@ export const ProjectsApiFp = function(configuration?: Configuration) {
         },
         /**
          * 
+         * @summary Get app users for a project
+         * @param {string} projectId 
+         * @param {number} [page] Page number (starts from 1)
+         * @param {number} [limit] Number of items per page
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async getAppUsers(projectId: string, page?: number, limit?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<AppUserList>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getAppUsers(projectId, page, limit, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ProjectsApi.getAppUsers']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
          * @summary Get a specific project by ID
          * @param {string} id 
          * @param {*} [options] Override http request option.
@@ -504,6 +565,18 @@ export const ProjectsApiFactory = function (configuration?: Configuration, baseP
         },
         /**
          * 
+         * @summary Get app users for a project
+         * @param {string} projectId 
+         * @param {number} [page] Page number (starts from 1)
+         * @param {number} [limit] Number of items per page
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        getAppUsers(projectId: string, page?: number, limit?: number, options?: RawAxiosRequestConfig): AxiosPromise<AppUserList> {
+            return localVarFp.getAppUsers(projectId, page, limit, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
          * @summary Get a specific project by ID
          * @param {string} id 
          * @param {*} [options] Override http request option.
@@ -601,6 +674,20 @@ export class ProjectsApi extends BaseAPI {
      */
     public getAllProjects(page?: number, limit?: number, options?: RawAxiosRequestConfig) {
         return ProjectsApiFp(this.configuration).getAllProjects(page, limit, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @summary Get app users for a project
+     * @param {string} projectId 
+     * @param {number} [page] Page number (starts from 1)
+     * @param {number} [limit] Number of items per page
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ProjectsApi
+     */
+    public getAppUsers(projectId: string, page?: number, limit?: number, options?: RawAxiosRequestConfig) {
+        return ProjectsApiFp(this.configuration).getAppUsers(projectId, page, limit, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

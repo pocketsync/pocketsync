@@ -131,7 +131,7 @@
 
 <script setup lang="ts">
 import { PhCode } from '@phosphor-icons/vue';
-import { ChevronDownIcon, DocsIcon, HomeIcon, SupportIcon, TableIcon, HorizontalDots, SettingsIcon, PlugInIcon, PageIcon, WarningIcon} from '~/components/icons';
+import { ChevronDownIcon, DocsIcon, HomeIcon, SupportIcon, TableIcon, HorizontalDots, SettingsIcon, PlugInIcon, PageIcon, WarningIcon, UserGroupIcon } from '~/components/icons';
 
 
 const route = useRoute()
@@ -217,6 +217,11 @@ const menuGroups = computed(() => [
                 path: `/console/projects/${projectId.value}`,
             },
             {
+                name: 'Data exploration',
+                icon: TableIcon,
+                path: `/console/projects/${projectId.value}/data-exploration`,
+            },
+            {
                 name: 'Integrations',
                 icon: PhCode,
                 path: `/console/projects/${projectId.value}/integrations`,
@@ -232,30 +237,25 @@ const menuGroups = computed(() => [
                 path: `/console/projects/${projectId.value}/monitoring/sessions`,
             },
             {
-                name: 'System logs',
-                icon: PageIcon,
-                path: `/console/projects/${projectId.value}/sync-logs`,
-            },
-            {
                 name: 'Sync conflicts',
                 icon: WarningIcon,
                 path: `/console/projects/${projectId.value}/conflicts`,
             },
-        ],
-    },
-    {
-        title: 'Tools',
-        items: [
             {
-                name: 'Data exploration',
-                icon: TableIcon,
-                path: `/console/projects/${projectId.value}/data-exploration`,
+                name: 'System logs',
+                icon: PageIcon,
+                path: `/console/projects/${projectId.value}/sync-logs`,
             },
         ],
     },
     {
-        title: 'Settings',
+        title: 'Administration',
         items: [
+            {
+                name: 'Users',
+                icon: UserGroupIcon,
+                path: `/console/projects/${projectId.value}/users`,
+            },
             {
                 name: 'Project settings',
                 icon: SettingsIcon,
@@ -264,11 +264,11 @@ const menuGroups = computed(() => [
         ],
     },
     {
-        title: 'Help',
+        title: 'Help & Resources',
         items: [
             {
                 name: 'Documentation',
-                icon: SupportIcon,
+                icon: DocsIcon,
                 path: 'https://docs.pocketsync.dev',
                 target: '_blank',
             }

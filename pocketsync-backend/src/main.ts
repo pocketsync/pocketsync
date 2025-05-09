@@ -4,6 +4,8 @@ import { AppModule } from './app.module';
 import { swaggerConfig } from './config/swagger.config';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
+import { AppUserDto } from './common/entities/app-user.entity';
+
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -43,7 +45,9 @@ async function bootstrap() {
   );
 
   // Setup Swagger documentation
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  const document = SwaggerModule.createDocument(app, swaggerConfig, {
+    extraModels: [AppUserDto]
+  });
   SwaggerModule.setup('api-docs', app, document);
 
   await app.listen(process.env.PORT || 3000);

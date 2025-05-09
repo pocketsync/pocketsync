@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import type { ProjectResponseDto, CreateProjectDto, UpdateProjectDto, CreateAuthTokenDto } from '~/api-client'
+import type { ProjectResponseDto, CreateProjectDto, UpdateProjectDto, CreateAuthTokenDto, AppUserList, AppUserDto } from '~/api-client'
 import { ProjectsApi } from '~/api-client'
 import { useApi } from './useApi'
 import { useToast } from './useToast'
@@ -219,6 +219,20 @@ export const useProjects = () => {
         }
     }
 
+    const getAppUsers = async (projectId: string, page = 1, limit = 10) => {
+        error.value = null
+        try {
+            isLoading.value = true
+            const response = await projectsApi.getAppUsers(projectId, page, limit)
+            return response.data
+        } catch (err: any) {
+            error.value = handleProjectError(err)
+            throw error.value
+        } finally {
+            isLoading.value = false
+        }
+    }
+
     return {
         projects,
         currentProject,
@@ -233,6 +247,7 @@ export const useProjects = () => {
         loadMoreProjects,
         generateAuthToken,
         revokeToken,
-        getSyncActivity
+        getSyncActivity,
+        getAppUsers
     }
 }
