@@ -46,6 +46,19 @@
                     {{ searchQuery ? 'No matching users found.' : 'No users found for this project.' }}
                 </p>
             </div>
+            
+            <div v-else-if="expandedUsers.length > 0" class="mb-4 flex justify-end">
+                <button @click="collapseAllUsers" 
+                    class="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 text-xs font-medium flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                    </svg>
+                    Collapse All
+                </button>
+                <div class="ml-4 text-xs text-gray-500 dark:text-gray-400">
+                    <span class="italic">Tip: Hold Shift while clicking to expand multiple users</span>
+                </div>
+            </div>
 
             <div v-else>
                 <div
@@ -73,7 +86,10 @@
                             </thead>
                             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                                 <tr v-for="user in filteredUsers" :key="user.userIdentifier"
-                                    class="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-slate-700/30">
+                                    :class="{
+                                        'border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-slate-700/30': true,
+                                        'bg-gray-50 dark:bg-slate-700/20': expandedUsers.includes(user.userIdentifier)
+                                    }">
                                     <td class="px-5 py-4 sm:px-6">
                                         <div class="flex items-center">
                                             <div class="flex-1 text-start">
@@ -91,9 +107,19 @@
                                                 }}
                                             </span>
                                             <button v-if="user.devices.length > 0"
-                                                @click="toggleDeviceDetails(user.userIdentifier)"
-                                                class="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 text-xs font-medium">
-                                                {{ expandedUsers.includes(user.userIdentifier) ? 'Hide' : 'View' }}
+                                                @click="toggleDeviceDetails(user.userIdentifier, $event)"
+                                                class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-150">
+                                                <svg v-if="expandedUsers.includes(user.userIdentifier)"
+                                                    xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                                                    viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                                <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                                                    viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M9 5l7 7-7 7" />
+                                                </svg>
                                             </button>
                                         </div>
                                     </td>
@@ -118,19 +144,40 @@
                                 <!-- Device details expansion -->
                                 <tr v-for="user in filteredUsers" :key="`${user.userIdentifier}-details`"
                                     v-show="expandedUsers.includes(user.userIdentifier)"
-                                    class="bg-gray-50 dark:bg-slate-700/30">
-                                    <td colspan="5" class="px-5 py-4 sm:px-6">
+                                    class="bg-gray-50 dark:bg-slate-700/30 border-b border-gray-200 dark:border-gray-700">
+                                    <td colspan="4" class="px-5 py-4 sm:px-6">
                                         <div class="space-y-3">
-                                            <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300">Device
-                                                details
-                                            </h4>
+                                            <div class="flex items-center justify-between">
+                                                <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                                    <span class="text-primary-600 dark:text-primary-400 mr-2">User:</span>
+                                                    {{ user.userIdentifier }}
+                                                </h4>
+                                                <button @click="collapseUser(user.userIdentifier)"
+                                                    class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-xs flex items-center">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                                                    </svg>
+                                                    Collapse
+                                                </button>
+                                            </div>
                                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                 <div v-for="device in user.devices" :key="device.deviceId"
-                                                    class="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                                                    class="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border-l-4 border border-gray-200 dark:border-gray-700" 
+                                                    :class="{
+                                                        'border-l-green-500': device.lastSyncStatus === 'SUCCESS',
+                                                        'border-l-red-500': device.lastSyncStatus === 'FAILED',
+                                                        'border-l-yellow-500': device.lastSyncStatus === 'IN_PROGRESS',
+                                                        'border-l-gray-500': !device.lastSyncStatus
+                                                    }">
                                                     <div class="flex justify-between items-start">
                                                         <div class="flex items-center gap-2">
-                                                            <div class="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[200px]"
-                                                                :title="device.deviceId">{{ device.deviceId }}</div>
+                                                            <div class="flex flex-col">
+                                                                <div class="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[200px]"
+                                                                    :title="device.deviceId">{{ device.deviceId }}</div>
+                                                                <div class="text-xs text-gray-500 dark:text-gray-400">
+                                                                    Belongs to: <span class="text-primary-600 dark:text-primary-400">{{ user.userIdentifier }}</span>
+                                                                </div>
+                                                            </div>
                                                             <button @click="copyToClipboard(device.deviceId)"
                                                                 class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-150">
                                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4"
@@ -338,12 +385,30 @@
         }
     };
 
-    const toggleDeviceDetails = (userId: string) => {
+    const toggleDeviceDetails = (userId: string, event: Event) => {
+        // Check if shift key was pressed during click
+        const shiftPressed = event && (event as MouseEvent).shiftKey;
+        
         if (expandedUsers.value.includes(userId)) {
+            // If already expanded, collapse it
             expandedUsers.value = expandedUsers.value.filter(id => id !== userId);
         } else {
-            expandedUsers.value.push(userId);
+            // If shift key wasn't pressed, collapse all others
+            if (!shiftPressed) {
+                expandedUsers.value = [userId];
+            } else {
+                // If shift key was pressed, add to expanded without collapsing others
+                expandedUsers.value.push(userId);
+            }
         }
+    };
+    
+    const collapseUser = (userId: string) => {
+        expandedUsers.value = expandedUsers.value.filter(id => id !== userId);
+    };
+    
+    const collapseAllUsers = () => {
+        expandedUsers.value = [];
     };
 
     const formatDate = (dateString: string) => {
