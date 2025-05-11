@@ -47,20 +47,22 @@
                 </p>
             </div>
             
-            <div v-else-if="expandedUsers.length > 0" class="mb-4 flex justify-end">
-                <button @click="collapseAllUsers" 
-                    class="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 text-xs font-medium flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
-                    </svg>
-                    Collapse All
-                </button>
-                <div class="ml-4 text-xs text-gray-500 dark:text-gray-400">
-                    <span class="italic">Tip: Hold Shift while clicking to expand multiple users</span>
-                </div>
-            </div>
+
 
             <div v-else>
+                <div v-if="expandedUsers.length > 0" class="mb-4 flex justify-end">
+                    <button @click="collapseAllUsers" 
+                        class="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 text-xs font-medium flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                        </svg>
+                        Collapse All
+                    </button>
+                    <div class="ml-4 text-xs text-gray-500 dark:text-gray-400">
+                        <span class="italic">Tip: Hold Shift while clicking to expand multiple users</span>
+                    </div>
+                </div>
+                
                 <div
                     class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
                     <div class="max-w-full overflow-x-auto custom-scrollbar">
@@ -145,7 +147,7 @@
                                 <tr v-for="user in filteredUsers" :key="`${user.userIdentifier}-details`"
                                     v-show="expandedUsers.includes(user.userIdentifier)"
                                     class="bg-gray-50 dark:bg-slate-700/30 border-b border-gray-200 dark:border-gray-700">
-                                    <td colspan="4" class="px-5 py-4 sm:px-6">
+                                    <td colspan="5" class="px-5 py-4 sm:px-6">
                                         <div class="space-y-3">
                                             <div class="flex items-center justify-between">
                                                 <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -335,7 +337,7 @@
 
         const totalPages = appUsers.value.totalPages;
         const current = currentPage.value;
-        const delta = 1; // Number of pages to show before and after current page
+        const delta = 1;
 
         let range = [];
 
@@ -386,18 +388,14 @@
     };
 
     const toggleDeviceDetails = (userId: string, event: Event) => {
-        // Check if shift key was pressed during click
         const shiftPressed = event && (event as MouseEvent).shiftKey;
         
         if (expandedUsers.value.includes(userId)) {
-            // If already expanded, collapse it
             expandedUsers.value = expandedUsers.value.filter(id => id !== userId);
         } else {
-            // If shift key wasn't pressed, collapse all others
             if (!shiftPressed) {
                 expandedUsers.value = [userId];
             } else {
-                // If shift key was pressed, add to expanded without collapsing others
                 expandedUsers.value.push(userId);
             }
         }
