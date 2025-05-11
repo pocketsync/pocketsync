@@ -1,16 +1,16 @@
 # PocketSync
 
-PocketSync is a lightweight synchronization engine for SQLite databases that enables efficient data syncing across devices, even in offline scenarios. It uses a change tracking mechanism with system tables to record modifications, assigns unique global IDs to rows, and triggers sync operations in real-time or upon reconnection. The server handles conflict resolution, broadcasts changes to connected devices, and optimizes data distribution by cleaning and merging updates. This system ensures data consistency and integrity across distributed SQLite databases with minimal overhead.
+PocketSync is a lightweight synchronization engine for SQLite databases that enables efficient data syncing across devices, even in offline scenarios. It uses a change tracking mechanism with system tables to record modifications, assigns unique global IDs to rows, and triggers sync operations in real-time or upon reconnection. The server handles broadcasts changes to connected devices, and optimizes data distribution by cleaning and merging updates. This system ensures data consistency and integrity across distributed SQLite databases with minimal overhead.
 
-## Key Features
+## Key features
 
 - Event-driven synchronization
 - Offline support
 - Automatic conflict resolution
-- Real-time updates via WebSocket
+- Real-time updates via socket.io
 - Efficient change tracking and processing
 
-## How It Works
+## How it works
 
 1. System tables track changes and manage sync state
 2. Triggers capture modifications to user-defined tables
@@ -21,7 +21,8 @@ PocketSync is a lightweight synchronization engine for SQLite databases that ena
 7. Offline devices receive optimized updates upon reconnection
 
 PocketSync provides a robust solution for maintaining data consistency across multiple devices using SQLite databases, making it suitable for applications requiring seamless synchronization capabilities
-## Getting Started
+
+## Getting started
 
 ### Installation
 
@@ -57,14 +58,6 @@ await database.insert('users', {
 // No additional code needed for sync
 ```
 
-## Documentation
-
-For detailed documentation about advanced features and configuration options, please refer to the following resources:
-
-- [Architecture](docs/architecture.md)
-- [Change Tracking System](docs/diff-extraction.md)
-- [Changeset Structure](docs/changeset_structure.md)
-
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the Functional Source License, Version 1.1, MIT-Style - see the [LICENSE](LICENSE) file for details.
