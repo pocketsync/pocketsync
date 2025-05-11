@@ -126,7 +126,9 @@ export class SyncService {
                 projectId,
                 `${createdChanges.length} changes processed`,
                 LogLevel.INFO,
-                { tables: createdChanges.map(c => c.tableName).join(', ') },
+                {
+                    tables: [...new Set(createdChanges.map(c => c.tableName))].join(', ')
+                },
                 appUser.userIdentifier,
                 device.deviceId,
                 syncSession.id
