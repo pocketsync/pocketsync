@@ -23,6 +23,14 @@
                         <NuxtLink to="/faq" class="text-base text-gray-600 dark:text-white hover:text-primary-600 transition-colors duration-200 block">FAQ</NuxtLink>
                         <NuxtLink to="/contact" class="text-base text-gray-600 dark:text-white hover:text-primary-600 transition-colors duration-200 block">Contact
                         </NuxtLink>
+                        <a href="https://status.pocketsync.dev" target="_blank" rel="noopener noreferrer"
+                            class="text-base text-gray-600 dark:text-white hover:text-primary-600 transition-colors duration-200 flex items-center gap-2">
+                            Status
+                            <span class="relative flex h-3 w-3">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                            </span>
+                        </a>
                     </div>
                 </div>
                 <div class="col-span-1 md:col-span-1">
