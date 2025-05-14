@@ -250,13 +250,13 @@ const getCodeExamples = computed(() => [
         code: `// Dart/Flutter Example
 // Initialize PocketSync
 await PocketSync.instance.initialize(
-  dbPath: 'path',
   options: PocketSyncOptions(
     projectId: '${projectId.value}',
     authToken: 'your-auth-token',
     serverUrl: 'https://api.pocketsync.dev',
   ),
   databaseOptions: DatabaseOptions(
+    dbPath: 'path',
     onCreate: (db, version) async {
       await db.execute(
         'CREATE TABLE todos(id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, isCompleted INTEGER)',

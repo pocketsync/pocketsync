@@ -81,13 +81,13 @@
                         <div class="rounded-md bg-gray-900 p-4">
                             <pre class="text-sm leading-6 text-gray-300 overflow-x-auto"><code class="language-dart hljs">// Initialize <span class="text-blue-400">PocketSync</span>
 <span class="text-green-400">await</span> PocketSync.instance.initialize(
-  dbPath: path,
   options: <span class="text-yellow-400">PocketSyncOptions</span>(
     projectId: <span class="text-amber-300">'your-project-id'</span>,
     authToken: <span class="text-amber-300">'your-auth-token'</span>,
     serverUrl: <span class="text-amber-300">'https://api.pocketsync.dev'</span>,
   ),
   databaseOptions: <span class="text-yellow-400">DatabaseOptions</span>(
+    dbPath: path,
     onCreate: (db, version) <span class="text-green-400">async</span> {
       <span class="text-green-400">await</span> db.execute(
         <span class="text-amber-300">'CREATE TABLE todos(id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, isCompleted INTEGER)'</span>,
@@ -97,7 +97,7 @@
 );
 
 // Set user ID - In a real app, this would come from your auth system
-<span class="text-green-400">await</span> PocketSync.instance.setUserId(userId: <span class="text-amber-300">'your-user-id'</span>);
+PocketSync.instance.setUserId(userId: <span class="text-amber-300">'your-user-id'</span>);
 
 // Start syncing
 <span class="text-green-400">await</span> PocketSync.instance.start();</code></pre>
