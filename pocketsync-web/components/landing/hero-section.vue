@@ -88,11 +88,11 @@
   ),
   databaseOptions: <span class="text-yellow-400">DatabaseOptions</span>(
     dbPath: path,
-    onCreate: (db, version) <span class="text-green-400">async</span> {
-      <span class="text-green-400">await</span> db.execute(
-        <span class="text-amber-300">'CREATE TABLE todos(id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, isCompleted INTEGER)'</span>,
-      );
-    },
+    schema: <span class="text-yellow-400">DatabaseSchema</span>(
+        tables: [
+            <span class="text-gray-600">// ...</span>
+        ],
+    ),
   ),
 );
 

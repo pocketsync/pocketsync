@@ -247,7 +247,8 @@ const getCodeExamples = computed(() => [
         icon: `
         <svg height="16" viewBox=".29 .22 77.26 95.75" width="24" xmlns="http://www.w3.org/2000/svg"><g fill="none" fill-rule="evenodd"><path d="m48.75 95.97-25.91-25.74 14.32-14.57 40.39 40.31z" fill="#02539a"/><g fill="#45d1fd"><path d="m22.52 70.25 25.68-25.68h28.87l-39.95 39.95z" fill-opacity=".85"/><path d="m.29 47.85 14.58 14.57 62.2-62.2h-29.02z"/></g></g></svg>
         `,
-        code: `// Dart/Flutter Example
+        code: `
+// Dart/Flutter Example
 // Initialize PocketSync
 await PocketSync.instance.initialize(
   options: PocketSyncOptions(
@@ -257,16 +258,23 @@ await PocketSync.instance.initialize(
   ),
   databaseOptions: DatabaseOptions(
     dbPath: 'path',
-    onCreate: (db, version) async {
-      await db.execute(
-        'CREATE TABLE todos(id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, isCompleted INTEGER)',
-      );
-    },
+    schema: DatabaseSchema(
+        TableSchema(
+            name: 'todos',
+            columns: [
+                TableColumn.primaryKey(
+                name: 'id',
+                type: ColumnType.integer,
+                isAutoIncrement: true,
+            ),
+            ...,
+        ),
+    ),
   ),
 );
 
-// Set user ID - In a real app, this would come from your auth system
-await PocketSync.instance.setUserId(userId: 'your-user-id');
+// Set user ID - In a real app, this would come from your auth system (e.g. Firebase Auth)
+PocketSync.instance.setUserId(userId: 'your-user-id');
 
 // Start syncing
 await PocketSync.instance.start();`
