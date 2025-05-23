@@ -298,6 +298,31 @@ export const useAuth = () => {
         }
     }
 
+    const deleteAccount = async (password: string) => {
+        error.value = null
+        try {
+            isLoading.value = true
+            await authApi.deleteAccount({ password })
+            
+            // Clear user data and tokens after successful deletion
+            const accessTokenCookie = useCookie(ACCESS_TOKEN_COOKIE_NAME, cookieOptions)
+            const refreshTokenCookie = useCookie(REFRESH_TOKEN_COOKIE_NAME, cookieOptions)
+            accessTokenCookie.value = null
+            refreshTokenCookie.value = null
+
+            user.value = null
+            isAuthenticated.value = false
+            isSessionValidated.value = false
+            
+            return true
+        } catch (err: any) {
+            error.value = handleAuthError(err)
+            throw error.value
+        } finally {
+            isLoading.value = false
+        }
+    }
+
     return {
         user,
         isAuthenticated,
@@ -316,5 +341,6 @@ export const useAuth = () => {
         sendEmailVerification,
         verifyEmail,
         signUp,
+        deleteAccount,
     }
 }

@@ -59,6 +59,14 @@ export class AuthService {
       { firstName: user.firstName, verificationUrl }
     );
 
+    // Send welcome email
+    if (user.email) {
+      await this.emailService.sendWelcomeEmail(
+        user.email,
+        user.firstName || 'User'
+      );
+    }
+
     const tokens = await this.generateTokens(user.id, user.email!);
     return {
       user: this.userMapper.toResponse(user),
@@ -438,5 +446,84 @@ export class AuthService {
       'email-verification',
       { firstName: user.firstName, verificationUrl }
     );
+  }
+
+  async deleteAccount(userId: string, password?: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        socialConnections: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // If user has password authentication, verify password
+    if (user.passwordHash && password) {
+      const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('Invalid password');
+      }
+    } else if (user.passwordHash && !password) {
+      // Password is required for users with password authentication
+      throw new BadRequestException('Password is required to delete account');
+    }
+    
+    // Get all projects owned by the user
+    const userProjects = await this.prisma.project.findMany({
+      where: { userId },
+    });
+    
+    // Send account deletion confirmation email if user has an email
+    if (user.email) {
+      await this.emailService.sendAccountDeletionEmail(
+        user.email,
+        user.firstName || 'User'
+      );
+    }
+    
+    // Use a transaction to ensure all related data is deleted atomically
+    await this.prisma.$transaction(async (prisma) => {
+      // Revoke all refresh tokens
+      await prisma.refreshToken.updateMany({
+        where: { userId },
+        data: { revoked: true },
+      });
+      
+      // Delete projects and related data
+      for (const project of userProjects) {
+        // Delete project auth tokens
+        await prisma.projectAuthTokens.deleteMany({
+          where: { projectId: project.id },
+        });
+        
+        // Delete debug settings
+        await prisma.debugSettings.deleteMany({
+          where: { projectId: project.id },
+        });
+        
+        // Delete the project
+        await prisma.project.delete({
+          where: { id: project.id },
+        });
+      }
+      
+      // Delete notification settings
+      await prisma.notificationSettings.deleteMany({
+        where: { userId },
+      });
+      
+      // Delete password reset tokens
+      await prisma.passwordResetToken.deleteMany({
+        where: { userId },
+      });
+      
+      // Delete the user
+      await prisma.user.delete({
+        where: { id: userId },
+      });
+    });
   }
 }

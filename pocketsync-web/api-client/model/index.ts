@@ -13,6 +13,7 @@ export * from './data-export-job-response-dto';
 export * from './data-export-jobs-response-dto';
 export * from './debug-settings-dto';
 export * from './default-success-response';
+export * from './delete-account-dto';
 export * from './device-change-dto';
 export * from './device-change-response-dto';
 export * from './device-change-timeline-dto';

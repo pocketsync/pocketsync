@@ -1,4 +1,4 @@
-import { Controller, Get, Post, UseGuards, Req, Res, Body, HttpStatus, Request, Put } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Req, Res, Body, HttpStatus, Request, Put, Delete } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { ConfigService } from '@nestjs/config';
@@ -15,6 +15,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { RequestPasswordResetDto } from './dto/request-password-reset.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
+import { DeleteAccountDto } from './dto/delete-account.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -298,5 +299,29 @@ export class AuthController {
   async resendEmailVerification(@Request() req) {
     await this.authService.resendEmailVerification(req.user.id);
     return { message: 'Verification email sent successfully' };
+  }
+
+  @Delete('account')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Delete account',
+    description: 'Permanently delete user account and all associated data',
+    operationId: 'deleteAccount'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Account deleted successfully'
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Password is required to delete account'
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid password or unauthorized'
+  })
+  async deleteAccount(@Request() req, @Body() deleteAccountDto: DeleteAccountDto) {
+    await this.authService.deleteAccount(req.user.id, deleteAccountDto.password);
+    return { message: 'Account deleted successfully' };
   }
 }

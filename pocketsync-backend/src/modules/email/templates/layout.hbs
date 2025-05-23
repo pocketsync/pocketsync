@@ -28,12 +28,27 @@
             font-size: 0.9em;
             color: #666;
         }
+        .social-links {
+            margin-top: 10px;
+        }
+        .social-links a {
+            color: #007bff;
+            text-decoration: none;
+            margin-right: 10px;
+        }
     </style>
 </head>
 <body>
+    <div class="header" style="text-align: center; margin-bottom: 20px;">
+        <img src="{{frontendUrl}}/images/banner.png" alt="PocketSync" style="max-width: 100%; height: auto;">
+    </div>
     {{{body}}}
     <div class="footer">
         <p>© {{year}} PocketSync. All rights reserved.</p>
+        <div class="social-links">
+            <a href="https://twitter.com/pocket_sync">Follow us on Twitter</a>
+            <a href="https://github.com/pocketsync">GitHub</a>
+        </div>
     </div>
 </body>
 </html>

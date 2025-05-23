@@ -46,7 +46,15 @@ export class EmailService {
   }
 
   async sendTemplatedEmail(to: string, subject: string, template: string, context: any) {
-    const html = await this.emailTemplateService.render(template, context);
+    const frontendUrl = this.configService.get('FRONTEND_URL', 'http://localhost:3000');
+    
+    // Add frontend URL to all template contexts
+    const enrichedContext = {
+      ...context,
+      frontendUrl,
+    };
+    
+    const html = await this.emailTemplateService.render(template, enrichedContext);
     return this.sendEmail(to, subject, html);
   }
 
@@ -59,5 +67,33 @@ export class EmailService {
     });
 
     return this.sendEmail(to, 'Reset your password', html);
+  }
+  
+  async sendWelcomeEmail(to: string, firstName: string) {
+    const frontendUrl = this.configService.get('FRONTEND_URL', 'http://localhost:3000');
+    const dashboardUrl = `${frontendUrl}/dashboard`;
+
+    return this.sendTemplatedEmail(
+      to,
+      'Welcome to PocketSync',
+      'welcome',
+      {
+        firstName,
+        dashboardUrl,
+        docsUrl: 'https://docs.pocketsync.dev',
+        sampleUrl: 'https://github.com/pocketsync/pocketsync-samples',
+      }
+    );
+  }
+  
+  async sendAccountDeletionEmail(to: string, firstName: string) {
+    return this.sendTemplatedEmail(
+      to,
+      'Account deleted',
+      'account-deletion',
+      {
+        firstName: firstName || 'User',
+      }
+    );
   }
 }
